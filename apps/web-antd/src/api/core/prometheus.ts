@@ -321,3 +321,19 @@ export const updateRecordRuleApi = (data: updateAlertManagerRecordReq) => {
 export const deleteRecordRuleApi = (id: number) => {
   return requestClient.delete(`/monitor/record_rules/${id}`);
 };
+
+export const getOnDutyChangesApi = () => {
+  return requestClient.get('/monitor/onDuty_groups/list');
+};
+
+export const createOnDutyChangeApi = (data: any) => {
+  return requestClient.post('/monitor/onDuty_groups/create', data);
+};
+
+export const updateOnDutyChangeApi = (data: any) => {
+  return requestClient.post('/monitor/onDuty_groups/update', data);
+};
+
+export const deleteOnDutyChangeApi = (id: number) => {
+  return requestClient.delete(`/monitor/onDuty_groups/${id}`);
+};
