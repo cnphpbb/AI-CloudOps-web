@@ -26,14 +26,10 @@
   "type": "module",
   "scripts": {
     "bootstrap": "pnpm install",
-    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 turbo build",
+    "build": "pnpm run build:antd",
     "build:analyze": "turbo build:analyze",
     "build:docker": "./build-local-docker-image.sh",
     "build:antd": "pnpm run build --filter=@vben/web-antd",
-    "build:docs": "pnpm run build --filter=@vben/docs",
-    "build:ele": "pnpm run build --filter=@vben/web-ele",
-    "build:naive": "pnpm run build --filter=@vben/web-naive",
-    "build:play": "pnpm run build --filter=@vben/playground",
     "changeset": "pnpm exec changeset",
     "check": "pnpm run check:circular && pnpm run check:dep && pnpm run check:type && pnpm check:cspell",
     "check:circular": "vsh check-circular",
@@ -42,12 +38,8 @@
     "check:type": "turbo run typecheck",
     "clean": "vsh clean",
     "commit": "czg",
-    "dev": "turbo-run dev",
+    "dev": "pnpm run dev:antd",
     "dev:antd": "pnpm -F @vben/web-antd run dev",
-    "dev:docs": "pnpm -F @vben/docs run dev",
-    "dev:ele": "pnpm -F @vben/web-ele run dev",
-    "dev:naive": "pnpm -F @vben/web-naive run dev",
-    "dev:play": "pnpm -F @vben/playground run dev",
     "format": "vsh lint --format",
     "lint": "vsh lint",
     "postinstall": "turbo run stub",
@@ -59,6 +51,10 @@
     "test:unit": "vitest",
     "update:deps": "pnpm update --latest --recursive",
     "version": "pnpm exec changeset version && pnpm install --no-frozen-lockfile"
+  },
+  "dependencies": {
+    "jiti": "^2.3.3",
+    "vue-request": "^2.0.4"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.0",
@@ -116,9 +112,5 @@
       "node-gyp",
       "playwright"
     ]
-  },
-  "dependencies": {
-    "jiti": "^2.3.3",
-    "vue-request": "^2.0.4"
   }
 }

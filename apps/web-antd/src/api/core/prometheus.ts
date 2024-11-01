@@ -193,6 +193,27 @@ export interface MonitorAlertEventItem {
   silenceId: string;
 }
 
+export interface createAlertManagerRecordReq {
+  name: string;
+  recordName: string;
+  poolId: number;
+  treeNodeId: number;
+  enable: number;
+  forTime: string;
+  expr: string;
+}
+
+export interface updateAlertManagerRecordReq {
+  ID: number;
+  name: string;
+  recordName: string;
+  poolId: number;
+  treeNodeId: number;
+  enable: number;
+  forTime: string;
+  expr: string;
+}
+
 export const getMonitorScrapePoolApi = () => {
   return requestClient.get<MonitorScrapePoolItem[]>('/monitor/scrape_pools');
 };
@@ -283,4 +304,20 @@ export const cancelSilenceAlertApi = () => {
 
 export const silenceBatchApi = () => {
   return requestClient.get('/monitor/alert_events');
+};
+
+export const getRecordRulesApi = () => {
+  return requestClient.get('/monitor/record_rules');
+};
+
+export const createRecordRuleApi = (data: createAlertManagerRecordReq) => {
+  return requestClient.post('/monitor/record_rules/create', data);
+};
+
+export const updateRecordRuleApi = (data: updateAlertManagerRecordReq) => {
+  return requestClient.post('/monitor/record_rules/update', data);
+};
+
+export const deleteRecordRuleApi = (id: number) => {
+  return requestClient.delete(`/monitor/record_rules/${id}`);
 };
