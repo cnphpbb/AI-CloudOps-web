@@ -3,7 +3,11 @@
     <!-- 操作工具栏 -->
     <div class="toolbar">
       <div class="search-area">
-        <a-input v-model="searchText" placeholder="请输入节点名称" style="width: 200px; margin-right: 16px;" />
+        <a-input
+          v-model="searchText"
+          placeholder="请输入节点名称"
+          style="width: 200px; margin-right: 16px"
+        />
         <a-button type="primary" @click="handleSearch">搜索</a-button>
       </div>
     </div>
@@ -14,13 +18,32 @@
       <template #action="{ record }">
         <a-space>
           <a-button type="link" @click="handleEditNode(record)">编辑</a-button>
-          <a-button type="link" danger @click="handleDeleteNode(record)">删除</a-button>
+          <a-button type="link" danger @click="handleDeleteNode(record)"
+            >删除</a-button
+          >
         </a-space>
         <!-- 编辑表单的模态框 -->
-        <a-modal v-model:visible="isEditModalVisible" title="编辑节点" @ok="handleSaveNode" @cancel="handleCancel">
-          <a-form :model="editForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }" ref="editFormRef">
-            <a-form-item label="节点名称" name="title" :rules="[{ required: true, message: '请输入节点名称' }]">
-              <a-input v-model:value="editForm.title" placeholder="请输入节点名称" />
+        <a-modal
+          v-model:visible="isEditModalVisible"
+          title="编辑节点"
+          @ok="handleSaveNode"
+          @cancel="handleCancel"
+        >
+          <a-form
+            :model="editForm"
+            :label-col="{ span: 6 }"
+            :wrapper-col="{ span: 16 }"
+            ref="editFormRef"
+          >
+            <a-form-item
+              label="节点名称"
+              name="title"
+              :rules="[{ required: true, message: '请输入节点名称' }]"
+            >
+              <a-input
+                v-model:value="editForm.title"
+                placeholder="请输入节点名称"
+              />
             </a-form-item>
 
             <a-form-item label="描述" name="description">
@@ -28,24 +51,48 @@
             </a-form-item>
 
             <a-form-item label="运维负责人" name="ops_admins">
-              <a-select v-model:value="editForm.ops_admins" mode="multiple" placeholder="请选择运维负责人">
-                <a-select-option v-for="person in availableOpsAdmins" :key="person.id" :value="person.id">
+              <a-select
+                v-model:value="editForm.ops_admins"
+                mode="multiple"
+                placeholder="请选择运维负责人"
+              >
+                <a-select-option
+                  v-for="person in availableOpsAdmins"
+                  :key="person.id"
+                  :value="person.id"
+                >
                   {{ person.name }}
                 </a-select-option>
               </a-select>
             </a-form-item>
 
             <a-form-item label="研发负责人" name="rd_admins">
-              <a-select v-model:value="editForm.rd_admins" mode="multiple" placeholder="请选择研发负责人">
-                <a-select-option v-for="person in availableRdAdmins" :key="person.id" :value="person.id">
+              <a-select
+                v-model:value="editForm.rd_admins"
+                mode="multiple"
+                placeholder="请选择研发负责人"
+              >
+                <a-select-option
+                  v-for="person in availableRdAdmins"
+                  :key="person.id"
+                  :value="person.id"
+                >
                   {{ person.name }}
                 </a-select-option>
               </a-select>
             </a-form-item>
 
             <a-form-item label="研发工程师" name="rd_members">
-              <a-select v-model:value="editForm.rd_members" mode="multiple" placeholder="请选择研发工程师">
-                <a-select-option v-for="person in availableRdMembers" :key="person.id" :value="person.id">
+              <a-select
+                v-model:value="editForm.rd_members"
+                mode="multiple"
+                placeholder="请选择研发工程师"
+              >
+                <a-select-option
+                  v-for="person in availableRdMembers"
+                  :key="person.id"
+                  :value="person.id"
+                >
                   {{ person.name }}
                 </a-select-option>
               </a-select>
@@ -76,6 +123,11 @@ const columns = [
     title: '节点名称',
     dataIndex: 'title',
     key: 'title',
+  },
+  {
+    title: 'ID',
+    dataIndex: 'ID',
+    key: 'ID',
   },
   {
     title: '层级',
@@ -146,7 +198,9 @@ const availableRdMembers = [
 // 处理搜索
 const handleSearch = () => {
   const searchValue = searchText.value.trim().toLowerCase();
-  filteredData.value = data.filter(item => item.title.toLowerCase().includes(searchValue));
+  filteredData.value = data.filter((item) =>
+    item.title.toLowerCase().includes(searchValue),
+  );
 };
 
 const handleDeleteNode = (record: TreeNode) => {
@@ -162,7 +216,7 @@ const handleDeleteNode = (record: TreeNode) => {
         await deleteTreeNode(record.ID); // 假设 key 是节点的唯一标识
 
         // 从前端数据中删除节点
-        const index = data.findIndex(item => item.key === record.key);
+        const index = data.findIndex((item) => item.key === record.key);
         if (index !== -1) {
           data.splice(index, 1);
           handleSearch(); // 更新过滤后的数据
@@ -173,7 +227,7 @@ const handleDeleteNode = (record: TreeNode) => {
         message.error(String(err.message));
       }
     },
-    onCancel() { 
+    onCancel() {
       console.log('取消删除');
     },
   });
@@ -186,7 +240,7 @@ const handleEditNode = (record: TreeNode) => {
   editForm.title = record.title;
   editForm.desc = record.desc;
   editForm.ops_admins = [...record.ops_admins]; // 复制运维负责人
-  editForm.rd_admins = [...record.rd_admins];   // 复制研发负责人
+  editForm.rd_admins = [...record.rd_admins]; // 复制研发负责人
   editForm.rd_members = [...record.rd_members]; // 复制研发工程师
 
   // 显示模态框
@@ -201,7 +255,7 @@ const handleSaveNode = async () => {
 
     // 更新成功后显示成功消息
     message.success('节点信息已保存');
-    
+
     // 关闭模态框
     isEditModalVisible.value = false;
 
@@ -220,13 +274,15 @@ const handleCancel = () => {
 };
 
 onMounted(() => {
-  getAllTreeNodes().then(response => {
-    data.splice(0, data.length, ...response);  // 替换 reactive 对象中的数据
-    filteredData.value = data;  // 初始化时，将 filteredData 设置为 data
-  }).catch(error => {
-    message.error('获取树数据失败');
-    console.error(error);
-  });
+  getAllTreeNodes()
+    .then((response) => {
+      data.splice(0, data.length, ...response); // 替换 reactive 对象中的数据
+      filteredData.value = data; // 初始化时，将 filteredData 设置为 data
+    })
+    .catch((error) => {
+      message.error('获取树数据失败');
+      console.error(error);
+    });
 });
 
 // 获取所有节点数据并更新页面
