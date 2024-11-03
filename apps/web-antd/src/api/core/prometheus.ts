@@ -214,6 +214,19 @@ export interface updateAlertManagerRecordReq {
   expr: string;
 }
 
+export interface getOnDutyFuturePlan {
+  ID: number;
+  startTime: string;
+  endTime: string;
+}
+
+export interface createOnDutychangeItem {
+  onDutyGroupId: number;
+  date: string;
+  originUserId: number;
+  onDutyUserId: number;
+}
+
 export const getMonitorScrapePoolApi = () => {
   return requestClient.get<MonitorScrapePoolItem[]>('/monitor/scrape_pools');
 };
@@ -320,4 +333,32 @@ export const updateRecordRuleApi = (data: updateAlertManagerRecordReq) => {
 
 export const deleteRecordRuleApi = (id: number) => {
   return requestClient.delete(`/monitor/record_rules/${id}`);
+};
+
+export const getAllOnDutyApi = () => {
+  return requestClient.get('/monitor/onDuty_groups/list');
+};
+
+export const getOnDutyApi = (id: number) => {
+  return requestClient.get(`/monitor/onDuty_groups/${id}`);
+};
+
+export const createOnDutyApi = (data: any) => {
+  return requestClient.post('/monitor/onDuty_groups/create', data);
+};
+
+export const updateOnDutyApi = (data: any) => {
+  return requestClient.post('/monitor/onDuty_groups/update', data);
+};
+
+export const deleteOnDutyApi = (id: number) => {
+  return requestClient.delete(`/monitor/onDuty_groups/${id}`);
+};
+
+export const getOnDutyFuturePlanApi = (data: getOnDutyFuturePlan) => {
+  return requestClient.post('/monitor/onDuty_groups/future_plan', data);
+};
+
+export const createOnDutyChangeApi = (data: createOnDutychangeItem) => {
+  return requestClient.post('/monitor/onDuty_groups/changes', data);
 };

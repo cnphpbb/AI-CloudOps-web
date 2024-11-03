@@ -1,4 +1,4 @@
-import {baseRequestClient, requestClient} from '#/api/request';
+import { baseRequestClient, requestClient } from '#/api/request';
 
 export namespace AuthApi {
   /** 登录接口参数 */
@@ -40,7 +40,7 @@ export async function loginApi(data: AuthApi.LoginParams) {
 export async function refreshTokenApi(data: AuthApi.RefreshTokenParams) {
   return baseRequestClient.post<AuthApi.RefreshTokenResult>(
     '/user/refresh_token',
-    data,  // 直接传递 data 对象
+    data, // 直接传递 data 对象
     {
       withCredentials: true,
     },
@@ -62,3 +62,7 @@ export async function logoutApi() {
 export async function getAccessCodesApi() {
   return requestClient.get<string[]>('/user/codes');
 }
+
+export const getUserList = () => {
+  return requestClient.get('/user/list');
+};

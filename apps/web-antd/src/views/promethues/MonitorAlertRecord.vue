@@ -97,7 +97,6 @@
         <a-form-item
           label="树节点"
           name="TreeNodeID"
-          :rules="[{ required: true, message: '请选择树节点' }]"
         >
           <a-select
             v-model:value="addForm.treeNodeId"
@@ -132,7 +131,6 @@
         <a-form-item
           label="持续时间"
           name="forTime"
-          :rules="[{ required: true, message: '请输入持续时间' }]"
         >
           <a-input v-model:value="addForm.forTime" placeholder="例如: 15s" />
         </a-form-item>
@@ -140,7 +138,6 @@
         <a-form-item
           label="表达式"
           name="expr"
-          :rules="[{ required: true, message: '请输入表达式' }]"
         >
           <a-input v-model:value="addForm.expr" placeholder="请输入表达式" />
         </a-form-item>
@@ -206,11 +203,7 @@
           </a-select>
         </a-form-item>
 
-        <a-form-item
-          label="树节点"
-          name="TreeNodeID"
-          :rules="[{ required: true, message: '请选择树节点' }]"
-        >
+        <a-form-item label="树节点" name="TreeNodeID">
           <a-select
             v-model:value="editForm.treeNodeId"
             placeholder="请选择树节点"
@@ -244,7 +237,6 @@
         <a-form-item
           label="持续时间"
           name="forTime"
-          :rules="[{ required: true, message: '请输入持续时间' }]"
         >
           <a-input v-model:value="editForm.forTime" placeholder="例如: 15s" />
         </a-form-item>
@@ -252,7 +244,6 @@
         <a-form-item
           label="表达式"
           name="expr"
-          :rules="[{ required: true, message: '请输入表达式' }]"
         >
           <a-input v-model:value="editForm.expr" placeholder="请输入表达式" />
         </a-form-item>
@@ -490,9 +481,9 @@ const handleAdd = async () => {
     loading.value = true;
     await createRecordRuleApi(payload); // 调用创建 API
     loading.value = false;
-      message.success('新增记录规则成功');
-      fetchRecordRules();
-      closeAddModal();
+    message.success('新增记录规则成功');
+    fetchRecordRules();
+    closeAddModal();
   } catch (error) {
     loading.value = false;
     message.error('新增记录规则失败，请稍后重试');
@@ -530,9 +521,9 @@ const handleUpdate = async () => {
     loading.value = true;
     await updateRecordRuleApi(payload); // 调用更新 API
     loading.value = false;
-      message.success('更新记录规则成功');
-      fetchRecordRules();
-      closeEditModal();
+    message.success('更新记录规则成功');
+    fetchRecordRules();
+    closeEditModal();
   } catch (error) {
     loading.value = false;
     message.error('更新记录规则失败，请稍后重试');
@@ -552,8 +543,8 @@ const handleDelete = (record: RecordRule) => {
         loading.value = true;
         await deleteRecordRuleApi(record.ID); // 调用删除 API
         loading.value = false;
-          message.success('记录规则已删除');
-          fetchRecordRules();
+        message.success('记录规则已删除');
+        fetchRecordRules();
       } catch (error) {
         loading.value = false;
         message.error('删除记录规则失败，请稍后重试');
@@ -567,7 +558,7 @@ const handleDelete = (record: RecordRule) => {
 const fetchRecordRules = async () => {
   try {
     const response = await getRecordRulesApi(); // 调用获取数据 API
-      data.value = response;
+    data.value = response;
   } catch (error) {
     loading.value = false;
     message.error('获取记录规则数据失败，请稍后重试');
@@ -579,7 +570,7 @@ const fetchRecordRules = async () => {
 const fetchPools = async () => {
   try {
     const response = await getMonitorScrapePoolApi(); // 调用获取实例池 API
-      poolOptions.value = response;
+    poolOptions.value = response;
   } catch (error) {
     message.error('获取实例池数据失败，请稍后重试');
     console.error(error);
@@ -590,7 +581,7 @@ const fetchPools = async () => {
 const fetchTreeNodes = async () => {
   try {
     const response = await getAllTreeNodes(); // 调用获取树节点 API
-      treeNodeOptions.value = response;
+    treeNodeOptions.value = response;
   } catch (error) {
     message.error('获取树节点数据失败，请稍后重试');
     console.error(error);
@@ -606,7 +597,7 @@ const validateAddExpression = async () => {
     }
     const payload = { promqlExpr: addForm.expr };
     await validateExprApi(payload); // 调用验证 API
-      message.success('表达式验证成功');
+    message.success('表达式验证成功');
   } catch (error) {
     message.error('表达式验证失败，请稍后重试');
     console.error(error);
@@ -622,7 +613,7 @@ const validateEditExpression = async () => {
     }
     const payload = { promqlExpr: editForm.expr };
     await validateExprApi(payload); // 调用验证 API
-      message.success('表达式验证成功');
+    message.success('表达式验证成功');
   } catch (error) {
     message.error('表达式验证失败，请稍后重试');
     console.error(error);
