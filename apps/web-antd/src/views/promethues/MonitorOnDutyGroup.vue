@@ -13,11 +13,11 @@
       </div>
       <!-- 操作按钮 -->
       <div class="action-buttons">
-        <a-button type="primary" @click="showAddModal">新增换班记录</a-button>
+        <a-button type="primary" @click="showAddModal">新增值班组</a-button>
       </div>
     </div>
 
-    <!-- 值班换班记录列表表格 -->
+    <!-- 值班组记录列表表格 -->
     <a-table
       :columns="columns"
       :data-source="filteredData"
@@ -27,19 +27,19 @@
       <template #action="{ record }">
         <a-space>
           <a-button type="link" @click="showEditModal(record)"
-            >编辑换班记录</a-button
+            >编辑值班组</a-button
           >
           <a-button type="link" @click="viewSchedule(record)"
             >查看排班表</a-button
           >
           <a-button type="link" danger @click="handleDelete(record)"
-            >删除换班记录</a-button
+            >删除值班组</a-button
           >
         </a-space>
       </template>
     </a-table>
 
-    <!-- 新增换班记录模态框 -->
+    <!-- 新增值班组模态框 -->
     <a-modal
       title="新增换班记录"
       v-model:visible="isAddModalVisible"
@@ -82,9 +82,9 @@
       </a-form>
     </a-modal>
 
-    <!-- 编辑换班记录模态框 -->
+    <!-- 编辑值班组记录模态框 -->
     <a-modal
-      title="编辑换班记录"
+      title="编辑值班组"
       v-model:visible="isEditModalVisible"
       @ok="handleUpdate"
       @cancel="closeEditModal"
@@ -131,12 +131,13 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  getOnDutyChangesApi,
-  createOnDutyChangeApi,
-  updateOnDutyChangeApi,
-  deleteOnDutyChangeApi,
+  getAllOnDutyApi,
+  createOnDutyApi,
+  updateOnDutyApi,
+  deleteOnDutyApi,
   getUserList
 } from '#/api'; // 请根据实际路径调整
+import { useRouter } from 'vue-router'; // 导入 Vue Router 的 useRouter
 
 // 定义数据类型
 interface OnDutyChange {
@@ -147,7 +148,8 @@ interface OnDutyChange {
   userId: number; // 创建者用户名
   CreatedAt: string; // 创建时间
 }
-
+// 在脚本中定义 router
+const router = useRouter();
 // 数据源
 const data = ref<OnDutyChange[]>([]);
 
@@ -281,12 +283,12 @@ const handleAdd = async () => {
       userNames: addForm.userNames,
     };
 
-    await createOnDutyChangeApi(payload); // 调用创建 API
-    message.success('新增换班记录成功');
+    await createOnDutyApi(payload); // 调用创建 API
+    message.success('新增值班组成功');
     fetchOnDutyChanges();
     closeAddModal();
   } catch (error) {
-    message.error('新增换班记录失败，请稍后重试');
+    message.error('新增值班组失败，请稍后重试');
     console.error(error);
   }
 };
@@ -308,15 +310,15 @@ const handleUpdate = async () => {
     };
 
     loading.value = true;
-    await updateOnDutyChangeApi(payload); // 调用更新 API
+    await updateOnDutyApi(payload); // 调用更新 API
     loading.value = false;
 
-      message.success('更新换班记录成功');
+      message.success('更新值班组成功');
       fetchOnDutyChanges();
       closeEditModal();
   } catch (error) {
     loading.value = false;
-    message.error('更新换班记录失败，请稍后重试');
+    message.error('更新值班组失败，请稍后重试');
     console.error(error);
   }
 };
@@ -331,13 +333,13 @@ const handleDelete = (record: OnDutyChange) => {
     onOk: async () => {
       try {
         loading.value = true;
-        await deleteOnDutyChangeApi(record.ID); // 调用删除 API
+        await deleteOnDutyApi(record.ID); // 调用删除 API
         loading.value = false;
-        message.success('换班记录已删除');
+        message.success('值班组已删除');
         fetchOnDutyChanges();
       } catch (error) {
         loading.value = false;
-        message.error('删除换班记录失败，请稍后重试');
+        message.error('删除值班组失败，请稍后重试');
         console.error(error);
       }
     },
@@ -354,19 +356,19 @@ const fetchUserList = async () => {
   }
 };
 
-// 查看排班表（具体实现根据需求调整）
+// 查看排班表
 const viewSchedule = (record: OnDutyChange) => {
-  // 这里可以跳转到查看排班表的页面或弹出排班表的对话框
-  message.info(`查看值班组 ${record.name} 的排班表`);
+  // 跳转到排班表页面并传递当前值班组的 ID
+  router.push({ name: 'MonitorOnDutyGroupTable', query: { id: record.ID } });
 };
 
 // 获取换班记录数据
 const fetchOnDutyChanges = async () => {
   try {
-    const response = await getOnDutyChangesApi();
+    const response = await getAllOnDutyApi();
     data.value = response;
   } catch (error) {
-    message.error('获取换班记录失败，请稍后重试');
+    message.error('获取值班组失败，请稍后重试');
     console.error(error);
   }
 };

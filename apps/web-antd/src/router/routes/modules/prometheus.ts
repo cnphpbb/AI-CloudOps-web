@@ -99,8 +99,9 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/views/promethues/MonitorOnDutyGroupTable.vue'),
         meta: {
+          hideInMenu: true,
           title: "排班表",
-          icon: 'lucide:user-round-minus'
+          icon: 'material-symbols:table-outline'
         },
       },
       {
