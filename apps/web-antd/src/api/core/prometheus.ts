@@ -1,5 +1,4 @@
 import { requestClient } from '#/api/request';
-import { interaction } from '@antv/g2plot/lib/adaptor/common';
 
 export interface MonitorScrapePoolItem {
   ID: number;
@@ -227,6 +226,41 @@ export interface createOnDutychangeItem {
   onDutyUserId: number;
 }
 
+export interface createSendGroupReq {
+  name: string;
+  nameZh: string;
+  enable: number;
+  poolId: number;
+  onDutyGroupId: number;
+  staticReceiveUsers: string[];
+  feiShuQunRobotToken: string; 
+  repeatInterval: string; 
+  sendResolved: number;
+  notifyMethods: string[];
+  needUpgrade: number;
+  firstUpgradeUsers: string[];
+  upgradeMinutes: number;
+  secondUpgradeUsers: string[];
+}
+
+export interface updateSendGroupReq {
+  ID: number;
+  name: string;
+  nameZh: string;
+  enable: number;
+  poolId: number;
+  onDutyGroupId: number;
+  staticReceiveUsers: string[];
+  feiShuQunRobotToken: string; 
+  repeatInterval: string; 
+  sendResolved: number;
+  notifyMethods: string[];
+  needUpgrade: number;
+  firstUpgradeUsers: string[];
+  upgradeMinutes: number;
+  secondUpgradeUsers: string[];
+}
+
 export const getMonitorScrapePoolApi = () => {
   return requestClient.get<MonitorScrapePoolItem[]>('/monitor/scrape_pools');
 };
@@ -361,4 +395,20 @@ export const getOnDutyFuturePlanApi = (data: getOnDutyFuturePlan) => {
 
 export const createOnDutyChangeApi = (data: createOnDutychangeItem) => {
   return requestClient.post('/monitor/onDuty_groups/changes', data);
+};
+
+export const getMonitorSendGroupApi = () => {
+  return requestClient.get('/monitor/send_groups/list');
+};
+
+export const createMonitorSendGroupApi = (data: createSendGroupReq) => {
+  return requestClient.post('/monitor/send_groups/create', data);
+};
+
+export const updateMonitorSendGroupApi = (data: updateSendGroupReq) => {
+  return requestClient.post('/monitor/send_groups/update', data);
+};
+
+export const deleteMonitorSendGroupApi = (id: number) => {
+  return requestClient.delete(`/monitor/send_groups/${id}`);
 };
