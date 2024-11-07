@@ -6,7 +6,11 @@
       <!-- 查询功能 -->
       <div class="search-filters">
         <!-- 搜索输入框 -->
-        <a-input v-model="searchText" placeholder="请输入AlertRule名称" style="width: 200px; margin-right: 16px;" />
+        <a-input
+          v-model="searchText"
+          placeholder="请输入AlertRule名称"
+          style="width: 200px; margin-right: 16px"
+        />
       </div>
       <!-- 操作按钮 -->
       <div class="action-buttons">
@@ -15,10 +19,10 @@
     </div>
 
     <!-- AlertRule 列表表格 -->
-    <a-table :columns="columns" :data-source="filteredData" row-key="ID">
+    <a-table :columns="columns" :data-source="filteredData" row-key="id">
       <!-- 表达式列 -->
       <template #expr="{ record }">
-        <div style="max-width: 300px; word-break: break-all;">
+        <div style="max-width: 300px; word-break: break-all">
           {{ record.expr }}
         </div>
       </template>
@@ -30,7 +34,11 @@
       </template>
       <!-- 注解列 -->
       <template #annotations="{ record }">
-        <a-tag v-for="annotation in record.annotations" :key="annotation" color="orange">
+        <a-tag
+          v-for="annotation in record.annotations"
+          :key="annotation"
+          color="orange"
+        >
           {{ annotation }}
         </a-tag>
       </template>
@@ -51,36 +59,71 @@
       <template #action="{ record }">
         <a-space>
           <a-button type="link" @click="showEditModal(record)">编辑</a-button>
-          <a-button type="link" danger @click="handleDelete(record)">删除</a-button>
+          <a-button type="link" danger @click="handleDelete(record)"
+            >删除</a-button
+          >
         </a-space>
       </template>
     </a-table>
 
     <!-- 新增AlertRule模态框 -->
-    <a-modal title="新增AlertRule" v-model:visible="isAddModalVisible" @ok="handleAdd" @cancel="closeAddModal"
-      :confirmLoading="loading">
+    <a-modal
+      title="新增AlertRule"
+      v-model:visible="isAddModalVisible"
+      @ok="handleAdd"
+      @cancel="closeAddModal"
+      :confirmLoading="loading"
+    >
       <a-form :model="addForm" layout="vertical">
-        <a-form-item label="名称" name="name" :rules="[{ required: true, message: '请输入名称' }]">
+        <a-form-item
+          label="名称"
+          name="name"
+          :rules="[{ required: true, message: '请输入名称' }]"
+        >
           <a-input v-model:value="addForm.name" placeholder="请输入名称" />
         </a-form-item>
 
-        <a-form-item label="所属实例池ID" name="poolId" :rules="[{ required: true, message: '请输入所属实例池ID' }]">
-          <a-input-number v-model:value="addForm.poolId" style="width: 100%;" placeholder="请输入所属实例池ID" />
+        <a-form-item
+          label="所属实例池ID"
+          name="poolId"
+          :rules="[{ required: true, message: '请输入所属实例池ID' }]"
+        >
+          <a-input-number
+            v-model:value="addForm.poolId"
+            style="width: 100%"
+            placeholder="请输入所属实例池ID"
+          />
         </a-form-item>
 
         <a-form-item label="发送组ID" name="sendGroupId">
-          <a-input-number v-model:value="addForm.sendGroupId" style="width: 100%;" placeholder="请输入发送组ID" />
+          <a-input-number
+            v-model:value="addForm.sendGroupId"
+            style="width: 100%"
+            placeholder="请输入发送组ID"
+          />
         </a-form-item>
 
         <a-form-item label="树节点" name="treeNodeId">
-          <a-select v-model:value="addForm.treeNodeId" placeholder="请选择树节点" style="width: 100%;">
-            <a-select-option v-for="node in treeNodes" :key="node.ID" :value="node.ID">
+          <a-select
+            v-model:value="addForm.treeNodeId"
+            placeholder="请选择树节点"
+            style="width: 100%"
+          >
+            <a-select-option
+              v-for="node in treeNodes"
+              :key="node.id"
+              :value="node.id"
+            >
               {{ node.title }}
             </a-select-option>
           </a-select>
         </a-form-item>
 
-        <a-form-item label="启用" name="enable" :rules="[{ required: true, message: '请选择是否启用' }]">
+        <a-form-item
+          label="启用"
+          name="enable"
+          :rules="[{ required: true, message: '请选择是否启用' }]"
+        >
           <a-switch v-model:checked="addForm.enable" />
         </a-form-item>
         <a-form-item label="表达式" name="expr">
@@ -88,7 +131,9 @@
         </a-form-item>
 
         <a-form-item>
-          <a-button type="primary" @click="validateAddExpression(addForm.expr)">验证表达式</a-button>
+          <a-button type="primary" @click="validateAddExpression(addForm.expr)"
+            >验证表达式</a-button
+          >
         </a-form-item>
 
         <a-form-item label="严重性" name="severity">
@@ -103,39 +148,81 @@
           <a-input v-model:value="addForm.forTime" placeholder="例如: 10s" />
         </a-form-item>
         <a-form-item label="标签" name="labels">
-          <a-select mode="tags" v-model:value="addForm.labels" placeholder="请输入标签，例如 key=value" />
+          <a-select
+            mode="tags"
+            v-model:value="addForm.labels"
+            placeholder="请输入标签，例如 key=value"
+          />
         </a-form-item>
         <a-form-item label="注解" name="annotations">
-          <a-select mode="tags" v-model:value="addForm.annotations" placeholder="请输入注解" />
+          <a-select
+            mode="tags"
+            v-model:value="addForm.annotations"
+            placeholder="请输入注解"
+          />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- 编辑AlertRule模态框 -->
-    <a-modal title="编辑AlertRule" v-model:visible="isEditModalVisible" @ok="handleEdit" @cancel="closeEditModal"
-      :confirmLoading="loading">
+    <a-modal
+      title="编辑AlertRule"
+      v-model:visible="isEditModalVisible"
+      @ok="handleEdit"
+      @cancel="closeEditModal"
+      :confirmLoading="loading"
+    >
       <a-form :model="editForm" layout="vertical">
-        <a-form-item label="名称" name="name" :rules="[{ required: true, message: '请输入名称' }]">
+        <a-form-item
+          label="名称"
+          name="name"
+          :rules="[{ required: true, message: '请输入名称' }]"
+        >
           <a-input v-model:value="editForm.name" placeholder="请输入名称" />
         </a-form-item>
 
-        <a-form-item label="所属实例池ID" name="poolId" :rules="[{ required: true, message: '请输入所属实例池ID' }]">
-          <a-input-number v-model:value="editForm.poolId" style="width: 100%;" placeholder="请输入所属实例池ID" />
+        <a-form-item
+          label="所属实例池ID"
+          name="poolId"
+          :rules="[{ required: true, message: '请输入所属实例池ID' }]"
+        >
+          <a-input-number
+            v-model:value="editForm.poolId"
+            style="width: 100%"
+            placeholder="请输入所属实例池ID"
+          />
         </a-form-item>
 
         <a-form-item label="发送组ID" name="sendGroupId">
-          <a-input-number v-model:value="editForm.sendGroupId" style="width: 100%;" placeholder="请输入发送组ID" />
+          <a-input-number
+            v-model:value="editForm.sendGroupId"
+            style="width: 100%"
+            placeholder="请输入发送组ID"
+          />
         </a-form-item>
 
         <a-form-item label="树节点" name="treeNodeId">
-          <a-select v-model:value="editForm.treeNodeId" placeholder="请选择树节点" style="width: 100%;" show-search
-            optionFilterProp="children">
-            <a-select-option v-for="node in treeNodes" :key="node.ID" :value="node.ID">
+          <a-select
+            v-model:value="editForm.treeNodeId"
+            placeholder="请选择树节点"
+            style="width: 100%"
+            show-search
+            optionFilterProp="children"
+          >
+            <a-select-option
+              v-for="node in treeNodes"
+              :key="node.id"
+              :value="node.id"
+            >
               {{ node.title }}
             </a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="启用" name="enable" :rules="[{ required: true, message: '请选择是否启用' }]">
+        <a-form-item
+          label="启用"
+          name="enable"
+          :rules="[{ required: true, message: '请选择是否启用' }]"
+        >
           <a-switch v-model:checked="editForm.enable" />
         </a-form-item>
         <a-form-item label="表达式" name="expr">
@@ -143,11 +230,16 @@
         </a-form-item>
 
         <a-form-item>
-          <a-button type="primary" @click="validateEditExpression">验证表达式</a-button>
+          <a-button type="primary" @click="validateEditExpression"
+            >验证表达式</a-button
+          >
         </a-form-item>
 
         <a-form-item label="严重性" name="severity">
-          <a-select v-model:value="editForm.severity" placeholder="请选择严重性">
+          <a-select
+            v-model:value="editForm.severity"
+            placeholder="请选择严重性"
+          >
             <a-select-option value="critical">Critical</a-select-option>
             <a-select-option value="warning">Warning</a-select-option>
             <a-select-option value="info">Info</a-select-option>
@@ -158,13 +250,20 @@
           <a-input v-model:value="editForm.forTime" placeholder="例如: 10s" />
         </a-form-item>
         <a-form-item label="标签" name="labels">
-          <a-select mode="tags" v-model:value="editForm.labels" placeholder="请输入标签，例如 key=value" />
+          <a-select
+            mode="tags"
+            v-model:value="editForm.labels"
+            placeholder="请输入标签，例如 key=value"
+          />
         </a-form-item>
 
         <a-form-item label="注解" name="annotations">
-          <a-select mode="tags" v-model:value="editForm.annotations" placeholder="请输入注解" />
+          <a-select
+            mode="tags"
+            v-model:value="editForm.annotations"
+            placeholder="请输入注解"
+          />
         </a-form-item>
-
       </a-form>
     </a-modal>
   </div>
@@ -179,12 +278,12 @@ import {
   updateAlertRuleApi,
   deleteAlertRuleApi,
   getAllTreeNodes,
-  validateExprApi
+  validateExprApi,
 } from '#/api'; // 请根据实际路径调整
 
 // 定义数据类型
 interface AlertRule {
-  ID: number;
+  id: number;
   name: string;
   userId: number;
   poolId: number;
@@ -201,13 +300,12 @@ interface AlertRule {
 }
 // 定义树节点数据类型
 interface TreeNode {
-  ID: number;
+  id: number;
   title: string;
 }
 
 // 树节点数据源
 const treeNodes = ref<TreeNode[]>([]);
-
 
 // 数据源
 const data = ref<AlertRule[]>([]);
@@ -221,8 +319,8 @@ const loading = ref(false);
 // 过滤后的数据
 const filteredData = computed(() => {
   const searchValue = searchText.value.trim().toLowerCase();
-  return data.value.filter(item =>
-    item.name.toLowerCase().includes(searchValue)
+  return data.value.filter((item) =>
+    item.name.toLowerCase().includes(searchValue),
   );
 });
 
@@ -237,14 +335,13 @@ const fetchTreeNodes = async () => {
   }
 };
 
-
 // 表格列配置
 const columns = [
   {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
-    sorter: (a: AlertRule, b: AlertRule) => a.ID - b.ID,
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
+    sorter: (a: AlertRule, b: AlertRule) => a.id - b.id,
   },
   {
     title: '名称',
@@ -275,7 +372,8 @@ const columns = [
     dataIndex: 'severity',
     key: 'severity',
     slots: { customRender: 'severity' },
-    sorter: (a: AlertRule, b: AlertRule) => a.severity.localeCompare(b.severity),
+    sorter: (a: AlertRule, b: AlertRule) =>
+      a.severity.localeCompare(b.severity),
   },
   {
     title: '持续时间',
@@ -334,7 +432,7 @@ const addForm = reactive({
 
 // 编辑表单
 const editForm = reactive({
-  ID: 0,
+  id: 0,
   name: '',
   poolId: null as number | null,
   sendGroupId: null as number | null,
@@ -367,8 +465,6 @@ const resetAddForm = () => {
   addForm.annotations = [];
 };
 
-
-
 // 关闭新增模态框
 const closeAddModal = () => {
   isAddModalVisible.value = false;
@@ -377,7 +473,7 @@ const closeAddModal = () => {
 // 显示编辑模态框
 const showEditModal = (record: AlertRule) => {
   Object.assign(editForm, {
-    ID: record.ID,
+    id: record.id,
     name: record.name,
     poolId: record.poolId,
     sendGroupId: record.sendGroupId,
@@ -427,15 +523,11 @@ const handleAdd = async () => {
       annotations: addForm.annotations,
     };
     loading.value = true;
-    const response = await createAlertRuleApi(payload); // 调用创建 API
+    await createAlertRuleApi(payload); // 调用创建 API
     loading.value = false;
-    if (response.code === 0) {
-      message.success('新增AlertRule成功');
-      fetchAlertRules();
-      closeAddModal();
-    } else {
-      message.error(`新增AlertRule失败: ${response.message}`);
-    }
+    message.success('新增AlertRule成功');
+    fetchAlertRules();
+    closeAddModal();
   } catch (error) {
     loading.value = false;
     message.error('新增AlertRule失败，请稍后重试');
@@ -446,16 +538,13 @@ const handleAdd = async () => {
 // 提交更新AlertRule
 const handleEdit = async () => {
   try {
-    if (
-      editForm.name === '' ||
-      editForm.poolId === null
-    ) {
+    if (editForm.name === '' || editForm.poolId === null) {
       message.error('请填写所有必填项');
       return;
     }
 
     const payload = {
-      ID: editForm.ID,
+      id: editForm.id,
       name: editForm.name,
       poolId: editForm.poolId,
       sendGroupId: editForm.sendGroupId || 0,
@@ -468,9 +557,9 @@ const handleEdit = async () => {
       annotations: editForm.annotations,
     };
     await updateAlertRuleApi(payload); // 调用更新 API
-      message.success('更新AlertRule成功');
-      fetchAlertRules();
-      closeEditModal();
+    message.success('更新AlertRule成功');
+    fetchAlertRules();
+    closeEditModal();
   } catch (error) {
     message.error('更新AlertRule失败，请稍后重试');
     console.error(error);
@@ -489,7 +578,7 @@ const handleDelete = (record: AlertRule) => {
     onOk: async () => {
       try {
         loading.value = true;
-        const response = await deleteAlertRuleApi(record.ID); // 调用删除 API
+        const response = await deleteAlertRuleApi(record.id); // 调用删除 API
         loading.value = false;
         if (response.code === 0) {
           message.success('AlertRule已删除');
@@ -535,7 +624,7 @@ const validateAddExpression = async (expr: string) => {
   try {
     const payload = { promqlExpr: expr };
     const result = await validateExprApi(payload);
-    message.success("验证表达式成功", result.message);
+    message.success('验证表达式成功', result.message);
     return true;
   } catch (error) {
     message.error('验证表达式失败，请检查后重试');
@@ -544,13 +633,12 @@ const validateAddExpression = async (expr: string) => {
   }
 };
 
-
 // 验证表达式的方法（编辑）
 const validateEditExpression = async () => {
   try {
     const payload = { promqlExpr: editForm.expr };
     const result = await validateExprApi(payload);
-    message.success("验证表达式成功", result.message);
+    message.success('验证表达式成功', result.message);
     return true;
   } catch (error) {
     message.error('验证表达式失败，请稍后重试');

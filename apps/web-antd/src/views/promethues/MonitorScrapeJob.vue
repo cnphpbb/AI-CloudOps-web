@@ -16,7 +16,7 @@
     <!-- 数据加载状态 -->
     <a-spin :spinning="loading">
       <!-- 采集任务列表表格 -->
-      <a-table :columns="columns" :data-source="filteredData" row-key="ID">
+      <a-table :columns="columns" :data-source="filteredData" row-key="id">
         <!-- 服务发现类型列 -->
         <template #serviceDiscoveryType="{ record }">
           {{ record.serviceDiscoveryType === 'k8s' ? 'Kubernetes' : 'HTTP' }}
@@ -212,7 +212,7 @@ import {
 
 // 定义数据类型
 interface ScrapeJob {
-  ID: number;
+  id: number;
   CreatedAt: string;
   UpdatedAt: string;
   DeletedAt: string | null;
@@ -257,9 +257,9 @@ const filteredData = computed(() => {
 // 表格列配置
 const columns = [
   {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
   },
   {
     title: '采集任务名称',
@@ -358,7 +358,7 @@ const addForm = reactive({
 });
 
 const editForm = reactive({
-  ID: 0,
+  id: 0,
   name: '',
   enable: 1,
   serviceDiscoveryType: 'http',
@@ -409,7 +409,7 @@ const fetchPools = async () => {
   try {
     const response = await getMonitorScrapePoolApi();
     pools.value = response.map((pool: any) => ({
-      id: pool.ID,
+      id: pool.id,
       name: pool.name,
     }));
   } catch (error) {
@@ -423,7 +423,7 @@ const fetchTreeNodes = async () => {
   try {
     const response = await getAllTreeNodes();
     treeNodeOptions.value = response.map((node: any) => ({
-      id: node.ID,
+      id: node.id,
       title: node.name || node.title, // 根据实际数据结构调整
     }));
   } catch (error) {
@@ -530,7 +530,7 @@ const handleAdd = async () => {
 const openEditModal = (record: ScrapeJob) => {
   currentRecord.value = record;
   Object.assign(editForm, {
-    ID: record.ID,
+    id: record.id,
     name: record.name,
     enable: record.enable,
     serviceDiscoveryType: record.serviceDiscoveryType,
@@ -578,7 +578,7 @@ const handleDelete = (record: ScrapeJob) => {
     content: `您确定要删除采集任务 "${record.name}" 吗？`,
     onOk: async () => {
       try {
-        await deleteScrapeJobApi(record.ID);
+        await deleteScrapeJobApi(record.id);
         message.success('删除采集任务成功');
         fetchResources(); // 重新获取数据
       } catch (error) {

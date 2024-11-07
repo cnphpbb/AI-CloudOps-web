@@ -1,7 +1,7 @@
 import { requestClient } from '#/api/request';
 
 export interface MonitorScrapePoolItem {
-  ID: number;
+  id: number;
   CreatedAt: string;
   UpdatedAt: string;
   name: string;
@@ -46,7 +46,7 @@ export interface createMonitorScrapePoolReq {
 }
 
 export interface updateMonitorScrapePoolReq {
-  ID: number;
+  id: number;
   name: string;
   prometheusInstances: string[];
   alertManagerInstances: string[];
@@ -64,7 +64,7 @@ export interface updateMonitorScrapePoolReq {
 }
 
 export interface MonitorScrapeJobItem {
-  ID: number;
+  id: number;
   CreatedAt: string;
   UpdatedAt: string;
   DeletedAt: string | null;
@@ -98,7 +98,7 @@ export interface createScrapeJobReq {
 }
 
 export interface editScrapeJobReq {
-  ID: number;
+  id: number;
   name: string;
   enable: number;
   serviceDiscoveryType: string;
@@ -137,7 +137,7 @@ export interface createAlertManagerPoolReq {
 }
 
 export interface editAlertManagerPoolReq {
-  ID: number;
+  id: number;
   name: string;
   alertManagerInstances: string[];
   resolveTimeout: string;
@@ -162,7 +162,7 @@ export interface createAlertRuleReq {
 }
 
 export interface updateAlertRuleReq {
-  ID: number;
+  id: number;
   name: string;
   poolId: number;
   sendGroupId: number;
@@ -180,7 +180,7 @@ export interface validateExprApiReq {
 }
 
 export interface MonitorAlertEventItem {
-  ID: number;
+  id: number;
   alertName: string;
   fingerprint: string;
   status: string;
@@ -203,7 +203,7 @@ export interface createAlertManagerRecordReq {
 }
 
 export interface updateAlertManagerRecordReq {
-  ID: number;
+  id: number;
   name: string;
   recordName: string;
   poolId: number;
@@ -214,7 +214,7 @@ export interface updateAlertManagerRecordReq {
 }
 
 export interface getOnDutyFuturePlan {
-  ID: number;
+  id: number;
   startTime: string;
   endTime: string;
 }
@@ -244,7 +244,7 @@ export interface createSendGroupReq {
 }
 
 export interface updateSendGroupReq {
-  ID: number;
+  id: number;
   name: string;
   nameZh: string;
   enable: number;

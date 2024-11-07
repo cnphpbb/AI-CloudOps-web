@@ -21,7 +21,7 @@
     <a-table
       :columns="columns"
       :data-source="filteredData"
-      row-key="ID"
+      row-key="id"
     >
       <!-- 操作列 -->
       <template #action="{ record }">
@@ -141,7 +141,7 @@ import { useRouter } from 'vue-router'; // 导入 Vue Router 的 useRouter
 
 // 定义数据类型
 interface OnDutyChange {
-  ID: number; // 换班记录ID
+  id: number; // 换班记录id
   name: string; // 值班组名称
   shiftDays: number; // 轮班周期（天）
   userNames: string[]; // 用户名称列表
@@ -175,10 +175,10 @@ const filteredData = computed(() => {
 // 表格列配置
 const columns = [
   {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
-    sorter: (a: OnDutyChange, b: OnDutyChange) => a.ID - b.ID,
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
+    sorter: (a: OnDutyChange, b: OnDutyChange) => a.id - b.id,
   },
   {
     title: '名称',
@@ -256,7 +256,7 @@ const closeAddModal = () => {
 
 // 显示编辑模态框
 const showEditModal = (record: OnDutyChange) => {
-  editForm.id = record.ID;
+  editForm.id = record.id;
   editForm.name = record.name;
   editForm.shiftDays = record.shiftDays;
   editForm.userNames = [...record.userNames];
@@ -333,7 +333,7 @@ const handleDelete = (record: OnDutyChange) => {
     onOk: async () => {
       try {
         loading.value = true;
-        await deleteOnDutyApi(record.ID); // 调用删除 API
+        await deleteOnDutyApi(record.id); // 调用删除 API
         loading.value = false;
         message.success('值班组已删除');
         fetchOnDutyChanges();
@@ -358,8 +358,8 @@ const fetchUserList = async () => {
 
 // 查看排班表
 const viewSchedule = (record: OnDutyChange) => {
-  // 跳转到排班表页面并传递当前值班组的 ID
-  router.push({ name: 'MonitorOnDutyGroupTable', query: { id: record.ID } });
+  // 跳转到排班表页面并传递当前值班组的 id
+  router.push({ name: 'MonitorOnDutyGroupTable', query: { id: record.id } });
 };
 
 // 获取换班记录数据

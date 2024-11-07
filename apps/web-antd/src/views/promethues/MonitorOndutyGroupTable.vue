@@ -138,13 +138,13 @@ const fetchDutySchedule = async () => {
 
   try {
     const currentMonthResponse = await getOnDutyFuturePlanApi({
-      ID: id,
+      id: id,
       startTime: startTime.toISOString().split('T')[0] as string,
       endTime: endTime.toISOString().split('T')[0] as string,
     });
 
     const previousMonthResponse = await getOnDutyFuturePlanApi({
-      ID: id,
+      id: id,
       startTime: previousMonthStartTime.toISOString().split('T')[0] as string,
       endTime: previousMonthEndTime.toISOString().split('T')[0] as string,
     });
@@ -161,7 +161,7 @@ const fetchDutySchedule = async () => {
       daysInMonth.value.push({
         date: dateStr,
         weekday: getWeekday(currentDate) as string,
-        userId: detail.user?.ID || null,
+        userId: detail.user?.id || null,
       });
     }
 
@@ -180,7 +180,7 @@ const fetchDutySchedule = async () => {
       previousMonthDays.value.unshift({
         date: dateStr,
         weekday: getWeekday(day) as string,
-        userId: detail.user?.ID || null,
+        userId: detail.user?.id || null,
       });
     }
   } catch (error) {
