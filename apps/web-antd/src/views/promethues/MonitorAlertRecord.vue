@@ -86,8 +86,8 @@
           >
             <a-select-option
               v-for="pool in poolOptions"
-              :key="pool.ID"
-              :value="pool.ID"
+              :key="pool.id"
+              :value="pool.id"
             >
               {{ pool.name }}
             </a-select-option>
@@ -105,8 +105,8 @@
           >
             <a-select-option
               v-for="node in treeNodeOptions"
-              :key="node.ID"
-              :value="node.ID"
+              :key="node.id"
+              :value="node.id"
             >
               {{ node.title }}
             </a-select-option>
@@ -195,8 +195,8 @@
           >
             <a-select-option
               v-for="pool in poolOptions"
-              :key="pool.ID"
-              :value="pool.ID"
+              :key="pool.id"
+              :value="pool.id"
             >
               {{ pool.name }}
             </a-select-option>
@@ -211,8 +211,8 @@
           >
             <a-select-option
               v-for="node in treeNodeOptions"
-              :key="node.ID"
-              :value="node.ID"
+              :key="node.id"
+              :value="node.id"
             >
               {{ node.title }}
             </a-select-option>
@@ -273,12 +273,12 @@ import {
 
 // 定义数据类型
 interface RecordRule {
-  ID: number; // 记录规则ID
+  id: number; // 记录规则id
   name: string; // 记录规则名称
   recordName: string; // 记录名称
-  poolId: number; // 关联的 Prometheus 实例池 ID
+  poolId: number; // 关联的 Prometheus 实例池 id
   poolName: string; // 关联的 Prometheus 实例池名称
-  treeNodeId: number; // 绑定的树节点ID
+  treeNodeId: number; // 绑定的树节点id
   enable: number; // 是否启用记录规则：1 启用，2 禁用
   expr: string; // 记录规则表达式
   forTime: string; // 持续时间，达到此时间才触发记录规则
@@ -288,12 +288,12 @@ interface RecordRule {
 
 // 定义 Pool 和 TreeNode 类型
 interface Pool {
-  ID: number;
+  id: number;
   name: string;
 }
 
 interface TreeNode {
-  ID: number;
+  id: number;
   title: string;
 }
 
@@ -321,10 +321,10 @@ const filteredData = computed(() => {
 // 表格列配置
 const columns = [
   {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
-    sorter: (a: RecordRule, b: RecordRule) => a.ID - b.ID,
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
+    sorter: (a: RecordRule, b: RecordRule) => a.id - b.id,
   },
   {
     title: '记录规则名称',
@@ -346,7 +346,7 @@ const columns = [
     sorter: (a: RecordRule, b: RecordRule) => a.poolId - b.poolId,
   },
   {
-    title: '绑定树节点ID',
+    title: '绑定树节点id',
     dataIndex: 'treeNodeId',
     key: 'treeNodeId',
     sorter: (a: RecordRule, b: RecordRule) => a.treeNodeId - b.treeNodeId,
@@ -400,7 +400,7 @@ const addForm = reactive({
 
 // 编辑表单
 const editForm = reactive({
-  ID: 0,
+  id: 0,
   name: '',
   recordName: '',
   poolId: null as number | null,
@@ -435,11 +435,11 @@ const closeAddModal = () => {
 // 显示编辑模态框
 const showEditModal = (record: RecordRule) => {
   Object.assign(editForm, {
-    ID: record.ID,
+    id: record.id,
     name: record.name,
     recordName: record.recordName,
     poolId: record.poolId,
-    TreeNodeID: record.treeNodeId,
+    TreeNodeid: record.treeNodeId,
     enable: record.enable,
     forTime: record.forTime,
     expr: record.expr,
@@ -508,7 +508,7 @@ const handleUpdate = async () => {
     }
 
     const payload = {
-      ID: editForm.ID,
+      id: editForm.id,
       name: editForm.name,
       recordName: editForm.recordName,
       poolId: editForm.poolId,
@@ -541,7 +541,7 @@ const handleDelete = (record: RecordRule) => {
     onOk: async () => {
       try {
         loading.value = true;
-        await deleteRecordRuleApi(record.ID); // 调用删除 API
+        await deleteRecordRuleApi(record.id); // 调用删除 API
         loading.value = false;
         message.success('记录规则已删除');
         fetchRecordRules();

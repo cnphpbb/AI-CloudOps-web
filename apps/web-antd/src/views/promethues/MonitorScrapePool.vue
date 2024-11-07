@@ -156,7 +156,7 @@ import { getMonitorScrapePoolApi, createMonitorScrapePoolApi, deleteMonitorScrap
 
 // 定义数据类型
 interface ScrapePool {
-  ID: number;
+  id: number;
   name: string;
   prometheusInstances: string[];
   alertManagerInstances: string[];
@@ -189,9 +189,9 @@ const filteredData = computed(() => {
 // 表格列配置
 const columns = [
   {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
   },
   {
     title: '采集池名称',
@@ -276,7 +276,7 @@ const resetAddForm = () => {
 // 编辑相关状态
 const isEditModalVisible = ref(false);
 const editForm = reactive({
-  ID: 0,
+  id: 0,
   name: '',
   scrapeInterval: 10,
   scrapeTimeout: 10,
@@ -302,7 +302,7 @@ const showAddModal = () => {
 // 显示编辑模态框
 const showEditModal = (record: ScrapePool) => {
   // 预填充表单数据
-  editForm.ID = record.ID;
+  editForm.id = record.id;
   editForm.name = record.name;
   editForm.scrapeInterval = record.scrapeInterval;
   editForm.scrapeTimeout = record.scrapeTimeout;
@@ -348,7 +348,7 @@ const handleDelete = (record: ScrapePool) => {
     onOk: async () => {
       try {
         // 调用删除采集池的 API
-        await deleteMonitorScrapePoolApi(record.ID);
+        await deleteMonitorScrapePoolApi(record.id);
         message.success('删除采集池成功');
         fetchResources(); // 重新获取数据，刷新列表
       } catch (error) {

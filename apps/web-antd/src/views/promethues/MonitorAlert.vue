@@ -128,7 +128,7 @@ import {
 
 // 定义数据类型
 interface AlertManagerPool {
-  ID: number;
+  id: number;
   name: string; 
   alertManagerInstances: string[]; 
   resolveTimeout: string; 
@@ -156,9 +156,9 @@ const filteredData = computed(() => {
 // 表格列配置
 const columns = [
 {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
   },
   {
     title: '实例池名称',
@@ -235,7 +235,7 @@ const addForm = reactive({
 // 编辑模态框状态和表单
 const isEditModalVisible = ref(false);
 const editForm = reactive({
-  ID: 0,
+  id: 0,
   key: '',
   name: '',
   alertManagerInstances: [] as string[],
@@ -296,7 +296,7 @@ const handleAdd = async () => {
 // 显示编辑模态框
 const showEditModal = (record: AlertManagerPool) => {
   // 预填充表单数据
-  editForm.ID = record.ID;
+  editForm.id = record.id;
   editForm.name = record.name;
   editForm.alertManagerInstances = record.alertManagerInstances;
   editForm.resolveTimeout = record.resolveTimeout;
@@ -305,7 +305,7 @@ const showEditModal = (record: AlertManagerPool) => {
   editForm.repeatInterval = record.repeatInterval;
   editForm.groupBy = record.groupBy;
   editForm.receiver = record.receiver;
-  console.log("record:::::", record.ID)
+  console.log("record:::::", record.id)
   isEditModalVisible.value = true;
 };
 
@@ -318,7 +318,7 @@ const closeEditModal = () => {
 const handleEdit = async () => {
   try {
     const payload = {
-      ID: editForm.ID,
+      id: editForm.id,
       name: editForm.name,
       alertManagerInstances: editForm.alertManagerInstances,
       resolveTimeout: editForm.resolveTimeout,
@@ -345,7 +345,7 @@ const handleDelete = (record: AlertManagerPool) => {
     content: `您确定要删除实例池 "${record.name}" 吗？`,
     onOk: async () => {
       try {
-        await deleteAlertManagerPoolApi(record.ID); // 调用删除 API
+        await deleteAlertManagerPoolApi(record.id); // 调用删除 API
         message.success('实例池已删除');
         fetchAlertManagerPools(); // 重新获取数据
       } catch (error) {

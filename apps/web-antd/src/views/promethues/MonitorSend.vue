@@ -107,9 +107,9 @@ import {
 
 const columns = [
   {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
   },
   {
     title: '发送组名称',
@@ -166,7 +166,7 @@ const columns = [
 ];
 
 interface SendGroup {
-  ID: number;
+  id: number;
   name: string;
   nameZh: string;
   enable: number;
@@ -196,7 +196,7 @@ const filteredData = computed(() => {
 
 const isModalVisible = ref(false);
 const form = reactive({
-  ID: 0,
+  id: 0,
   name: '',
   nameZh: '',
   enable: 0,
@@ -241,9 +241,9 @@ const rules = {
 const fetchUsers = async () => {
   try {
     const users = await getUserList(); // 调用获取用户的 API
-    userOptions.value = users.map((user: { username: any; ID: any }) => ({
+    userOptions.value = users.map((user: { username: any; id: any }) => ({
       label: user.username,
-      value: user.ID,
+      value: user.id,
     }));
   } catch (error) {
     message.error('获取用户列表失败');
@@ -273,7 +273,7 @@ const showEditModal = (record: SendGroup) => {
 
 const resetForm = () => {
   Object.assign(form, {
-    ID: 0,
+    id: 0,
     name: '',
     nameZh: '',
     enable: 1,
@@ -291,6 +291,7 @@ const resetForm = () => {
 const handleSubmit = async () => {
   try {
     const submitData = {
+      id : form.id,
       name: form.name,
       nameZh: form.nameZh,
       enable: parseInt(form.enable),
@@ -302,13 +303,13 @@ const handleSubmit = async () => {
       feiShuQunRobotToken: form.feiShuQunRobotToken,
     };
 
-    if (form.ID === 0) {
+    if (form.id === 0) {
       // 新增发送组
       await createMonitorSendGroupApi(submitData);
       message.success('新增发送组成功');
     } else {
-      // 编辑发送组，添加 ID 字段
-      submitData.ID = form.ID;
+      // 编辑发送组，添加 id 字段
+      submitData.id = form.id;
       await updateMonitorSendGroupApi(submitData);
       message.success('编辑发送组成功');
     }
@@ -328,7 +329,7 @@ const handleDelete = (record: SendGroup) => {
     onOk: async () => {
       try {
         // 删除逻辑，假设有一个 deleteMonitorSendGroupApi 方法
-        await deleteMonitorSendGroupApi(record.ID);
+        await deleteMonitorSendGroupApi(record.id);
         message.success('发送组已删除');
         fetchSendGroups(); // 刷新发送组列表
       } catch (error) {

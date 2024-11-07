@@ -27,7 +27,7 @@
     <a-table
       :columns="columns"
       :data-source="filteredData"
-      row-key="ID"
+      row-key="id"
       :loading="loading"
       pagination={{
         pageSize: 10,
@@ -66,16 +66,16 @@ import {
 
 // 定义数据类型
 interface AlertEvent {
-  ID: number; // 唯一标识符，用于区分不同的告警事件
+  id: number; // 唯一标识符，用于区分不同的告警事件
   alertName: string; // 告警名称
-  fingerprint: string; // 告警唯一ID
+  fingerprint: string; // 告警唯一id
   status: string; // 告警状态，如 "告警中"、"已屏蔽"、"已认领"、"已恢复"
   sendGroupId: string; // 关联的发送组名称
   eventTimes: number; // 触发次数
   renLingUserId: string; // 认领告警的用户名
   labels: string[]; // 标签组，格式为 key=v
   CreatedAt: string; // 创建时间
-  silenceId: string; // 静默ID
+  silenceId: string; // 静默id
 }
 
 // 状态变量
@@ -94,10 +94,10 @@ const filteredData = computed(() => {
 // 表格列配置
 const columns = [
   {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
-    sorter: (a: AlertEvent, b: AlertEvent) => a.ID - b.ID,
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
+    sorter: (a: AlertEvent, b: AlertEvent) => a.id - b.id,
   },
   {
     title: '告警名称',
@@ -131,7 +131,7 @@ const columns = [
     sorter: (a: AlertEvent, b: AlertEvent) => a.eventTimes - b.eventTimes,
   },
   {
-    title: '静默ID',
+    title: '静默id',
     dataIndex: 'silenceId',
     key: 'silenceId',
     sorter: (a: AlertEvent, b: AlertEvent) => a.silenceId.localeCompare(b.silenceId),
@@ -190,7 +190,7 @@ const handleBatchSilence = () => {
     onOk: async () => {
       try {
         loading.value = true;
-        const alertIds = filteredData.value.map(item => item.ID);
+        const alertIds = filteredData.value.map(item => item.id);
         await silenceBatchApi(alertIds); // 替换为实际的 API 接口
         message.success('批量屏蔽告警成功');
         fetchResources(); // 刷新数据
@@ -214,7 +214,7 @@ const handleSilence = async (record: AlertEvent) => {
     onOk: async () => {
       try {
         loading.value = true;
-        await silenceAlertApi(record.ID); // 替换为实际的 API 接口
+        await silenceAlertApi(record.id); // 替换为实际的 API 接口
         message.success(`屏蔽告警 "${record.alertName}" 成功`);
         fetchResources(); // 刷新数据
       } catch (error) {
@@ -237,7 +237,7 @@ const handleClaim = async (record: AlertEvent) => {
     onOk: async () => {
       try {
         loading.value = true;
-        await claimAlertApi(record.ID); // 替换为实际的 API 接口
+        await claimAlertApi(record.id); // 替换为实际的 API 接口
         message.success(`认领告警 "${record.alertName}" 成功`);
         fetchResources(); // 刷新数据
       } catch (error) {
@@ -260,7 +260,7 @@ const handleCancelSilence = async (record: AlertEvent) => {
     onOk: async () => {
       try {
         loading.value = true;
-        await cancelSilenceAlertApi(record.ID); // 替换为实际的 API 接口
+        await cancelSilenceAlertApi(record.id); // 替换为实际的 API 接口
         message.success(`取消屏蔽告警 "${record.alertName}" 成功`);
         fetchResources(); // 刷新数据
       } catch (error) {

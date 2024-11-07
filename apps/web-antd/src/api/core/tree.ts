@@ -15,7 +15,7 @@ export interface User {
 }
 
 export interface TreeNode {
-  ID: number;
+  id: number;
   title: string;
   pId: number;
   level: number;
@@ -46,7 +46,7 @@ export interface TreeNode {
 }
 
 export interface ResourceEcs {
-  ID: number;
+  id: number;
   osType: string;
   instanceName: string;
   vmType: number;
@@ -90,7 +90,7 @@ export interface ResourceEcs {
 }
 
 export interface ResourceElb {
-  ID: number;
+  id: number;
   loadBalancerType: string;
   bandwidthCapacity: number;
   addressType: string;
@@ -100,7 +100,7 @@ export interface ResourceElb {
 }
 
 export interface ResourceRds {
-  ID: number;
+  id: number;
   engine: string;
   dbInstanceNetType: string;
   dbInstanceClass: string;
@@ -132,7 +132,7 @@ export interface CreateTreeNodeReq {
 }
 
 export interface updateTreeNodeReq {
-  ID: number;
+  id: number;
   title: string;
   desc: string;
   ops_admins: User[];
@@ -151,7 +151,7 @@ export interface CreateECSResourceReq {
 }
 
 export interface EditECSResourceReq {
-  ID: number;
+  id: number;
   instanceName: string;
   vendor: string;
   description: string;
@@ -195,7 +195,7 @@ export interface createAliECSResourcesReq {
 }
 
 export interface OtherEcsResourceReq {
-  ID: number;
+  id: number;
   name: string;
   description: string;
   region: string;

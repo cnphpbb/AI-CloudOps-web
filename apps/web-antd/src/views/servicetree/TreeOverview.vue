@@ -26,7 +26,7 @@
               <a-form-item label="父节点" name="pId">
                 <a-select v-if="isSelectVisible" v-model:value="addForm.pId" placeholder="请选择父节点">
                   <a-select-option :key="0" :value="0">顶级节点</a-select-option>
-                  <a-select-option v-for="node in flatTreeData" :key="node.ID" :value="node.ID">
+                  <a-select-option v-for="node in flatTreeData" :key="node.id" :value="node.id">
                     {{ node.title }}
                   </a-select-option>
                 </a-select>
@@ -54,21 +54,21 @@
                       </a-form-item>
                       <a-form-item label="运维负责人" name="ops_admins">
                         <a-select v-model:value="editForm.ops_admins" mode="tags" placeholder="请选择运维负责人">
-                          <a-select-option v-for="person in flatTreeData" :key="person.ID" :value="person.ops_admin_users">
+                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.ops_admin_users">
                             {{ person.ops_admin_users }}
                           </a-select-option>
                         </a-select>
                       </a-form-item>
                       <a-form-item label="研发负责人" name="rd_admins">
                         <a-select v-model:value="editForm.rd_admins" mode="tags" placeholder="请选择研发负责人">
-                          <a-select-option v-for="person in flatTreeData" :key="person.ID" :value="person.ops_admin_users">
+                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.ops_admin_users">
                             {{ person.rd_admin_users }}
                           </a-select-option>
                         </a-select>
                       </a-form-item>
                       <a-form-item label="研发工程师" name="rd_members">
                         <a-select v-model:value="editForm.rd_members" mode="tags" placeholder="请选择研发工程师">
-                          <a-select-option v-for="person in flatTreeData" :key="person.ID" :value="person.ops_admin_users">
+                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.ops_admin_users">
                             {{ person.rd_member_users }}
                           </a-select-option>
                         </a-select>
@@ -102,15 +102,15 @@
             </a-descriptions>
 
             <a-divider orientation="left">ECS 资源详情</a-divider>
-            <a-table :columns="ecsColumns" :data-source="selectedNode.bind_ecs" rowKey="ID" :pagination="false"
+            <a-table :columns="ecsColumns" :data-source="selectedNode.bind_ecs" rowKey="id" :pagination="false"
               size="small" bordered />
 
             <a-divider orientation="left">ELB 资源详情</a-divider>
-            <a-table :columns="elbColumns" :data-source="selectedNode.bind_elb" rowKey="ID" :pagination="false"
+            <a-table :columns="elbColumns" :data-source="selectedNode.bind_elb" rowKey="id" :pagination="false"
               size="small" bordered />
 
             <a-divider orientation="left">RDS 资源详情</a-divider>
-            <a-table :columns="rdsColumns" :data-source="selectedNode.bind_rds" rowKey="ID" :pagination="false"
+            <a-table :columns="rdsColumns" :data-source="selectedNode.bind_rds" rowKey="id" :pagination="false"
               size="small" bordered />
           </a-card>
         </div>
@@ -152,7 +152,7 @@ interface Person {
 }
 
 const editForm = reactive({
-  ID: 0,
+  id: 0,
   title: '',
   desc: '',
   ops_admins: [] as Person[],
@@ -161,7 +161,7 @@ const editForm = reactive({
 });
 
 const ecsColumns = [
-  { title: 'ID', dataIndex: 'ID', key: 'ID' },
+  { title: 'id', dataIndex: 'id', key: 'id' },
   { title: '操作系统类型', dataIndex: 'osType', key: 'osType' },
   { title: '实例类型', dataIndex: 'instanceType', key: 'instanceType' },
   { title: 'CPU 核数', dataIndex: 'cpu', key: 'cpu' },
@@ -171,7 +171,7 @@ const ecsColumns = [
 ];
 
 const elbColumns = [
-  { title: 'ID', dataIndex: 'ID', key: 'ID' },
+  { title: 'id', dataIndex: 'id', key: 'id' },
   { title: '载均衡类型', dataIndex: 'loadBalancerType', key: 'loadBalancerType' },
   { title: '带宽容量 (Mb)', dataIndex: 'bandwidthCapacity', key: 'bandwidthCapacity' },
   { title: '地址类型', dataIndex: 'addressType', key: 'addressType' },
@@ -179,7 +179,7 @@ const elbColumns = [
 ];
 
 const rdsColumns = [
-  { title: 'ID', dataIndex: 'ID', key: 'ID' },
+  { title: 'id', dataIndex: 'id', key: 'id' },
   { title: '引擎类型', dataIndex: 'engine', key: 'engine' },
   { title: '网络类型', dataIndex: 'dbInstanceNetType', key: 'dbInstanceNetType' },
   { title: '实例规格', dataIndex: 'dbInstanceClass', key: 'dbInstanceClass' },
@@ -264,7 +264,7 @@ const handleAdd = async () => {
 const showEditModal = () => {
   if (selectedNode.value) {
     // 将当前选中的节点数据复制到 editForm 中
-    editForm.ID = selectedNode.value.ID;
+    editForm.id = selectedNode.value.id;
     editForm.title = selectedNode.value.title;
     editForm.desc = selectedNode.value.desc;
     editForm.ops_admins = selectedNode.value.ops_admins ? [...selectedNode.value.ops_admins] : [];
@@ -283,7 +283,7 @@ const handleEdit = async () => {
 
   try {
     await updateTreeNode({
-      ID: editForm.ID,
+      id: editForm.id,
       title: editForm.title,
       desc: editForm.desc,
       ops_admins: editForm.ops_admins,

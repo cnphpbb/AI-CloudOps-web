@@ -13,7 +13,7 @@
     </div>
 
     <!-- 资源列表 -->
-    <a-table :columns="columns" :data-source="filteredData" row-key="ID" :pagination="{ pageSize: 10 }">
+    <a-table :columns="columns" :data-source="filteredData" row-key="id" :pagination="{ pageSize: 10 }">
       <template #action="{ record }">
         <a-space>
           <a-button type="link" @click="handleEditResource(record)">编辑</a-button>
@@ -352,7 +352,7 @@ const createForm = reactive({
 
 // 编辑表单
 const editForm = reactive({
-  ID: 0,
+  id: 0,
   instanceName: '',
   description: '',
   tags: [] as string[],
@@ -403,9 +403,9 @@ const resourceToBind = ref<ResourceEcs | null>(null);
 // 表格列配置
 const columns = [
   {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
   },
   {
     title: '资源名称',
@@ -471,9 +471,9 @@ const fetchResources = async () => {
     ecsResponse.forEach(ecs => {
       ecs.isBound = false;
       treeResponse.forEach(node => {
-        if (node.bind_ecs.some(boundEcs => boundEcs.ID === ecs.ID)) {
+        if (node.bind_ecs.some(boundEcs => boundEcs.id === ecs.id)) {
           ecs.isBound = true;
-          ecs.boundNodeId = node.ID; // 确保 ResourceEcs 接口中有 boundNodeId
+          ecs.boundNodeId = node.id; // 确保 ResourceEcs 接口中有 boundNodeId
         }
       });
     });
@@ -491,7 +491,7 @@ const fetchTreeNodes = async () => {
     const response = await getAllTreeNodes();
     treeNodes.value = response;
     // 根据需要设置默认展开的节点
-    defaultExpandedKeys.value = response.map(node => node.ID);
+    defaultExpandedKeys.value = response.map(node => node.id);
   } catch (error) {
     console.error('获取树节点失败', error);
     message.error('获取树节点失败');
@@ -651,7 +651,7 @@ const handleAddResource = () => {
 // 处理编辑资源
 const handleEditResource = (record: ResourceEcs) => {
   Object.assign(editForm, {
-    ID: record.ID,
+    id: record.id,
     instanceName: record.instanceName,
     description: record.description,
     tags: record.tags,
@@ -683,7 +683,7 @@ const handleEditECS = async () => {
   try {
     if (editForm.vendor == '1') {
       await editECSResources({
-        ID: editForm.ID, // 确保传递资源的ID
+        id: editForm.id, // 确保传递资源的id
         instanceName: editForm.instanceName,
         description: editForm.description,
         tags: editForm.tags,
@@ -694,7 +694,7 @@ const handleEditECS = async () => {
       });
     } else {
       await editOtherECSResources({
-        ID: editForm.ID,
+        id: editForm.id,
         name: editForm.name,
         description: editForm.description,
         region: editForm.region,
@@ -742,15 +742,15 @@ const handleDeleteResource = (record: ResourceEcs) => {
       try {
         if (record.vendor === '1') {
           // 使用个人供应商的删除接口
-          await deleteECSResources(record.ID);
+          await deleteECSResources(record.id);
         } else {
           // 使用非个人供应商的删除接口
-          await deleteOtherECSResources(record.ID);
+          await deleteOtherECSResources(record.id);
         }
         message.success(`资源 "${record.instanceName}" 已成功删除`);
         await fetchResources();
         // // 从本地数据中删除该资源
-        // const index = data.findIndex(item => item.ID === record.ID);
+        // const index = data.findIndex(item => item.id === record.id);
         // if (index !== -1) {
         //   data.splice(index, 1);  // 删除资源
         //   handleSearch();  // 重新过滤数据
@@ -784,7 +784,7 @@ const handleBindToNode = (record: ResourceEcs) => {
 // 处理解绑资源
 const handleUnbindFromNode = (record: ResourceEcs) => {
   // 查找绑定的节点
-  const boundNode = treeNodes.value.find(node => node.ID === record.boundNodeId);
+  const boundNode = treeNodes.value.find(node => node.id === record.boundNodeId);
   const boundNodeName = boundNode ? boundNode.title : '未知节点';
 
   // 弹出确认对话框
@@ -798,13 +798,13 @@ const handleUnbindFromNode = (record: ResourceEcs) => {
         // 调用解绑接口
         await unbindECSResources({
           nodeId: record.boundNodeId!,
-          resource_ids: [record.ID]
+          resource_ids: [record.id]
         });
 
         message.success(`解绑资源 "${record.instanceName}" 成功`);
 
         // 更新本地数据
-        const index = data.findIndex(item => item.ID === record.ID);
+        const index = data.findIndex(item => item.id === record.id);
         if (index !== -1) {
           data[index].isBound = false;
           data[index].boundNodeId = undefined;
@@ -828,13 +828,13 @@ const confirmBind = async () => {
   try {
     await bindECSResources({
       nodeId: selectedNodeId.value,
-      resource_ids: [resourceToBind.value.ID],
+      resource_ids: [resourceToBind.value.id],
     });
 
     message.success(`绑定资源 "${resourceToBind.value.instanceName}" 成功`);
 
     // 更新本地数据
-    const index = data.findIndex(item => item.ID === resourceToBind.value?.ID);
+    const index = data.findIndex(item => item.id === resourceToBind.value?.id);
     if (index !== -1) {
       data[index].isBound = true;
       data[index].boundNodeId = selectedNodeId.value;

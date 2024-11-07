@@ -125,9 +125,9 @@ const columns = [
     key: 'title',
   },
   {
-    title: 'ID',
-    dataIndex: 'ID',
-    key: 'ID',
+    title: 'id',
+    dataIndex: 'id',
+    key: 'id',
   },
   {
     title: '层级',
@@ -169,7 +169,7 @@ const columns = [
 
 // 编辑表单的数据
 const editForm = reactive({
-  ID: 0,
+  id: 0,
   title: '',
   desc: '',
   ops_admins: [] as User[],
@@ -213,7 +213,7 @@ const handleDeleteNode = (record: TreeNode) => {
     onOk: async () => {
       try {
         // 调用后端删除接口，传入节点的 key 或 id
-        await deleteTreeNode(record.ID); // 假设 key 是节点的唯一标识
+        await deleteTreeNode(record.id); // 假设 key 是节点的唯一标识
 
         // 从前端数据中删除节点
         const index = data.findIndex((item) => item.key === record.key);
@@ -236,7 +236,7 @@ const handleDeleteNode = (record: TreeNode) => {
 // 点击编辑按钮时，弹出表单并填充默认数据
 const handleEditNode = (record: TreeNode) => {
   // 填充编辑表单的数据
-  editForm.ID = record.ID;
+  editForm.id = record.id;
   editForm.title = record.title;
   editForm.desc = record.desc;
   editForm.ops_admins = [...record.ops_admins]; // 复制运维负责人
