@@ -1,27 +1,31 @@
 <template>
-  <!-- 查询和操作 -->
-  <div class="custom-toolbar">
-    <!-- 查询功能 -->
-    <div class="search-filters">
-      <a-input v-model="searchText" placeholder="请输入集群名称" style="width: 200px; margin-right: 16px;" />
-    </div>
-    <!-- 操作按钮 -->
-    <div class="action-buttons">
-      <a-button type="primary" @click="isAddModalVisible = true">新增集群</a-button>
-    </div>
-  </div>
   <div>
+    <!-- 查询和操作 -->
+    <div class="custom-toolbar">
+      <!-- 查询功能 -->
+      <div class="search-filters">
+        <a-input v-model="searchText" placeholder="请输入集群名称" style="width: 200px; margin-right: 16px;" />
+      </div>
+      <!-- 操作按钮 -->
+      <div class="action-buttons">
+        <a-button type="primary" @click="isAddModalVisible = true">新增集群</a-button>
+      </div>
+    </div>
+
     <!-- 表格 -->
     <a-table :dataSource="filteredData" :columns="columns" rowKey="id" :rowSelection="rowSelection" pagination={false}>
       <template v-slot:action="{ record }">
-        <a-button type="link" @click="handleEdit(record.id)">编辑集群</a-button>
+        <!-- 编辑集群按钮 -->
+        <a-button type="link" @click="handleEdit(record.id)" style="margin-right: 8px">编辑集群</a-button>
+        <!-- 删除集群弹出确认框 -->
         <a-popconfirm title="确定删除这个集群吗?" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record.id)">
-          <a-button type="link" danger>删除集群</a-button>
+          <a-button type="link" danger style="margin-right: 8px">删除集群</a-button>
         </a-popconfirm>
+        <!-- 查看节点按钮 -->
+        <a-button type="link" @click="handleViewNodes(record.id)">查看节点</a-button>
       </template>
     </a-table>
-  </div>
-  <div>
+
     <!-- 新增集群模态框 -->
     <a-modal title="新增集群" v-model:visible="isAddModalVisible" @ok="handleAdd" @cancel="closeAddModal">
       <a-form :model="addForm" layout="vertical">
@@ -57,7 +61,6 @@
             <a-select-option value="press">压力测试</a-select-option>
           </a-select>
         </a-form-item>
-
         <a-form-item label="集群版本" name="version">
           <a-input v-model:value="addForm.version" placeholder="请输入集群版本" />
         </a-form-item>
@@ -128,23 +131,22 @@
 <script lang="ts" setup>
 import { ref, reactive, computed } from 'vue';
 import { message } from 'ant-design-vue';
-import { getAllClustersApi, getClusterApi, createClusterApi, updateClusterApi, deleteClusterApi, batchDeleteClusterApi } from '#/api';
+import { getAllClustersApi, getClusterApi, createClusterApi, updateClusterApi, deleteClusterApi } from '#/api';
 import type { ClustersItem } from '#/api';
-
+import { onMounted } from 'vue';
+import { useRouter } from 'vue-router'; // 导入 Vue Router 的 useRouter
 // 数据和状态管理
 const clusters = ref<ClustersItem[]>([]);
 const searchText = ref('');
 const selectedRows = ref<ClustersItem[]>([]); // 用于批量删除
 const isAddModalVisible = ref(false);
 const isEditModalVisible = ref(false);
+const router = useRouter();
 
-// 过滤后的数据并按 id 升序排列
 const filteredData = computed(() => {
   const searchValue = searchText.value.trim().toLowerCase();
-  const sortedClusters = clusters.value.sort((a, b) => a.id - b.id); // 按 id 升序排序
-  return sortedClusters.filter((item: { name: string; }) => item.name.toLowerCase().includes(searchValue));
+  return clusters.value.filter(item => item.name.toLowerCase().includes(searchValue));
 });
-
 
 // 表格列配置
 const columns = [
@@ -243,9 +245,9 @@ const getClusters = async () => {
 // 打开新增集群弹窗
 const handleAdd = async () => {
   try {
-    const formToSubmit = { 
-      ...addForm, 
-      restricted_name_space: addForm.restricted_name_space 
+    const formToSubmit = {
+      ...addForm,
+      restricted_name_space: addForm.restricted_name_space
     };
     await createClusterApi(formToSubmit);
     message.success('集群新增成功');
@@ -286,8 +288,8 @@ const handleUpdate = async () => {
     return;
   }
   try {
-    const formToSubmit = { 
-      ...editForm, 
+    const formToSubmit = {
+      ...editForm,
       restricted_name_space: editForm.restricted_name_space,
     };
     await updateClusterApi(formToSubmit);
@@ -310,21 +312,9 @@ const handleDelete = async (id: number) => {
   }
 };
 
-// 批量删除
-const handleBatchDelete = async () => {
-  if (selectedRows.value.length === 0) {
-    message.warning('请选择至少一个集群');
-    return;
-  }
-  try {
-    const ids = selectedRows.value.map(row => row.id);
-    await batchDeleteClusterApi(ids);
-    message.success('集群批量删除成功');
-    getClusters();
-    selectedRows.value = [];
-  } catch (error) {
-    message.error('批量删除集群失败');
-  }
+const handleViewNodes = (id: number) => {
+  // 跳转到节点页面
+  router.push({ name: 'K8sNode', query: { cluster_id: id } });
 };
 
 // 关闭模态框
@@ -335,8 +325,15 @@ const closeAddModal = () => {
 const closeEditModal = () => {
   isEditModalVisible.value = false;
 };
-getClusters()
+
+onMounted(() => {
+  console.log('Page mounted, fetching clusters...');
+  getClusters();
+});
+
+
 </script>
+
 
 <style scoped>
 .custom-toolbar {
@@ -354,6 +351,8 @@ getClusters()
 .action-buttons {
   display: flex;
   align-items: center;
+  gap: 8px;
+  margin-left: 16px;
 }
 
 a-form-item {
