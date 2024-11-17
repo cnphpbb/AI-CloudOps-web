@@ -264,3 +264,19 @@ export async function updateServiceApi(data: any) {
 export async function deleteServiceApi(id: number, namespace: string, svcName: string) {
   return requestClient.delete(`/k8s/services/delete/${id}?namespace=${namespace}&svcName=${svcName}`);
 }
+
+export async function getDeployListApi(id: number, namespace: string) {
+  return requestClient.get(`/k8s/deployments/${id}?namespace=${namespace}`);
+}
+
+export async function getDeployYamlApi(id: number, deployment_name: string, namespace: string) {
+  return requestClient.get(`/k8s/deployments/${id}/yaml?namespace=${namespace}&deployment_name=${deployment_name}`);
+}
+
+export async function deleteDeployApi(id: number, namespace: string, deployment_name: string) {
+  return requestClient.delete(`/k8s/deployments/delete/${id}?namespace=${namespace}&deployment_name=${deployment_name}`);
+}
+
+export async function restartDeployApi(id: number, namespace: string, deployment_name: string) {
+  return requestClient.post(`/k8s/deployments/restart/${id}?namespace=${namespace}&deployment_name=${deployment_name}`);
+}
