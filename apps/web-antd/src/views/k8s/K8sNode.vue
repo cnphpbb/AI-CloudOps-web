@@ -26,15 +26,20 @@
     <!-- 节点表格 -->
     <a-table :columns="columns" :data-source="filteredData" pagination="{false}" row-key="name">
       <template #action="{ record }">
-        <a-button type="link" @click="handleViewDetails(record)">
-          查看详情
-        </a-button>
-        <a-button type="link" @click="showDeleteLabelModal(record)">
-          删除标签
-        </a-button>
-        <a-button type="link" @click="handleToggleSchedule(record)">
-          {{ record.schedulable ? '禁用调度' : '启用调度' }}
-        </a-button>
+        <a-space>
+          <a-button type="primary" ghost size="small" @click="handleViewDetails(record)">
+            <template #icon><EyeOutlined /></template>
+            查看详情
+          </a-button>
+          <a-button type="primary" ghost size="small" @click="showDeleteLabelModal(record)">
+            <template #icon><DeleteOutlined /></template>
+            删除标签
+          </a-button>
+          <a-button type="primary" ghost size="small" @click="handleToggleSchedule(record)">
+            <template #icon><ReloadOutlined /></template>
+            {{ record.schedulable ? '禁用调度' : '启用调度' }}
+          </a-button>
+        </a-space>
       </template>
     </a-table>
     <!-- 添加标签模态框 -->

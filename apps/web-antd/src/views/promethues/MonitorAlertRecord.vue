@@ -6,9 +6,9 @@
       <div class="search-filters">
         <!-- 搜索输入框 -->
         <a-input
-          v-model="searchText"
+          v-model:value="searchText"
           placeholder="请输入记录规则名称"
-          style="width: 200px; margin-right: 16px"
+          style="width: 200px"
         />
       </div>
       <!-- 操作按钮 -->
@@ -21,7 +21,7 @@
     <a-table
       :columns="columns"
       :data-source="filteredData"
-      row-key="key"
+      row-key="id"
       :loading="loading"
     >
       <!-- 标签组列 -->
@@ -31,12 +31,14 @@
       <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="showEditModal(record)"
-            >编辑记录规则</a-button
-          >
-          <a-button type="link" danger @click="handleDelete(record)"
-            >删除记录规则</a-button
-          >
+          <a-button type="primary" ghost size="small" @click="showEditModal(record)">
+            <template #icon><EditOutlined /></template>
+            编辑
+          </a-button>
+          <a-button type="primary" danger ghost size="small" @click="handleDelete(record)">
+            <template #icon><DeleteOutlined /></template>
+            删除
+          </a-button>
         </a-space>
       </template>
     </a-table>
@@ -230,7 +232,7 @@
             style="width: 100%"
           >
             <a-select-option :value="1">启用</a-select-option>
-            <a-select-option :value="2">禁用</a-select-option>
+            <a-select-option :value="2">��用</a-select-option>
           </a-select>
         </a-form-item>
 
@@ -281,7 +283,7 @@ interface RecordRule {
   treeNodeId: number; // 绑定的树节点id
   enable: number; // 是否启用记录规则：1 启用，2 禁用
   expr: string; // 记录规则表达式
-  forTime: string; // 持续时间，达到此时间才触发记录规则
+  forTime: string; // 持续时间，到此时间才触发记录规则
   userId: string; // 创建者用户名
   CreatedAt: string; // 创建时间
 }
@@ -313,9 +315,7 @@ const loading = ref(false);
 // 过滤后的数据
 const filteredData = computed(() => {
   const searchValue = searchText.value.trim().toLowerCase();
-  return data.value.filter((item) =>
-    item.name.toLowerCase().includes(searchValue),
-  );
+  return data.value.filter(item => item.name.toLowerCase().includes(searchValue));
 });
 
 // 表格列配置
@@ -634,15 +634,18 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
 }
 
 .search-filters {
   display: flex;
+  gap: 16px;
   align-items: center;
 }
 
 .action-buttons {
   display: flex;
+  gap: 8px;
   align-items: center;
 }
 

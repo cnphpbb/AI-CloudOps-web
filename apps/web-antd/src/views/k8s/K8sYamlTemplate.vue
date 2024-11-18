@@ -30,20 +30,27 @@
     >
       <!-- 操作列 -->
       <template #action="{ record }">
-        <a-button type="link" @click="handleCheck(record)" style="margin-right: 8px">
-          检查
-        </a-button>
-        <a-button type="link" @click="handleEdit(record)" style="margin-right: 8px">
-          编辑
-        </a-button>
-        <a-popconfirm
-          title="确定要删除该模板吗？"
-          @confirm="handleDelete(record)"
-          ok-text="确定"
-          cancel-text="取消"
-        >
-          <a-button type="link" danger>删除</a-button>
-        </a-popconfirm>
+        <a-space>
+          <a-button type="primary" ghost size="small" @click="handleCheck(record)">
+            <template #icon><CheckOutlined /></template>
+            检查
+          </a-button>
+          <a-button type="primary" ghost size="small" @click="handleEdit(record)">
+            <template #icon><EditOutlined /></template>
+            编辑
+          </a-button>
+          <a-popconfirm
+            title="确定要删除该模板吗？"
+            @confirm="handleDelete(record)"
+            ok-text="确定"
+            cancel-text="取消"
+          >
+            <a-button type="primary" danger ghost size="small">
+              <template #icon><DeleteOutlined /></template>
+              删除
+            </a-button>
+          </a-popconfirm>
+        </a-space>
       </template>
     </a-table>
 

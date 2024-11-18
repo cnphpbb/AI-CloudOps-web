@@ -6,9 +6,9 @@
       <div class="search-filters">
         <!-- 搜索输入框 -->
         <a-input
-          v-model="searchText"
+          v-model:value="searchText"
           placeholder="请输入值班组名称"
-          style="width: 200px; margin-right: 16px"
+          style="width: 200px"
         />
       </div>
       <!-- 操作按钮 -->
@@ -26,15 +26,18 @@
       <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="showEditModal(record)"
-            >编辑值班组</a-button
-          >
-          <a-button type="link" @click="viewSchedule(record)"
-            >查看排班表</a-button
-          >
-          <a-button type="link" danger @click="handleDelete(record)"
-            >删除值班组</a-button
-          >
+          <a-button type="primary" ghost size="small" @click="showEditModal(record)">
+            <template #icon><EditOutlined /></template>
+            编辑
+          </a-button>
+          <a-button type="primary" ghost size="small" @click="viewSchedule(record)">
+            <template #icon><EyeOutlined /></template>
+            排班表
+          </a-button>
+          <a-button type="primary" danger ghost size="small" @click="handleDelete(record)">
+            <template #icon><DeleteOutlined /></template>
+            删除
+          </a-button>
         </a-space>
       </template>
     </a-table>
@@ -162,14 +165,7 @@ const loading = ref(false);
 // 过滤后的数据，通过 computed 属性动态计算
 const filteredData = computed(() => {
   const searchValue = searchText.value.trim().toLowerCase();
-  if (!searchValue) return data.value;
-  return data.value.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchValue) ||
-      item.userNames.some((username) =>
-        username.toLowerCase().includes(searchValue),
-      ),
-  );
+  return data.value.filter(item => item.name.toLowerCase().includes(searchValue));
 });
 
 // 表格列配置

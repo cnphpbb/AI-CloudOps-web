@@ -47,17 +47,23 @@
 
       <!-- 操作列 -->
       <template #action="{ record }">
-        <a-button type="link" @click="viewServiceYaml(record)" style="margin-right: 8px">
-          查看YAML
-        </a-button>
-        <a-popconfirm
-          title="确定要删除该Service吗？"
-          @confirm="handleDelete(record)"
-          ok-text="确定"
-          cancel-text="取消"
-        >
-          <a-button type="link" danger>删除</a-button>
-        </a-popconfirm>
+        <a-space>
+          <a-button type="primary" ghost size="small" @click="viewServiceYaml(record)">
+            <template #icon><EyeOutlined /></template>
+            查看YAML
+          </a-button>
+          <a-popconfirm
+            title="确定要删除该Service吗？"
+            @confirm="handleDelete(record)"
+            ok-text="确定"
+            cancel-text="取消"
+          >
+            <a-button type="primary" danger ghost size="small">
+              <template #icon><DeleteOutlined /></template>
+              删除
+            </a-button>
+          </a-popconfirm>
+        </a-space>
       </template>
     </a-table>
 

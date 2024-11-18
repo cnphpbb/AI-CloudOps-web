@@ -4,9 +4,9 @@
     <div class="custom-toolbar">
       <div class="search-filters">
         <a-input
-          v-model="searchText"
+          v-model:value="searchText"
           placeholder="请输入发送组名称"
-          style="width: 200px; margin-right: 16px"
+          style="width: 200px"
         />
       </div>
       <div class="action-buttons">
@@ -27,12 +27,14 @@
       </template>
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="showEditModal(record)"
-            >编辑发送组</a-button
-          >
-          <a-button type="link" danger @click="handleDelete(record)"
-            >删除发送组</a-button
-          >
+          <a-button type="primary" ghost size="small" @click="showEditModal(record)">
+            <template #icon><EditOutlined /></template>
+            编辑
+          </a-button>
+          <a-button type="primary" danger ghost size="small" @click="handleDelete(record)">
+            <template #icon><DeleteOutlined /></template>
+            删除
+          </a-button>
         </a-space>
       </template>
     </a-table>
@@ -366,6 +368,13 @@ fetchSendGroups(); // 初始加载发送组
 
 .search-filters {
   display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
   align-items: center;
 }
 </style>
