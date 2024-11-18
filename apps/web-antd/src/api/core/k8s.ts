@@ -280,3 +280,59 @@ export async function deleteDeployApi(id: number, namespace: string, deployment_
 export async function restartDeployApi(id: number, namespace: string, deployment_name: string) {
   return requestClient.post(`/k8s/deployments/restart/${id}?namespace=${namespace}&deployment_name=${deployment_name}`);
 }
+
+export async function getConfigMapListApi(id: number, namespace: string) {
+  return requestClient.get(`/k8s/configmaps/${id}?namespace=${namespace}`);
+}
+
+export async function getConfigMapYamlApi(id: number, configmap_name: string, namespace: string) {
+  return requestClient.get(`/k8s/configmaps/${id}/yaml?namespace=${namespace}&configmap_name=${configmap_name}`);
+}
+
+export async function deleteConfigMapApi(id: number, namespace: string, configmap_name: string) {
+  return requestClient.delete(`/k8s/configmaps/delete/${id}?namespace=${namespace}&configmap_name=${configmap_name}`);
+}
+
+export async function getYamlTemplateApi(cluster_id: number) {
+  return requestClient.get(`/k8s/yaml_templates/list/?cluster_id=${cluster_id}`);
+}
+
+export async function createYamlTemplateApi(data: any) {
+  return requestClient.post('/k8s/yaml_templates/create', data);
+}
+
+export async function updateYamlTemplateApi(data: any) {
+  return requestClient.post('/k8s/yaml_templates/update', data);
+}
+
+export async function deleteYamlTemplateApi(id: number, cluster_id: number) {
+  return requestClient.delete(`/k8s/yaml_templates/delete/${id}?cluster_id=${cluster_id}`);
+}
+
+export async function getYamlTemplateDetailApi(id: number, cluster_id: number) {
+  return requestClient.get(`/k8s/yaml_templates/${id}/yaml?cluster_id=${cluster_id}`);
+}
+
+export async function checkYamlTemplateApi(data: any) {
+  return requestClient.post('/k8s/yaml_templates/check', data);
+}
+
+export async function getYamlTaskListApi() {
+  return requestClient.get('/k8s/yaml_tasks/list');
+}
+
+export async function deleteYamlTaskApi(id: number) {
+  return requestClient.delete(`/k8s/yaml_tasks/delete/${id}`);
+}
+
+export async function createYamlTaskApi(data: any) {
+  return requestClient.post('/k8s/yaml_tasks/create', data);
+}
+
+export async function updateYamlTaskApi(data: any) {
+  return requestClient.post('/k8s/yaml_tasks/update', data);
+}
+
+export async function applyYamlTaskApi(id: number) {
+  return requestClient.post(`/k8s/yaml_tasks/apply/${id}`);
+}

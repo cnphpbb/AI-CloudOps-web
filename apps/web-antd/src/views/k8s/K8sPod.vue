@@ -331,7 +331,7 @@ const handleDelete = async (pod: Pod) => {
   try {
     await deletePodApi(selectedCluster.value, pod.name, pod.namespace);
     message.success('Pod删除成功');
-    getPods();
+    await getPods(); // 删除成功后立即刷新数据
   } catch (error) {
     message.error('删除Pod失败');
   }
@@ -349,7 +349,7 @@ const handleBatchDelete = async () => {
     await Promise.all(promises);
     message.success('批量删除成功');
     selectedRows.value = [];
-    getPods();
+    await getPods(); // 删除成功后立即刷新数据
   } catch (error) {
     message.error('批量删除失败');
   }
