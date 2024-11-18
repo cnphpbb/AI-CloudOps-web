@@ -1,14 +1,16 @@
 <template>
   <div>
     <!-- 操作工具栏 -->
-    <div class="toolbar">
-      <div class="search-area">
-        <a-input
-          v-model="searchText"
-          placeholder="请输入节点名称"
-          style="width: 200px; margin-right: 16px"
+    <div class="custom-toolbar">
+      <div class="search-filters">
+        <a-input 
+          v-model:value="searchText" 
+          placeholder="请输入节点名称" 
+          style="width: 200px" 
         />
-        <a-button type="primary" @click="handleSearch">搜索</a-button>
+      </div>
+      <div class="action-buttons">
+        <a-button type="primary" @click="handleAddNode">新增节点</a-button>
       </div>
     </div>
 
@@ -105,7 +107,7 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, watch } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { getAllTreeNodes, deleteTreeNode, updateTreeNode } from '#/api';
 import type { TreeNode, User } from '#/api/core/tree';
@@ -116,6 +118,14 @@ const isEditModalVisible = ref(false);
 const searchText = ref('');
 // 过滤后的数据
 const filteredData = ref<TreeNode[]>(data);
+
+// 监听搜索文本变化
+watch(searchText, (newValue) => {
+  const searchValue = newValue.trim().toLowerCase();
+  filteredData.value = data.filter((item) =>
+    item.title.toLowerCase().includes(searchValue),
+  );
+});
 
 // 表格列配置
 const columns = [
@@ -195,14 +205,6 @@ const availableRdMembers = [
   { id: 6, name: '研发工程师B' },
 ];
 
-// 处理搜索
-const handleSearch = () => {
-  const searchValue = searchText.value.trim().toLowerCase();
-  filteredData.value = data.filter((item) =>
-    item.title.toLowerCase().includes(searchValue),
-  );
-};
-
 const handleDeleteNode = (record: TreeNode) => {
   // 手动创建一个确认 Modal
   Modal.confirm({
@@ -219,7 +221,6 @@ const handleDeleteNode = (record: TreeNode) => {
         const index = data.findIndex((item) => item.key === record.key);
         if (index !== -1) {
           data.splice(index, 1);
-          handleSearch(); // 更新过滤后的数据
           message.success(`节点 "${record.title}" 已删除`);
         }
       } catch (err) {
@@ -298,14 +299,19 @@ const refreshTreeData = async () => {
 </script>
 
 <style scoped>
-.toolbar {
+.custom-toolbar {
   padding: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.search-area {
+.search-filters {
+  display: flex;
+  align-items: center;
+}
+
+.action-buttons {
   display: flex;
   align-items: center;
 }

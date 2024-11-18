@@ -1,11 +1,13 @@
 <template>
   <div>
     <!-- 操作工具栏 -->
-    <div class="toolbar">
-      <div class="search-area">
-        <a-input v-model="searchText" placeholder="请输入ECS资源名称" style="width: 200px; margin-right: 16px;"
-          @keyup.enter="handleSearch" />
-        <a-button type="primary" @click="handleSearch">搜索</a-button>
+    <div class="custom-toolbar">
+      <div class="search-filters">
+        <a-input 
+          v-model:value="searchText" 
+          placeholder="请输入ECS资源名称" 
+          style="width: 200px" 
+        />
       </div>
       <div class="action-buttons">
         <a-button type="primary" @click="handleAddResource">新增ECS资源</a-button>
@@ -13,12 +15,27 @@
     </div>
 
     <!-- 资源列表 -->
-    <a-table :columns="columns" :data-source="filteredData" row-key="id" :pagination="{ pageSize: 10 }">
+    <a-table 
+      :columns="columns" 
+      :data-source="filteredData" 
+      row-key="id" 
+      :pagination="{ pageSize: 10 }"
+    >
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="handleEditResource(record)">编辑</a-button>
-          <a-button type="link" danger @click="handleDeleteResource(record)">删除</a-button>
-          <a-button type="link" @click="record.isBound ? handleUnbindFromNode(record) : handleBindToNode(record)">
+          <a-button type="primary" ghost size="small" @click="handleEditResource(record)">
+            <template #icon><EditOutlined /></template>
+            编辑
+          </a-button>
+          <a-button type="primary" danger ghost size="small" @click="handleDeleteResource(record)">
+            <template #icon><DeleteOutlined /></template>
+            删除
+          </a-button>
+          <a-button type="primary" ghost size="small" @click="record.isBound ? handleUnbindFromNode(record) : handleBindToNode(record)">
+            <template #icon>
+              <LinkOutlined v-if="!record.isBound"/>
+              <DisconnectOutlined v-else/>
+            </template>
             {{ record.isBound ? '解绑服务树' : '绑定到服务树' }}
           </a-button>
         </a-space>
@@ -297,7 +314,7 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   getAllECSResources,
@@ -387,7 +404,12 @@ const data = reactive<ResourceEcs[]>([]);
 // 搜索文本
 const searchText = ref('');
 // 过滤后的数据
-const filteredData = ref<ResourceEcs[]>([]);
+const filteredData = computed(() => {
+  const searchValue = searchText.value.trim().toLowerCase();
+  return data.filter(resource => 
+    resource.instanceName.toLowerCase().includes(searchValue)
+  );
+});
 // 模态框状态
 const isBindModalVisible = ref(false);
 const isCreateModalVisible = ref(false);
@@ -448,18 +470,6 @@ const columns = [
   },
 ];
 
-// 处理搜索
-const handleSearch = () => {
-  if (searchText.value.trim() === '') {
-    filteredData.value = data;
-  } else {
-    const search = searchText.value.trim().toLowerCase();
-    filteredData.value = data.filter(resource =>
-      resource.instanceName.toLowerCase().includes(search)
-    );
-  }
-};
-
 // 获取资源数据
 const fetchResources = async () => {
   try {
@@ -478,7 +488,6 @@ const fetchResources = async () => {
       });
     });
     data.splice(0, data.length, ...ecsResponse);
-    handleSearch(); // 初始化过滤后的数据
   } catch (error) {
     console.log(error);
     message.error('获取ECS资源数据失败');
@@ -808,7 +817,6 @@ const handleUnbindFromNode = (record: ResourceEcs) => {
         if (index !== -1) {
           data[index].isBound = false;
           data[index].boundNodeId = undefined;
-          handleSearch();
         }
       } catch (error) {
         console.error('解绑资源失败', error);
@@ -838,7 +846,6 @@ const confirmBind = async () => {
     if (index !== -1) {
       data[index].isBound = true;
       data[index].boundNodeId = selectedNodeId.value;
-      handleSearch();
     }
 
     // 重置绑定状态
@@ -865,20 +872,23 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.toolbar {
+.custom-toolbar {
   padding: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
 }
 
-.search-area {
+.search-filters {
   display: flex;
+  gap: 16px;
   align-items: center;
 }
 
 .action-buttons {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 </style>

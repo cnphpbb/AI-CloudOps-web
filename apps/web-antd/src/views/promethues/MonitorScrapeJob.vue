@@ -5,7 +5,11 @@
       <!-- 查询功能 -->
       <div class="search-filters">
         <!-- 搜索输入框 -->
-        <a-input v-model="searchText" placeholder="请输入采集任务名称" style="width: 200px; margin-right: 16px;" />
+        <a-input 
+          v-model:value="searchText" 
+          placeholder="请输入采集任务名称" 
+          style="width: 200px" 
+        />
       </div>
       <!-- 操作按钮 -->
       <div class="action-buttons">
@@ -32,8 +36,14 @@
         <!-- 操作列 -->
         <template #action="{ record }">
           <a-space>
-            <a-button type="link" @click="openEditModal(record)">编辑采集任务</a-button>
-            <a-button type="link" danger @click="handleDelete(record)">删除采集任务</a-button>
+            <a-button type="primary" ghost size="small" @click="openEditModal(record)">
+              <template #icon><EditOutlined /></template>
+              编辑
+            </a-button>
+            <a-button type="primary" danger ghost size="small" @click="handleDelete(record)">
+              <template #icon><DeleteOutlined /></template>
+              删除
+            </a-button>
           </a-space>
         </template>
         <!-- 树节点 ID 列 -->
@@ -249,7 +259,7 @@ const searchText = ref('');
 // 过滤后的数据
 const filteredData = computed(() => {
   const searchValue = searchText.value.trim().toLowerCase();
-  return data.value.filter(item =>
+  return data.value.filter(item => 
     item.name.toLowerCase().includes(searchValue)
   );
 });
@@ -596,10 +606,18 @@ const handleDelete = (record: ScrapeJob) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
 }
 
 .search-filters {
   display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
   align-items: center;
 }
 </style>

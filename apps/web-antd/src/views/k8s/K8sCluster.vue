@@ -15,14 +15,22 @@
     <!-- 表格 -->
     <a-table :dataSource="filteredData" :columns="columns" rowKey="id" :rowSelection="rowSelection" pagination={false}>
       <template v-slot:action="{ record }">
-        <!-- 编辑集群按钮 -->
-        <a-button type="link" @click="handleEdit(record.id)" style="margin-right: 8px">编辑集群</a-button>
-        <!-- 删除集群弹出确认框 -->
-        <a-popconfirm title="确定删除这个集群吗?" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record.id)">
-          <a-button type="link" danger style="margin-right: 8px">删除集群</a-button>
-        </a-popconfirm>
-        <!-- 查看节点按钮 -->
-        <a-button type="link" @click="handleViewNodes(record.id)">查看节点</a-button>
+        <a-space>
+          <a-button type="primary" ghost size="small" @click="handleEdit(record.id)">
+            <template #icon><EditOutlined /></template>
+            编辑集群
+          </a-button>
+          <a-popconfirm title="确定删除这个集群吗?" ok-text="删除" cancel-text="取消" @confirm="handleDelete(record.id)">
+            <a-button type="primary" danger ghost size="small">
+              <template #icon><DeleteOutlined /></template>
+              删除集群
+            </a-button>
+          </a-popconfirm>
+          <a-button type="primary" ghost size="small" @click="handleViewNodes(record.id)">
+            <template #icon><EyeOutlined /></template>
+            查看节点
+          </a-button>
+        </a-space>
       </template>
     </a-table>
 
