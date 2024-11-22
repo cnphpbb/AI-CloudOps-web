@@ -216,59 +216,59 @@ export interface OtherEcsResourceReq {
 }
 
 export async function getAllTreeNodes() {
-  return requestClient.get<TreeNode[]>('/tree/listTreeNode');
+  return requestClient.get<TreeNode[]>('/tree/node/listTreeNode');
 }
 
 export async function createTreeNode(data: CreateTreeNodeReq) {
-  return requestClient.post<GeneralRes>('/tree/createTreeNode', data);
+  return requestClient.post<GeneralRes>('/tree/node/createTreeNode', data);
 }
 
 export async function updateTreeNode(data: updateTreeNodeReq) {
-  return requestClient.post<GeneralRes>('/tree/updateTreeNode', data);
+  return requestClient.post<GeneralRes>('/tree/node/updateTreeNode', data);
 }
 
 export async function deleteTreeNode(id: number) {
-  return requestClient.delete<GeneralRes>(`/tree/deleteTreeNode/${id}`);
+  return requestClient.delete<GeneralRes>(`/tree/node/deleteTreeNode/${id}`);
 }
 
 export async function getAllECSResources() {
-  return requestClient.get<ResourceEcs[]>('/tree/getEcsList');
+  return requestClient.get<ResourceEcs[]>('/tree/ecs/getEcsList');
 }
 export async function getAllELBResources() {
-  return requestClient.get<ResourceElb[]>('/tree/getElbList');
+  return requestClient.get<ResourceElb[]>('/tree/elb/getElbList');
 }
 export async function getAllRDSResources() {
-  return requestClient.get<ResourceRds[]>('/tree/getRdsList');
+  return requestClient.get<ResourceRds[]>('/tree/rds/getRdsList');
 }
 
 export async function createECSResources(data: CreateECSResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/createEcsResource', data);
+  return requestClient.post<GeneralRes>('/tree/ecs/resource/createEcsResource', data);
 }
 
 export async function deleteECSResources(id: number) {
-  return requestClient.delete<GeneralRes>(`/tree/deleteEcsResource/${id}`);
+  return requestClient.delete<GeneralRes>(`/tree/ecs/resource/deleteEcsResource/${id}`);
 }
 
 export async function editECSResources(data: EditECSResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/updateEcsResource', data);
+  return requestClient.post<GeneralRes>('/tree/ecs/resource/updateEcsResource', data);
 }
 
 export async function bindECSResources(data: BindResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/bindEcs', data);
+  return requestClient.post<GeneralRes>('/tree/ecs/bindEcs', data);
 }
 
 export async function unbindECSResources(data: BindResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/unBindEcs', data);
+  return requestClient.post<GeneralRes>('/tree/ecs/unBindEcs', data);
 }
 
 export async function createAliECSResources(data: createAliECSResourcesReq) {
-  return requestClient.post<GeneralRes>('/tree/createAliResource', data);
+  return requestClient.post<GeneralRes>('/tree/ecs/ali/resource/createAliResource', data);
 }
 
 export async function editOtherECSResources(data: OtherEcsResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/updateAliResource', data);
+  return requestClient.post<GeneralRes>('/tree/ecs/ali/resource/updateAliResource', data);
 }
 
 export async function deleteOtherECSResources(id: number) {
-  return requestClient.delete<GeneralRes>(`/tree/deleteAliResource/${id}`);
+  return requestClient.delete<GeneralRes>(`/tree/ecs/ali/resource/deleteAliResource/${id}`);
 }
