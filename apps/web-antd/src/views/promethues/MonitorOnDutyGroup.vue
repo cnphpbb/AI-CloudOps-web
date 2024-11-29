@@ -9,6 +9,7 @@
           v-model:value="searchText"
           placeholder="请输入值班组名称"
           style="width: 200px"
+          allow-clear
         />
       </div>
       <!-- 操作按钮 -->
@@ -22,6 +23,12 @@
       :columns="columns"
       :data-source="filteredData"
       row-key="id"
+      :loading="loading"
+      :pagination="{
+        showSizeChanger: true,
+        showQuickJumper: true,
+        showTotal: total => `共 ${total} 条`
+      }"
     >
       <!-- 操作列 -->
       <template #action="{ record }">
@@ -40,38 +47,65 @@
           </a-button>
         </a-space>
       </template>
+
+      <!-- 用户名称列自定义渲染 -->
+      <template #userNames="{ text }">
+        <a-tag v-for="name in text" :key="name" color="blue">{{ name }}</a-tag>
+      </template>
+
+      <!-- 创建时间列格式化 -->
+      <template #CreatedAt="{ text }">
+        {{ formatDate(text) }}
+      </template>
     </a-table>
 
     <!-- 新增值班组模态框 -->
     <a-modal
-      title="新增换班记录"
+      title="新增值班组"
       v-model:visible="isAddModalVisible"
       @ok="handleAdd"
       @cancel="closeAddModal"
       :confirmLoading="loading"
+      :maskClosable="false"
     >
-      <a-form :model="addForm" layout="vertical">
-        <a-form-item label="名称" required>
+      <a-form :model="addForm" layout="vertical" ref="addFormRef">
+        <a-form-item 
+          label="名称" 
+          name="name"
+          :rules="[{ required: true, message: '请输入值班组名称' }]"
+        >
           <a-input
             v-model:value="addForm.name"
             placeholder="请输入值班组名称"
+            :maxLength="50"
           />
         </a-form-item>
 
-        <a-form-item label="轮班周期（天）">
+        <a-form-item 
+          label="轮班周期（天）"
+          name="shiftDays"
+          :rules="[{ required: true, message: '请输入轮班周期' }]"
+        >
           <a-input-number
             v-model:value="addForm.shiftDays"
             :min="1"
+            :max="365"
             style="width: 100%"
           />
         </a-form-item>
 
-        <a-form-item label="用户名称" required>
+        <a-form-item 
+          label="用户名称" 
+          name="userNames"
+          :rules="[{ required: true, message: '请选择至少一个用户' }]"
+        >
           <a-select
-            mode="tags"
+            mode="multiple"
             v-model:value="addForm.userNames"
-            placeholder="请输入用户名并按回车确认"
+            placeholder="请选择用户"
             style="width: 100%"
+            :maxTagCount="3"
+            :filterOption="filterOption"
           >
             <a-select-option
               v-for="user in availableUsers"
@@ -92,29 +126,46 @@
       @ok="handleUpdate"
       @cancel="closeEditModal"
       :confirmLoading="loading"
+      :maskClosable="false"
     >
-      <a-form :model="editForm" layout="vertical">
-        <a-form-item label="名称" required>
+      <a-form :model="editForm" layout="vertical" ref="editFormRef">
+        <a-form-item 
+          label="名称" 
+          name="name"
+          :rules="[{ required: true, message: '请输入值班组名称' }]"
+        >
           <a-input
             v-model:value="editForm.name"
             placeholder="请输入值班组名称"
+            :maxLength="50"
           />
         </a-form-item>
 
-        <a-form-item label="轮班周期（天）">
+        <a-form-item 
+          label="轮班周期（天）"
+          name="shiftDays"
+          :rules="[{ required: true, message: '请输入轮班周期' }]"
+        >
           <a-input-number
             v-model:value="editForm.shiftDays"
             :min="1"
+            :max="365"
             style="width: 100%"
           />
         </a-form-item>
 
-        <a-form-item label="用户名称" required>
+        <a-form-item 
+          label="用户名称" 
+          name="userNames"
+          :rules="[{ required: true, message: '请选择至少一个用户' }]"
+        >
           <a-select
-            mode="tags"
+            mode="multiple"
             v-model:value="editForm.userNames"
-            placeholder="请输入用户名并按回车确认"
+            placeholder="请选择用户"
             style="width: 100%"
+            :maxTagCount="3"
+            :filterOption="filterOption"
           >
             <a-select-option
               v-for="user in availableUsers"
@@ -139,89 +190,87 @@ import {
   updateOnDutyApi,
   deleteOnDutyApi,
   getUserList
-} from '#/api'; // 请根据实际路径调整
-import { useRouter } from 'vue-router'; // 导入 Vue Router 的 useRouter
+} from '#/api';
+import { useRouter } from 'vue-router';
+import dayjs from 'dayjs';
 
 // 定义数据类型
 interface OnDutyChange {
-  id: number; // 换班记录id
-  name: string; // 值班组名称
-  shiftDays: number; // 轮班周期（天）
-  userNames: string[]; // 用户名称列表
-  userId: number; // 创建者用户名
-  CreatedAt: string; // 创建时间
+  id: number;
+  name: string;
+  shiftDays: number;
+  userNames: string[];
+  userId: number;
+  CreatedAt: string;
 }
-// 在脚本中定义 router
+
 const router = useRouter();
-// 数据源
 const data = ref<OnDutyChange[]>([]);
-
-// 搜索文本
 const searchText = ref('');
-
-// 加载状态
 const loading = ref(false);
+const addFormRef = ref();
+const editFormRef = ref();
 
-// 过滤后的数据，通过 computed 属性动态计算
+// 过滤后的数据
 const filteredData = computed(() => {
   const searchValue = searchText.value.trim().toLowerCase();
-  return data.value.filter(item => item.name.toLowerCase().includes(searchValue));
+  return data.value.filter(item => 
+    item.name.toLowerCase().includes(searchValue) ||
+    item.userNames.some(name => name.toLowerCase().includes(searchValue))
+  );
 });
 
 // 表格列配置
 const columns = [
   {
-    title: 'id',
+    title: 'ID',
     dataIndex: 'id',
-    key: 'id',
-    sorter: (a: OnDutyChange, b: OnDutyChange) => a.id - b.id,
+    width: 80,
   },
   {
     title: '名称',
     dataIndex: 'name',
-    key: 'name',
-    sorter: (a: OnDutyChange, b: OnDutyChange) => a.name.localeCompare(b.name),
+    ellipsis: true,
   },
   {
     title: '轮班周期（天）',
     dataIndex: 'shiftDays',
-    key: 'shiftDays',
-    sorter: (a: OnDutyChange, b: OnDutyChange) => a.shiftDays - b.shiftDays,
+    width: 120,
   },
   {
     title: '用户名称',
     dataIndex: 'userNames',
-    key: 'userNames',
+    slots: { customRender: 'userNames' },
   },
   {
     title: '创建者',
     dataIndex: 'userId',
-    key: 'userId',
+    width: 100,
   },
   {
     title: '创建时间',
     dataIndex: 'CreatedAt',
-    key: 'CreatedAt',
+    slots: { customRender: 'CreatedAt' },
+    width: 160,
   },
   {
     title: '操作',
     key: 'action',
     slots: { customRender: 'action' },
+    width: 200,
+    fixed: 'right',
   },
 ];
 
-// 模态框状态和表单
 const isAddModalVisible = ref(false);
 const isEditModalVisible = ref(false);
 
-// 新增表单
 const addForm = reactive({
   name: '',
-  shiftDays: 7, // 默认值为7
+  shiftDays: 7,
   userNames: [] as string[],
 });
 
-// 编辑表单
 const editForm = reactive({
   id: 0,
   name: '',
@@ -229,28 +278,37 @@ const editForm = reactive({
   userNames: [] as string[],
 });
 
-// 可用的用户列表（可以从后端获取）
-const availableUsers = ref<string[]>([]); // 示例数据
+const availableUsers = ref<string[]>([]);
 
-// 显示新增模态框
+// Select 筛选方法
+const filterOption = (input: string, option: any) => {
+  return option.value.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+
+// 格式化日期
+const formatDate = (date: string) => {
+  return dayjs(date).format('YYYY-MM-DD HH:mm:ss');
+};
+
 const showAddModal = () => {
   resetAddForm();
   isAddModalVisible.value = true;
 };
 
-// 重置新增表单
 const resetAddForm = () => {
+  if (addFormRef.value) {
+    addFormRef.value.resetFields();
+  }
   addForm.name = '';
   addForm.shiftDays = 7;
   addForm.userNames = [];
 };
 
-// 关闭新增模态框
 const closeAddModal = () => {
+  resetAddForm();
   isAddModalVisible.value = false;
 };
 
-// 显示编辑模态框
 const showEditModal = (record: OnDutyChange) => {
   editForm.id = record.id;
   editForm.name = record.name;
@@ -259,84 +317,78 @@ const showEditModal = (record: OnDutyChange) => {
   isEditModalVisible.value = true;
 };
 
-// 关闭编辑模态框
 const closeEditModal = () => {
+  if (editFormRef.value) {
+    editFormRef.value.resetFields();
+  }
   isEditModalVisible.value = false;
 };
 
-// 提交新增换班记录
 const handleAdd = async () => {
   try {
-    // 表单验证
-    if (!addForm.name || addForm.userNames.length === 0) {
-      message.error('请填写所有必填项');
-      return;
-    }
+    await addFormRef.value.validate();
+    loading.value = true;
 
     const payload = {
-      name: addForm.name,
+      name: addForm.name.trim(),
       shiftDays: addForm.shiftDays,
       userNames: addForm.userNames,
     };
 
-    await createOnDutyApi(payload); // 调用创建 API
+    await createOnDutyApi(payload);
     message.success('新增值班组成功');
-    fetchOnDutyChanges();
+    await fetchOnDutyChanges();
     closeAddModal();
   } catch (error) {
+    console.error('新增值班组失败:', error);
     message.error('新增值班组失败，请稍后重试');
-    console.error(error);
+  } finally {
+    loading.value = false;
   }
 };
 
-// 提交更新换班记录
 const handleUpdate = async () => {
   try {
-    // 表单验证
-    if (!editForm.name || editForm.userNames.length === 0) {
-      message.error('请填写所有必填项');
-      return;
-    }
+    await editFormRef.value.validate();
+    loading.value = true;
 
     const payload = {
       id: editForm.id,
-      name: editForm.name,
+      name: editForm.name.trim(),
       shiftDays: editForm.shiftDays,
       userNames: editForm.userNames,
     };
 
-    loading.value = true;
-    await updateOnDutyApi(payload); // 调用更新 API
-    loading.value = false;
-
-      message.success('更新值班组成功');
-      fetchOnDutyChanges();
-      closeEditModal();
+    await updateOnDutyApi(payload);
+    message.success('更新值班组成功');
+    await fetchOnDutyChanges();
+    closeEditModal();
   } catch (error) {
-    loading.value = false;
+    console.error('更新值班组失败:', error);
     message.error('更新值班组失败，请稍后重试');
-    console.error(error);
+  } finally {
+    loading.value = false;
   }
 };
 
-// 处理删除换班记录
 const handleDelete = (record: OnDutyChange) => {
   Modal.confirm({
     title: '确认删除',
-    content: `您确定要删除值班组 "${record.name}" 吗？`,
+    content: `确定要删除值班组"${record.name}"吗？此操作不可恢复。`,
     okText: '确认',
+    okType: 'danger',
     cancelText: '取消',
-    onOk: async () => {
+    async onOk() {
       try {
         loading.value = true;
-        await deleteOnDutyApi(record.id); // 调用删除 API
-        loading.value = false;
-        message.success('值班组已删除');
-        fetchOnDutyChanges();
+        await deleteOnDutyApi(record.id);
+        message.success('删除值班组成功');
+        await fetchOnDutyChanges();
       } catch (error) {
-        loading.value = false;
+        console.error('删除值班组失败:', error);
         message.error('删除值班组失败，请稍后重试');
-        console.error(error);
+      } finally {
+        loading.value = false;
       }
     },
   });
@@ -344,41 +396,48 @@ const handleDelete = (record: OnDutyChange) => {
 
 const fetchUserList = async () => {
   try {
+    loading.value = true;
     const response = await getUserList();
     availableUsers.value = response.map((user: any) => user.username);
   } catch (error) {
+    console.error('获取用户列表失败:', error);
     message.error('获取用户列表失败，请稍后重试');
-    console.error(error);
+  } finally {
+    loading.value = false;
   }
 };
 
-// 查看排班表
 const viewSchedule = (record: OnDutyChange) => {
-  // 跳转到排班表页面并传递当前值班组的 id
-  router.push({ name: 'MonitorOnDutyGroupTable', query: { id: record.id } });
+  router.push({
+    name: 'MonitorOnDutyGroupTable',
+    query: { id: record.id.toString() }
+  });
 };
 
-// 获取换班记录数据
 const fetchOnDutyChanges = async () => {
   try {
+    loading.value = true;
     const response = await getAllOnDutyApi();
     data.value = response;
   } catch (error) {
-    message.error('获取值班组失败，请稍后重试');
-    console.error(error);
+    console.error('获取值班组列表失败:', error);
+    message.error('获取值班组列表失败，请稍后重试');
+  } finally {
+    loading.value = false;
   }
 };
 
-// 在组件加载时获取数据
-onMounted(() => {
-  fetchOnDutyChanges();
-  fetchUserList();
+onMounted(async () => {
+  await Promise.all([
+    fetchOnDutyChanges(),
+    fetchUserList()
+  ]);
 });
 </script>
 
 <style scoped>
 .custom-toolbar {
-  padding: 16px;
+  padding: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -388,14 +447,20 @@ onMounted(() => {
 .search-filters {
   display: flex;
   align-items: center;
+  gap: 16px;
 }
 
 .action-buttons {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
-a-form-item {
-  margin-bottom: 16px;
+:deep(.ant-form-item) {
+  margin-bottom: 24px;
+}
+
+:deep(.ant-tag) {
+  margin: 2px;
 }
 </style>
