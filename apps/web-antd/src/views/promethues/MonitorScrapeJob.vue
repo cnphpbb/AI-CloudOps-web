@@ -432,6 +432,11 @@ const fetchPools = async () => {
 const fetchTreeNodes = async () => {
   try {
     const response = await getAllTreeNodes();
+    if (!response) {
+      // 如果后端返回空数据,将数据设为空数组
+      treeNodeOptions.value = [];
+      return;
+    }
     treeNodeOptions.value = response.map((node: any) => ({
       id: node.id,
       title: node.name || node.title, // 根据实际数据结构调整

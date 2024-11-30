@@ -190,6 +190,11 @@ const rdsColumns = [
 
 const fetchTreeData = () => {
   getAllTreeNodes().then(response => {
+    if (!response) {
+      treeData.value = [];
+      flatTreeData.value = [];
+      return;
+    }
     treeData.value = response;
     flatTreeData.value = [];
     flattenTree(treeData.value, flatTreeData.value);
@@ -247,14 +252,14 @@ const handleAdd = async () => {
       level: addForm.level,
     });
 
-    const newNode = response.data;
-    treeData.value.push(newNode);
-    message.success('新增节点成功');
-    isSelectVisible.value = false;
-    resetForm(addForm);
-    setTimeout(() => {
-      location.reload();
-    }, 500);
+    if (response) {
+      message.success('新增节点成功');
+      isSelectVisible.value = false;
+      resetForm(addForm);
+      fetchTreeData(); // 直接调用获取最新树数据,而不是刷新页面
+    } else {
+      message.error('新增节点失败');
+    }
   } catch (error) {
     message.error('新增节点失败');
     console.error(error);

@@ -404,6 +404,11 @@ onMounted(() => {
 const refreshTreeData = async () => {
   try {
     const response = await getAllTreeNodes(); // 调用 API 获取所有节点数据
+    if (!response) {
+      // 如果后端返回空数据,将数据设为空数组
+      data.splice(0, data.length);
+      return;
+    }
     data.splice(0, data.length, ...response); // 更新页面显示的数据
   } catch (error) {
     message.error('刷新树节点数据失败');
