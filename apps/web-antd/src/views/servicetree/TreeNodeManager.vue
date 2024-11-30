@@ -103,13 +103,66 @@
         </a-modal>
       </template>
     </a-table>
+
+    <!-- 新增节点的模态框 -->
+    <a-modal
+      v-model:visible="isAddModalVisible"
+      title="新增节点"
+      @ok="handleSaveAddNode"
+      @cancel="isAddModalVisible = false"
+    >
+      <a-form
+        :model="addForm"
+        :label-col="{ span: 6 }"
+        :wrapper-col="{ span: 16 }"
+      >
+        <a-form-item
+          label="节点名称"
+          name="title"
+          :rules="[{ required: true, message: '请输入节点名称' }]"
+        >
+          <a-input v-model:value="addForm.title" placeholder="请输入节点名称" />
+        </a-form-item>
+
+        <a-form-item label="描述" name="desc">
+          <a-input v-model:value="addForm.desc" placeholder="请输入描述" />
+        </a-form-item>
+
+        <a-form-item label="父节点" name="pId">
+          <a-tree-select
+            v-model:value="addForm.pId"
+            :tree-data="data"
+            :field-names="{
+              children: 'children',
+              label: 'title',
+              value: 'id',
+            }"
+            placeholder="请选择父节点"
+            :tree-default-expand-all="true"
+            :show-search="true"
+            :filter-tree-node="filterTreeNode"
+          />
+        </a-form-item>
+
+        <a-form-item label="层级" name="level">
+          <a-input-number v-model:value="addForm.level" :min="1" />
+        </a-form-item>
+
+        <a-form-item label="节点类型" name="isLeaf">
+          <a-select v-model:value="addForm.isLeaf" placeholder="请选择节点类型">
+            <a-select-option :value="0">目录节点</a-select-option>
+            <a-select-option :value="1">叶子节点</a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { reactive, ref, onMounted, watch } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { getAllTreeNodes, deleteTreeNode, updateTreeNode } from '#/api';
+import { getAllTreeNodes, deleteTreeNode, updateTreeNode, createTreeNode } from '#/api';
 import type { TreeNode, User } from '#/api/core/tree';
 // 节点数据
 const data = reactive<TreeNode[]>([]);
@@ -234,6 +287,56 @@ const handleDeleteNode = (record: TreeNode) => {
   });
 };
 
+const isAddModalVisible = ref(false);
+
+// 添加节点的表单数据
+const addForm = reactive({
+  title: '',
+  desc: '',
+  pId: 0,
+  isLeaf: 0,
+  level: 1,
+});
+
+const handleAddNode = () => {
+  // 重置表单数据
+  Object.assign(addForm, {
+    title: '',
+    desc: '',
+    pId: 0,
+    isLeaf: 0,
+    level: 1,
+  });
+  
+  // 显示添加节点的模态框
+  isAddModalVisible.value = true;
+};
+
+// 添加保存新节点的方法
+const handleSaveAddNode = async () => {
+  if (!addForm.title) {
+    message.error('节点名称不能为空');
+    return;
+  }
+
+  try {
+    await createTreeNode({
+      title: addForm.title,
+      pId: addForm.pId,
+      desc: addForm.desc,
+      isLeaf: addForm.isLeaf,
+      level: addForm.level,
+    });
+
+    message.success('新增节点成功');
+    isAddModalVisible.value = false;
+    await refreshTreeData(); // 刷新节点数据
+  } catch (error) {
+    message.error('新增节点失败');
+    console.error(error);
+  }
+};
+
 // 点击编辑按钮时，弹出表单并填充默认数据
 const handleEditNode = (record: TreeNode) => {
   // 填充编辑表单的数据
@@ -274,11 +377,22 @@ const handleCancel = () => {
   isEditModalVisible.value = false;
 };
 
+// 树选择器的搜索过滤函数
+const filterTreeNode = (inputValue: string, treeNode: any) => {
+  return treeNode.title.toLowerCase().indexOf(inputValue.toLowerCase()) >= 0;
+};
+
 onMounted(() => {
   getAllTreeNodes()
     .then((response) => {
-      data.splice(0, data.length, ...response); // 替换 reactive 对象中的数据
-      filteredData.value = data; // 初始化时，将 filteredData 设置为 data
+      if (response) {
+        data.splice(0, data.length, ...response); // 替换 reactive 对象中的数据
+        filteredData.value = data; // 初始化时，将 filteredData 设置为 data
+      } else {
+        // 如果后端返回空数据,将数据设为空数组
+        data.splice(0, data.length);
+        filteredData.value = [];
+      }
     })
     .catch((error) => {
       message.error('获取树数据失败');
@@ -290,6 +404,11 @@ onMounted(() => {
 const refreshTreeData = async () => {
   try {
     const response = await getAllTreeNodes(); // 调用 API 获取所有节点数据
+    if (!response) {
+      // 如果后端返回空数据,将数据设为空数组
+      data.splice(0, data.length);
+      return;
+    }
     data.splice(0, data.length, ...response); // 更新页面显示的数据
   } catch (error) {
     message.error('刷新树节点数据失败');

@@ -477,13 +477,30 @@ const fetchResources = async () => {
       getAllECSResources(),
       getAllTreeNodes(),
     ]);
-    // 假设每个 TreeNode 的 bind_ecs 包含已绑定的 ECS 资源
+
+    // 如果后端返回空数据,将数据设为空数组
+    if (!ecsResponse) {
+      data.splice(0, data.length);
+      return;
+    }
+
+    // 如果树节点数据为空,则所有ECS资源都未绑定
+    if (!treeResponse) {
+      ecsResponse.forEach(ecs => {
+        ecs.isBound = false;
+        ecs.boundNodeId = undefined;
+      });
+      data.splice(0, data.length, ...ecsResponse);
+      return;
+    }
+
+    // 处理ECS资源的绑定状态
     ecsResponse.forEach(ecs => {
       ecs.isBound = false;
       treeResponse.forEach(node => {
-        if (node.bind_ecs.some(boundEcs => boundEcs.id === ecs.id)) {
+        if (node.bind_ecs && node.bind_ecs.some(boundEcs => boundEcs.id === ecs.id)) {
           ecs.isBound = true;
-          ecs.boundNodeId = node.id; // 确保 ResourceEcs 接口中有 boundNodeId
+          ecs.boundNodeId = node.id;
         }
       });
     });
@@ -498,6 +515,11 @@ const fetchResources = async () => {
 const fetchTreeNodes = async () => {
   try {
     const response = await getAllTreeNodes();
+    if (!response) {
+      treeNodes.value = [];
+      defaultExpandedKeys.value = [];
+      return;
+    }
     treeNodes.value = response;
     // 根据需要设置默认展开的节点
     defaultExpandedKeys.value = response.map(node => node.id);
