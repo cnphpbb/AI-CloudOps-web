@@ -265,7 +265,7 @@ interface TreeNode {
   id: string;
   title: string;
   children?: TreeNode[];
-  isLeaf?: boolean;
+  isLeaf?: number;
   value?: string;
   key?: string;
 }
@@ -349,12 +349,11 @@ const processTreeData = (nodes: any[]): TreeNode[] => {
       title: node.name || node.title,
       key: node.id,
       value: node.id,
-      isLeaf: !node.children || node.children.length === 0
+      isLeaf: node.isLeaf
     };
 
-    if (!processedNode.isLeaf) {
+    if (node.children && node.children.length > 0) {
       processedNode.children = processTreeData(node.children);
-      processedNode.selectable = false;
     }
 
     return processedNode;
@@ -365,7 +364,7 @@ const processTreeData = (nodes: any[]): TreeNode[] => {
 const getLeafNodes = (nodes: TreeNode[]): TreeNode[] => {
   let leaves: TreeNode[] = [];
   nodes.forEach(node => {
-    if (node.isLeaf) {
+    if (node.isLeaf === 1) {
       leaves.push(node);
     } else if (node.children) {
       leaves = leaves.concat(getLeafNodes(node.children));
