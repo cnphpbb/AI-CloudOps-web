@@ -15,7 +15,7 @@
     </div>
 
     <!-- 节点列表 -->
-    <a-table :columns="columns" :data-source="filteredData" row-key="key">
+    <a-table :columns="columns" :data-source="filteredData" row-key="id">
       <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
@@ -48,7 +48,7 @@
               />
             </a-form-item>
 
-            <a-form-item label="描述" name="description">
+            <a-form-item label="描述" name="desc">
               <a-input v-model:value="editForm.desc" placeholder="请输入描述" />
             </a-form-item>
 
@@ -109,12 +109,13 @@
       v-model:visible="isAddModalVisible"
       title="新增节点"
       @ok="handleSaveAddNode"
-      @cancel="isAddModalVisible = false"
+      @cancel="handleAddCancel"
     >
       <a-form
         :model="addForm"
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 16 }"
+        ref="addFormRef"
       >
         <a-form-item
           label="节点名称"
@@ -128,27 +129,30 @@
           <a-input v-model:value="addForm.desc" placeholder="请输入描述" />
         </a-form-item>
 
-        <a-form-item label="父节点" name="pId">
+        <a-form-item 
+          label="父节点" 
+          name="pId"
+          :rules="[{ required: true, message: '请选择父节点' }]"
+        >
           <a-tree-select
+            v-if="isAddModalVisible"
             v-model:value="addForm.pId"
-            :tree-data="data"
-            :field-names="{
-              children: 'children',
-              label: 'title',
-              value: 'id',
-            }"
+            style="width: 100%"
+            :dropdown-style="{ maxHeight: '400px', overflow: 'auto' }"
+            :tree-data="directoryNodes"
             placeholder="请选择父节点"
-            :tree-default-expand-all="true"
-            :show-search="true"
-            :filter-tree-node="filterTreeNode"
+            tree-default-expand-all
+            :field-names="{ label: 'title', value: 'id', children: 'children' }"
+            :tree-line="true"
+            @select="onParentSelect"
           />
         </a-form-item>
 
-        <a-form-item label="层级" name="level">
-          <a-input-number v-model:value="addForm.level" :min="1" />
-        </a-form-item>
-
-        <a-form-item label="节点类型" name="isLeaf">
+        <a-form-item 
+          label="节点类型" 
+          name="isLeaf"
+          :rules="[{ required: true, message: '请选择节点类型' }]"
+        >
           <a-select v-model:value="addForm.isLeaf" placeholder="请选择节点类型">
             <a-select-option :value="0">目录节点</a-select-option>
             <a-select-option :value="1">叶子节点</a-select-option>
@@ -160,25 +164,53 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, ref, onMounted, watch } from 'vue';
+import { reactive, ref, onMounted, watch, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { getAllTreeNodes, deleteTreeNode, updateTreeNode, createTreeNode } from '#/api';
 import type { TreeNode, User } from '#/api/core/tree';
+
 // 节点数据
 const data = reactive<TreeNode[]>([]);
 const isEditModalVisible = ref(false);
 // 搜索文本
 const searchText = ref('');
 // 过滤后的数据
-const filteredData = ref<TreeNode[]>(data);
-
-// 监听搜索文本变化
-watch(searchText, (newValue) => {
-  const searchValue = newValue.trim().toLowerCase();
-  filteredData.value = data.filter((item) =>
-    item.title.toLowerCase().includes(searchValue),
+const filteredData = computed(() => {
+  const searchValue = searchText.value.trim().toLowerCase();
+  return data.filter((item) =>
+    item.title.toLowerCase().includes(searchValue)
   );
 });
+
+// 计算属性：过滤出所有目录节点构建树形结构
+const directoryNodes = computed(() => {
+  const filterDirectoryNodes = (nodes: TreeNode[]): TreeNode[] => {
+    return nodes
+      .filter(node => !node.isLeaf)
+      .map(node => ({
+        ...node,
+        children: node.children ? filterDirectoryNodes(node.children) : []
+      }));
+  };
+  
+  return [
+    { id: 0, title: '顶级节点', key: '0', level: 0 },
+    ...filterDirectoryNodes(data)
+  ];
+});
+
+// 根据选择的父节点自动计算level
+const onParentSelect = (value: number) => {
+  if (value === 0) {
+    addForm.level = 1;
+    return;
+  }
+  
+  const parentNode = findNodeById(data, value);
+  if (parentNode) {
+    addForm.level = parentNode.level + 1;
+  }
+};
 
 // 表格列配置
 const columns = [
@@ -188,25 +220,9 @@ const columns = [
     key: 'title',
   },
   {
-    title: 'id',
-    dataIndex: 'id',
-    key: 'id',
-  },
-  {
-    title: '层级',
-    dataIndex: 'level',
-    key: 'level',
-  },
-  {
     title: '描述',
     dataIndex: 'desc',
     key: 'desc',
-  },
-  {
-    title: '是否为叶子节点',
-    dataIndex: 'isLeaf',
-    key: 'isLeaf',
-    customRender: ({ isLeaf }: { isLeaf: number }) => (isLeaf ? 1 : 0),
   },
   {
     title: 'ECS 数量',
@@ -267,27 +283,19 @@ const handleDeleteNode = (record: TreeNode) => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        // 调用后端删除接口，传入节点的 key 或 id
-        await deleteTreeNode(record.id); // 假设 key 是节点的唯一标识
-
-        // 从前端数据中删除节点
-        const index = data.findIndex((item) => item.key === record.key);
-        if (index !== -1) {
-          data.splice(index, 1);
-          message.success(`节点 "${record.title}" 已删除`);
-        }
-      } catch (err) {
-        // 捕获删除失败的错误并展示错误信息
+        await deleteTreeNode(record.id);
+        await refreshTreeData(); // 刷新节点数据
+        message.success(`节点 "${record.title}" 已删除`);
+      } catch (err: any) {
         message.error(String(err.message));
       }
-    },
-    onCancel() {
-      console.log('取消删除');
     },
   });
 };
 
 const isAddModalVisible = ref(false);
+const addFormRef = ref();
+const editFormRef = ref();
 
 // 添加节点的表单数据
 const addForm = reactive({
@@ -297,6 +305,22 @@ const addForm = reactive({
   isLeaf: 0,
   level: 1,
 });
+
+// 递归查找节点
+const findNodeById = (nodes: TreeNode[], id: number): TreeNode | null => {
+  for (const node of nodes) {
+    if (node.id === id) {
+      return node;
+    }
+    if (node.children) {
+      const found = findNodeById(node.children, id);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
+};
 
 const handleAddNode = () => {
   // 重置表单数据
@@ -314,12 +338,9 @@ const handleAddNode = () => {
 
 // 添加保存新节点的方法
 const handleSaveAddNode = async () => {
-  if (!addForm.title) {
-    message.error('节点名称不能为空');
-    return;
-  }
-
   try {
+    await addFormRef.value?.validate();
+    
     await createTreeNode({
       title: addForm.title,
       pId: addForm.pId,
@@ -343,9 +364,9 @@ const handleEditNode = (record: TreeNode) => {
   editForm.id = record.id;
   editForm.title = record.title;
   editForm.desc = record.desc;
-  editForm.ops_admins = [...record.ops_admins]; // 复制运维负责人
-  editForm.rd_admins = [...record.rd_admins]; // 复制研发负责人
-  editForm.rd_members = [...record.rd_members]; // 复制研发工程师
+  editForm.ops_admins = [...(record.ops_admins || [])]; 
+  editForm.rd_admins = [...(record.rd_admins || [])];
+  editForm.rd_members = [...(record.rd_members || [])];
 
   // 显示模态框
   isEditModalVisible.value = true;
@@ -354,19 +375,12 @@ const handleEditNode = (record: TreeNode) => {
 // 保存节点数据
 const handleSaveNode = async () => {
   try {
-    // 等待更新节点的请求完成
+    await editFormRef.value?.validate();
     await updateTreeNode(editForm);
-
-    // 更新成功后显示成功消息
     message.success('节点信息已保存');
-
-    // 关闭模态框
     isEditModalVisible.value = false;
-
-    // 刷新页面上的节点数据，确保页面数据是最新的
-    await refreshTreeData(); // 假设这个函数用于重新获取最新的节点数据并更新页面
+    await refreshTreeData();
   } catch (error) {
-    // 如果更新失败，显示错误消息
     message.error('保存节点信息失败');
     console.error(error);
   }
@@ -374,47 +388,44 @@ const handleSaveNode = async () => {
 
 // 取消编辑
 const handleCancel = () => {
+  editFormRef.value?.resetFields();
   isEditModalVisible.value = false;
 };
 
-// 树选择器的搜索过滤函数
-const filterTreeNode = (inputValue: string, treeNode: any) => {
-  return treeNode.title.toLowerCase().indexOf(inputValue.toLowerCase()) >= 0;
+// 取消新增
+const handleAddCancel = () => {
+  addFormRef.value?.resetFields();
+  isAddModalVisible.value = false;
 };
-
-onMounted(() => {
-  getAllTreeNodes()
-    .then((response) => {
-      if (response) {
-        data.splice(0, data.length, ...response); // 替换 reactive 对象中的数据
-        filteredData.value = data; // 初始化时，将 filteredData 设置为 data
-      } else {
-        // 如果后端返回空数据,将数据设为空数组
-        data.splice(0, data.length);
-        filteredData.value = [];
-      }
-    })
-    .catch((error) => {
-      message.error('获取树数据失败');
-      console.error(error);
-    });
-});
 
 // 获取所有节点数据并更新页面
 const refreshTreeData = async () => {
   try {
-    const response = await getAllTreeNodes(); // 调用 API 获取所有节点数据
+    const response = await getAllTreeNodes();
     if (!response) {
-      // 如果后端返回空数据,将数据设为空数组
       data.splice(0, data.length);
       return;
     }
-    data.splice(0, data.length, ...response); // 更新页面显示的数据
+    data.splice(0, data.length, ...response);
   } catch (error) {
     message.error('刷新树节点数据失败');
     console.error(error);
   }
 };
+
+onMounted(async () => {
+  try {
+    const response = await getAllTreeNodes();
+    if (response) {
+      data.splice(0, data.length, ...response);
+    } else {
+      data.splice(0, data.length);
+    }
+  } catch (error) {
+    message.error('获取树数据失败');
+    console.error(error);
+  }
+});
 </script>
 
 <style scoped>

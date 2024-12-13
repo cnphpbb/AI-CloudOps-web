@@ -11,9 +11,6 @@
               <a-form-item label="节点名称" name="title" :rules="[{ required: true, message: '请输入节点名称' }]">
                 <a-input v-model:value="addForm.title" placeholder="请输入节点名称" />
               </a-form-item>
-              <a-form-item label="level层级" name="level">
-                <a-input-number v-model:value="addForm.level" />
-              </a-form-item>
               <a-form-item label="创建类型" name="isLeaf" :rules="[{ required: true, message: '请选择是否为叶节点' }]">
                 <a-select v-model:value="addForm.isLeaf" placeholder="请选择">
                   <a-select-option :value=0>目录</a-select-option>
@@ -24,12 +21,18 @@
                 <a-input v-model:value="addForm.description" placeholder="请输入描述" />
               </a-form-item>
               <a-form-item label="父节点" name="pId">
-                <a-select v-if="isSelectVisible" v-model:value="addForm.pId" placeholder="请选择父节点">
-                  <a-select-option :key="0" :value="0">顶级节点</a-select-option>
-                  <a-select-option v-for="node in flatTreeData" :key="node.id" :value="node.id">
-                    {{ node.title }}
-                  </a-select-option>
-                </a-select>
+                <a-tree-select
+                  v-if="isSelectVisible"
+                  v-model:value="addForm.pId"
+                  style="width: 100%"
+                  :dropdown-style="{ maxHeight: '400px', overflow: 'auto' }"
+                  :tree-data="directoryNodes"
+                  placeholder="请选择父节点"
+                  tree-default-expand-all
+                  :field-names="{ label: 'title', value: 'id', children: 'children' }"
+                  :tree-line="true"
+                  @select="onParentSelect"
+                />
               </a-form-item>
             </a-form>
           </a-modal>
@@ -61,14 +64,14 @@
                       </a-form-item>
                       <a-form-item label="研发负责人" name="rd_admins">
                         <a-select v-model:value="editForm.rd_admins" mode="tags" placeholder="请选择研发负责人">
-                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.ops_admin_users">
+                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.rd_admin_users">
                             {{ person.rd_admin_users }}
                           </a-select-option>
                         </a-select>
                       </a-form-item>
                       <a-form-item label="研发工程师" name="rd_members">
                         <a-select v-model:value="editForm.rd_members" mode="tags" placeholder="请选择研发工程师">
-                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.ops_admin_users">
+                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.rd_member_users">
                             {{ person.rd_member_users }}
                           </a-select-option>
                         </a-select>
@@ -124,7 +127,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import type { TreeNode } from '#/api/core/tree';
 import { message } from 'ant-design-vue';
 import { getAllTreeNodes, createTreeNode, updateTreeNode } from '#/api';
@@ -134,13 +137,57 @@ const flatTreeData = ref<TreeNode[]>([]);
 const selectedNode = ref<TreeNode | null>(null);
 const isSelectVisible = ref(false);
 const isEditVisible = ref(false);
+const addFormRef = ref(); // 添加表单引用
+const editFormRef = ref(); // 添加表单引用
+
 const addForm = reactive({
   title: '',
   description: '',
   pId: 0,
   isLeaf: 0,
-  level: 1,
+  level: 1, // 默认值，会根据父节点自动计算
 });
+
+// 计算属性：过滤出所有目录节点构建树形结构
+const directoryNodes = computed(() => {
+  const filterDirectoryNodes = (nodes: TreeNode[]): TreeNode[] => {
+    return nodes
+      .filter(node => !node.isLeaf)
+      .map(node => ({
+        ...node,
+        children: node.children ? filterDirectoryNodes(node.children) : []
+      }));
+  };
+  
+  return [
+    { id: 0, title: '顶级节点', key: '0', level: 0 },
+    ...filterDirectoryNodes(treeData.value)
+  ];
+});
+
+// 根据选择的父节点自动计算level
+const onParentSelect = (value: number) => {
+  if (value === 0) {
+    addForm.level = 1;
+    return;
+  }
+  
+  const parentNode = findNodeById(treeData.value, value);
+  if (parentNode) {
+    addForm.level = parentNode.level + 1;
+  }
+};
+
+const findNodeById = (nodes: TreeNode[], id: number): TreeNode | null => {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    if (node.children) {
+      const result = findNodeById(node.children, id);
+      if (result) return result;
+    }
+  }
+  return null;
+};
 
 interface Person {
   id: number;
@@ -235,15 +282,12 @@ const findNodeByKey = (data: TreeNode[], key: string): TreeNode | null => {
 
 const showAddModal = () => {
   isSelectVisible.value = true;
+  resetForm(addForm);
 };
 
 const handleAdd = async () => {
-  if (!addForm.title) {
-    message.error('节点名称不能为空');
-    return;
-  }
-
   try {
+    await addFormRef.value.validate();
     const response = await createTreeNode({
       title: addForm.title,
       pId: addForm.pId,
@@ -256,19 +300,17 @@ const handleAdd = async () => {
       message.success('新增节点成功');
       isSelectVisible.value = false;
       resetForm(addForm);
-      fetchTreeData(); // 直接调用获取最新树数据,而不是刷新页面
+      fetchTreeData();
     } else {
       message.error('新增节点失败');
     }
   } catch (error) {
-    message.error('新增节点失败');
     console.error(error);
   }
 };
 
 const showEditModal = () => {
   if (selectedNode.value) {
-    // 将当前选中的节点数据复制到 editForm 中
     editForm.id = selectedNode.value.id;
     editForm.title = selectedNode.value.title;
     editForm.desc = selectedNode.value.desc;
@@ -276,17 +318,13 @@ const showEditModal = () => {
     editForm.rd_admins = selectedNode.value.rd_admins ? [...selectedNode.value.rd_admins] : [];
     editForm.rd_members = selectedNode.value.rd_members ? [...selectedNode.value.rd_members] : [];
     
-    isEditVisible.value = true; // 显示编辑模态框
+    isEditVisible.value = true;
   }
 };
 
 const handleEdit = async () => {
-  if (!editForm.title) {
-    message.error('节点名称不能为空');
-    return;
-  }
-
   try {
+    await editFormRef.value.validate();
     await updateTreeNode({
       id: editForm.id,
       title: editForm.title,
@@ -300,14 +338,22 @@ const handleEdit = async () => {
     isEditVisible.value = false;
     fetchTreeData();
   } catch (error) {
-    message.error('编辑节点失败');
     console.error(error);
   }
 };
 
-
 const resetForm = (form: any) => {
-  Object.keys(form).forEach(key => (form[key] = key === 'pId' ? 0 : ''));
+  Object.keys(form).forEach(key => {
+    if (key === 'pId') {
+      form[key] = 0;
+    } else if (key === 'level') {
+      form[key] = 1;
+    } else if (key === 'isLeaf') {
+      form[key] = 0;
+    } else {
+      form[key] = '';
+    }
+  });
 };
 
 onMounted(fetchTreeData);

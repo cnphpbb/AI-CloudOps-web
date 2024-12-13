@@ -122,9 +122,16 @@
           <a-input-number v-model:value="addForm.port" :min="1" :max="65535" style="width: 100%;" placeholder="请输入端口" />
         </a-form-item>
 
-        <a-form-item label="树节点 ID" name="treeNodeIds" :rules="[{ required: true, message: '请选择树节点 ID' }]">
-          <a-select v-model:value="addForm.treeNodeIds" mode="multiple" placeholder="请选择树节点 ID"
-            :options="formattedTreeNodeOptions" />
+        <a-form-item label="树节点" name="treeNodeIds" :rules="[{ required: true, message: '请选择树节点' }]">
+          <a-tree-select
+            v-model:value="addForm.treeNodeIds"
+            :tree-data="leafNodes"
+            :tree-checkable="true"
+            :tree-default-expand-all="true"
+            :show-checked-strategy="SHOW_PARENT"
+            placeholder="请选择树节点"
+            style="width: 100%"
+          />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -199,9 +206,16 @@
             placeholder="请输入端口" />
         </a-form-item>
 
-        <a-form-item label="树节点 ID" name="treeNodeIds" :rules="[{ required: true, message: '请选择树节点 ID' }]">
-          <a-select v-model:value="editForm.treeNodeIds" mode="multiple" placeholder="请选择树节点 ID"
-            :options="formattedTreeNodeOptions" />
+        <a-form-item label="树节点" name="treeNodeIds" :rules="[{ required: true, message: '请选择树节点' }]">
+          <a-tree-select
+            v-model:value="editForm.treeNodeIds"
+            :tree-data="leafNodes"
+            :tree-checkable="true"
+            :tree-default-expand-all="true"
+            :show-checked-strategy="SHOW_PARENT"
+            placeholder="请选择树节点"
+            style="width: 100%"
+          />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -211,6 +225,8 @@
 <script lang="ts" setup>
 import { computed, reactive, ref, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
+import { TreeSelect } from 'ant-design-vue';
+const { SHOW_PARENT } = TreeSelect;
 import {
   getMonitorScrapeJobApi,
   createScrapeJobApi,
@@ -218,7 +234,7 @@ import {
   deleteScrapeJobApi,
   getMonitorScrapePoolApi,
   getAllTreeNodes
-} from '#/api'; // 确保这些 API 已正确定义和导出
+} from '#/api';
 
 // 定义数据类型
 interface ScrapeJob {
@@ -248,6 +264,10 @@ interface Pool {
 interface TreeNode {
   id: string;
   title: string;
+  children?: TreeNode[];
+  isLeaf?: boolean;
+  value?: string;
+  key?: string;
 }
 
 // 数据源（待从后端获取）
@@ -264,7 +284,7 @@ const filteredData = computed(() => {
   );
 });
 
-// 表格列配置
+// 表格列配置 - 精简后的列
 const columns = [
   {
     title: 'id',
@@ -280,7 +300,7 @@ const columns = [
     title: '服务发现类型',
     dataIndex: 'serviceDiscoveryType',
     key: 'serviceDiscoveryType',
-    slots: { customRender: 'serviceDiscoveryType' }, // 使用自定义插槽来渲染服务发现类型
+    slots: { customRender: 'serviceDiscoveryType' },
   },
   {
     title: '监控采集路径',
@@ -288,59 +308,88 @@ const columns = [
     key: 'metricsPath',
   },
   {
-    title: '协议方案',
-    dataIndex: 'scheme',
-    key: 'scheme',
-  },
-  {
-    title: '采集间隔（秒）',
-    dataIndex: 'scrapeInterval',
-    key: 'scrapeInterval',
-  },
-  {
-    title: '采集超时（秒）',
-    dataIndex: 'scrapeTimeout',
-    key: 'scrapeTimeout',
-  },
-  {
     title: '关联采集池',
     dataIndex: 'poolId',
     key: 'poolId',
-    slots: { customRender: 'poolName' }, // 使用自定义插槽来渲染关联的采集池名称
+    slots: { customRender: 'poolName' },
   },
   {
-    title: '刷新间隔（秒）',
-    dataIndex: 'refreshInterval',
-    key: 'refreshInterval',
-  },
-  {
-    title: '端口',
-    dataIndex: 'port',
-    key: 'port',
-  },
-  {
-    title: '树节点 ID',
+    title: '树节点',
     dataIndex: 'treeNodeIds',
     key: 'treeNodeIds',
-    slots: { customRender: 'treeNodeIds' }, // 使用自定义插槽来渲染树节点 ID
+    slots: { customRender: 'treeNodeIds' },
   },
   {
     title: '创建者',
     dataIndex: 'userId',
     key: 'userId',
-    slots: { customRender: 'userId' }, // 使用自定义插槽来渲染创建者名称
+    slots: { customRender: 'userId' },
   },
   {
     title: '创建时间',
-    dataIndex: 'CreatedAt',
-    key: 'CreatedAt',
+    dataIndex: 'created_at',
+    key: 'created_at',
   },
   {
     title: '操作',
     key: 'action',
-    slots: { customRender: 'action' }, // 使用自定义插槽来渲染操作按钮
+    slots: { customRender: 'action' },
   },
 ];
+
+// 树形数据
+const treeData = ref<TreeNode[]>([]);
+const leafNodes = ref<TreeNode[]>([]);
+
+// 递归处理树节点数据
+const processTreeData = (nodes: any[]): TreeNode[] => {
+  return nodes.map(node => {
+    const processedNode: TreeNode = {
+      id: node.id,
+      title: node.name || node.title,
+      key: node.id,
+      value: node.id,
+      isLeaf: !node.children || node.children.length === 0
+    };
+
+    if (!processedNode.isLeaf) {
+      processedNode.children = processTreeData(node.children);
+      processedNode.selectable = false;
+    }
+
+    return processedNode;
+  });
+};
+
+// 递归获取所有叶子节点
+const getLeafNodes = (nodes: TreeNode[]): TreeNode[] => {
+  let leaves: TreeNode[] = [];
+  nodes.forEach(node => {
+    if (node.isLeaf) {
+      leaves.push(node);
+    } else if (node.children) {
+      leaves = leaves.concat(getLeafNodes(node.children));
+    }
+  });
+  return leaves;
+};
+
+// 获取树节点数据
+const fetchTreeNodes = async () => {
+  try {
+    const response = await getAllTreeNodes();
+    if (!response) {
+      treeData.value = [];
+      leafNodes.value = [];
+      return;
+    }
+    treeData.value = processTreeData(response);
+    leafNodes.value = getLeafNodes(treeData.value);
+  } catch (error) {
+    message.error('获取树节点数据失败，请稍后重试');
+    console.error(error);
+  }
+};
 
 // 模态框相关状态
 const isAddModalVisible = ref(false);
@@ -385,17 +434,6 @@ const editForm = reactive({
 // 采集池列表
 const pools = ref<Pool[]>([]);
 
-// 树节点选项
-const treeNodeOptions = ref<TreeNode[]>([]);
-
-// 格式化树节点选项为 { label, value } 结构
-const formattedTreeNodeOptions = computed(() =>
-  treeNodeOptions.value.map(node => ({
-    label: node.title,
-    value: String(node.id), 
-  }))
-);
-
 // 计算属性：将 addForm.enable 映射为布尔值用于 a-switch
 const addFormEnable = computed({
   get: () => addForm.enable === 1,
@@ -412,8 +450,6 @@ const editFormEnable = computed({
   }
 });
 
-
-
 // 获取采集池数据
 const fetchPools = async () => {
   try {
@@ -428,25 +464,6 @@ const fetchPools = async () => {
   }
 };
 
-// 获取树节点数据
-const fetchTreeNodes = async () => {
-  try {
-    const response = await getAllTreeNodes();
-    if (!response) {
-      // 如果后端返回空数据,将数据设为空数组
-      treeNodeOptions.value = [];
-      return;
-    }
-    treeNodeOptions.value = response.map((node: any) => ({
-      id: node.id,
-      title: node.name || node.title, // 根据实际数据结构调整
-    }));
-  } catch (error) {
-    message.error('获取树节点数据失败，请稍后重试');
-    console.error(error);
-  }
-};
-
 // 获取采集任务数据
 const loading = ref(false);
 
@@ -456,8 +473,8 @@ const fetchResources = async () => {
     const response = await getMonitorScrapeJobApi();
     data.value = response.map((item: ScrapeJob) => ({
       ...item,
-      // 确保 treeNodeIds 始终是数组
-      treeNodeIds: Array.isArray(item.treeNodeIds) ? item.treeNodeIds : [],
+      // 确保 treeNodeIds 始终是字符串数组
+      treeNodeIds: Array.isArray(item.treeNodeIds) ? item.treeNodeIds.map(String) : [],
     }));
   } catch (error) {
     message.error('获取采集任务数据失败，请稍后重试');
@@ -528,8 +545,14 @@ const handleAdd = async () => {
     // 表单验证
     await addFormRef.value.validateFields();
 
+    // 确保 treeNodeIds 是字符串数组
+    const formData = {
+      ...addForm,
+      treeNodeIds: addForm.treeNodeIds.map(String)
+    };
+
     // 提交数据
-    await createScrapeJobApi(addForm);
+    await createScrapeJobApi(formData);
     message.success('新增采集任务成功');
     fetchResources(); // 重新获取数据
     closeAddModal();
@@ -556,7 +579,7 @@ const openEditModal = (record: ScrapeJob) => {
     poolId: record.poolId,
     refreshInterval: record.refreshInterval,
     port: record.port,
-    treeNodeIds: Array.isArray(record.treeNodeIds) ? record.treeNodeIds : [],
+    treeNodeIds: Array.isArray(record.treeNodeIds) ? record.treeNodeIds.map(String) : [],
   });
   isEditModalVisible.value = true;
 };
@@ -573,8 +596,14 @@ const handleUpdate = async () => {
     // 表单验证
     await editFormRef.value.validateFields();
 
+    // 确保 treeNodeIds 是字符串数组
+    const formData = {
+      ...editForm,
+      treeNodeIds: editForm.treeNodeIds.map(String)
+    };
+
     // 提交数据
-    await updateScrapeJobApi(editForm);
+    await updateScrapeJobApi(formData);
     message.success('更新采集任务成功');
     fetchResources(); // 重新获取数据
     closeEditModal();
