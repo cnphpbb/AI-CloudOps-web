@@ -30,8 +30,8 @@
           {{ getPoolName(record.poolId) }}
         </template>
         <!-- 创建者列 -->
-        <template #userId="{ record }">
-          {{ getUserName(record.userId) }}
+        <template #createUserName="{ record }">
+          {{ record.createUserName }}
         </template>
         <!-- 操作列 -->
         <template #action="{ record }">
@@ -48,7 +48,11 @@
         </template>
         <!-- 树节点 ID 列 -->
         <template #treeNodeIds="{ record }">
-          {{ formatTreeNodeIds(record.treeNodeIds) }}
+          {{ formatTreeNodeNames(record.treeNodeNames) }}
+        </template>
+        <!-- 创建时间列 -->
+        <template #created_at="{ record }">
+          {{ formatDate(record.created_at) }}
         </template>
       </a-table>
     </a-spin>
@@ -226,6 +230,7 @@
 import { computed, reactive, ref, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { TreeSelect } from 'ant-design-vue';
+import dayjs from 'dayjs';
 const { SHOW_PARENT } = TreeSelect;
 import {
   getMonitorScrapeJobApi,
@@ -254,6 +259,8 @@ interface ScrapeJob {
   refreshInterval: number;
   port: number;
   treeNodeIds: string[];
+  treeNodeNames: string[];
+  createUserName: string;
 }
 
 interface Pool {
@@ -283,6 +290,11 @@ const filteredData = computed(() => {
     item.name.toLowerCase().includes(searchValue)
   );
 });
+
+// 格式化日期
+const formatDate = (date: string) => {
+  return dayjs(date).format('YYYY-MM-DD HH:mm:ss');
+};
 
 // 表格列配置 - 精简后的列
 const columns = [
@@ -321,14 +333,15 @@ const columns = [
   },
   {
     title: '创建者',
-    dataIndex: 'userId',
-    key: 'userId',
-    slots: { customRender: 'userId' },
+    dataIndex: 'createUserName',
+    key: 'createUserName',
+    slots: { customRender: 'createUserName' },
   },
   {
     title: '创建时间',
     dataIndex: 'created_at',
     key: 'created_at',
+    slots: { customRender: 'created_at' },
   },
   {
     title: '操作',
@@ -465,15 +478,15 @@ const fetchPools = async () => {
 
 // 获取采集任务数据
 const loading = ref(false);
-
 const fetchResources = async () => {
   loading.value = true;
   try {
     const response = await getMonitorScrapeJobApi();
-    data.value = response.map((item: ScrapeJob) => ({
+    data.value = response.map((item: any) => ({
       ...item,
       // 确保 treeNodeIds 始终是字符串数组
       treeNodeIds: Array.isArray(item.treeNodeIds) ? item.treeNodeIds.map(String) : [],
+      treeNodeNames: Array.isArray(item.treeNodeNames) ? item.treeNodeNames : []
     }));
   } catch (error) {
     message.error('获取采集任务数据失败，请稍后重试');
@@ -489,18 +502,10 @@ const getPoolName = (poolId: number) => {
   return pool ? pool.name : '未知';
 };
 
-// 获取用户名
-const getUserName = (userId: number) => {
-  // 实际项目中应从用户列表中查找
-  return `${userId}`;
-};
-
-// 格式化树节点 ID
-const formatTreeNodeIds = (treeNodeIds: string[]) => {
-  if (Array.isArray(treeNodeIds)) {
-    return treeNodeIds.join(', ');
-  }
-  return '';
+// 格式化树节点名称
+const formatTreeNodeNames = (treeNodeNames: string[]) => {
+  if (!Array.isArray(treeNodeNames)) return '';
+  return treeNodeNames.join(', ');
 };
 
 // 在组件挂载时获取数据
