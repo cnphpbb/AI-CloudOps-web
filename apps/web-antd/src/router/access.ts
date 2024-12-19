@@ -8,7 +8,8 @@ import { preferences } from '@vben/preferences';
 
 import { message } from 'ant-design-vue';
 
-import { listMenusApi } from '#/api/core/system';
+// import { listMenusApi } from '#/api/core/system';
+import { getUserInfoApi } from '#/api/core/user';
 import { BasicLayout, IFrameView } from '#/layouts';
 import { $t } from '#/locales';
 
@@ -32,12 +33,15 @@ async function generateAccess(options: GenerateMenuAndRoutesOptions) {
         content: `${$t('common.loadingMenu')}...`,
         duration: 1.5,
       });
-      // 调用接口获取菜单数据
-      return await listMenusApi({
-        page_number: 1,
-        page_size: 999,
-        is_tree: true
-      });
+      // // 调用接口获取菜单数据
+      // return await listMenusApi({
+      //   page_number: 1,
+      //   page_size: 999
+      // });
+
+      const res = await getUserInfoApi();
+
+      return res.menus;
     },
     // 可以指定没有权限跳转403页面
     forbiddenComponent,

@@ -412,3 +412,5 @@ export const updateMonitorSendGroupApi = (data: updateSendGroupReq) => {
 export const deleteMonitorSendGroupApi = (id: number) => {
   return requestClient.delete(`/monitor/send_groups/${id}`);
 };
+
+

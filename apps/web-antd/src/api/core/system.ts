@@ -72,6 +72,12 @@ export namespace SystemApi {
     page_size: number; // 每页数量
   }
 
+
+  export interface AssignMenuPermissionsToUserReq {
+    user_id: number; // 用户ID
+    menu_ids: number[]; // 菜单ID列表
+  }
+
   export interface CreateRoleReq {
     name: string; // 角色名称
     description?: string; // 角色描述
@@ -105,10 +111,7 @@ export namespace SystemApi {
     api_ids: number[]; // API ID列表
   }
 
-  export interface AssignMenuPermissionsToUserReq {
-    user_id: number; // 用户ID
-    menu_ids: number[]; // 菜单ID列表
-  }
+
 
   export interface AssignRoleToUserReq {
     user_id: number; // 用户ID
@@ -193,3 +196,8 @@ export function assignRoleToUserApi(data: SystemApi.AssignRoleToUserReq) {
 export function assignRoleToUsersApi(data: SystemApi.AssignRoleToUsersReq) {
   return requestClient.post('/permissions/users/assign', data);
 }
+
+
+export const updateUserMenu = (data: SystemApi.AssignMenuPermissionsToUserReq) => {
+  return requestClient.post('/menus/update_related', data);
+};

@@ -29,6 +29,9 @@
           <a-button type="link" @click="handleChangePassword(record)" title="修改密码">
             <template #icon><Icon icon="mdi:key-outline" style="font-size: 22px" /></template>
           </a-button>
+          <a-button type="link" @click="handleMenuPermissions(record)" title="菜单权限">
+            <template #icon><Icon icon="mdi:menu" style="font-size: 22px" /></template>
+          </a-button>
           <a-popconfirm
             title="确定要注销这个用户吗?"
             ok-text="确定"
@@ -113,6 +116,29 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 菜单权限对话框 -->
+    <a-modal
+      v-model:visible="isMenuModalVisible"
+      title="菜单权限"
+      @ok="handleMenuSubmit"
+      @cancel="handleMenuCancel"
+      :okText="'保存'"
+      :cancelText="'取消'"
+      width="600px"
+    >
+      <a-tree
+        v-model:checkedKeys="menuForm.selectedMenus"
+        :tree-data="menuTreeData"
+        checkable
+        :defaultExpandAll="true"
+        :fieldNames="{
+          title: 'name',
+          key: 'id',
+          children: 'children'
+        }"
+      />
+    </a-modal>
   </div>
 </template>
 
@@ -121,6 +147,7 @@ import { reactive, ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import { getAllUsers, registerApi, changePassword, deleteUser, updateUserInfo } from '#/api';
+import { updateUserMenu } from '#/api/core/system';
 
 // 表格加载状态
 const loading = ref(false);
@@ -130,6 +157,14 @@ const searchText = ref('');
 
 // 用户列表数据
 const userList = ref<any[]>([]);
+
+// 菜单权限相关
+const isMenuModalVisible = ref(false);
+const menuTreeData = ref<any[]>([]);
+const menuForm = reactive({
+  selectedMenus: [] as number[],
+  userId: 0
+});
 
 // 表格列配置
 const columns = [
@@ -201,11 +236,41 @@ const fetchUserList = async () => {
   try {
     const res = await getAllUsers();
     userList.value = res;
+    // 从第一个用户的menus字段获取菜单数据
+    if (res && res.length > 0 && res[0].menus) {
+      menuTreeData.value = buildMenuTree(res[0].menus);
+    }
   } catch (error) {
     message.error('获取用户列表失败');
   } finally {
     loading.value = false;
   }
+};
+
+// 构建菜单树结构
+const buildMenuTree = (menus: any[]) => {
+  const menuMap = new Map<number, any>();
+  const result: any[] = [];
+
+  // 先将所有菜单项放入Map中
+  menus.forEach(menu => {
+    menuMap.set(menu.id, { ...menu, children: [] });
+  });
+
+  // 构建树形结构
+  menus.forEach(menu => {
+    const menuItem = menuMap.get(menu.id);
+    if (menu.parent_id === 0) {
+      result.push(menuItem);
+    } else {
+      const parentMenu = menuMap.get(menu.parent_id);
+      if (parentMenu) {
+        parentMenu.children.push(menuItem);
+      }
+    }
+  });
+
+  return result;
 };
 
 // 处理搜索
@@ -248,6 +313,39 @@ const handleEdit = (record: any) => {
 const handleChangePassword = (record: any) => {
   passwordForm.username = record.username;
   isPasswordModalVisible.value = true;
+};
+
+// 处理菜单权限
+const handleMenuPermissions = (record: any) => {
+  menuForm.userId = record.id;
+  // 如果用户有菜单权限,则填充到选中项
+  if (record.menus && Array.isArray(record.menus)) {
+    menuForm.selectedMenus = record.menus.map((menu: any) => menu.id);
+  } else {
+    menuForm.selectedMenus = record.menuIds || [];
+  }
+  isMenuModalVisible.value = true;
+};
+
+// 处理菜单权限提交
+const handleMenuSubmit = async () => {
+  try {
+    await updateUserMenu({
+      user_id: menuForm.userId,
+      menu_ids: menuForm.selectedMenus
+    });
+    
+    message.success('菜单权限设置成功');
+    isMenuModalVisible.value = false;
+    fetchUserList();
+  } catch (error) {
+    message.error('菜单权限设置失败');
+  }
+};
+
+// 处理菜单权限取消
+const handleMenuCancel = () => {
+  isMenuModalVisible.value = false;
 };
 
 // 处理注销用户

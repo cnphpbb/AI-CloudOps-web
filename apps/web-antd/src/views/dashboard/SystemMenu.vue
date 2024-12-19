@@ -84,10 +84,19 @@
           <a-input v-model:value="formData.component" placeholder="请输入组件路径" />
         </a-form-item>
         <a-form-item label="图标">
-          <a-input v-model:value="formData.icon" placeholder="请输入图标名称" />
+          <a-input v-model:value="formData.meta.icon" placeholder="请输入图标名称" />
         </a-form-item>
         <a-form-item label="排序">
-          <a-input-number v-model:value="formData.sort_order" :min="0" />
+          <a-input-number v-model:value="formData.meta.order" :min="0" />
+        </a-form-item>
+        <a-form-item label="标题">
+          <a-input v-model:value="formData.meta.title" placeholder="请输入标题" />
+        </a-form-item>
+        <a-form-item label="固定标签页">
+          <a-switch v-model:checked="formData.meta.affixTab" />
+        </a-form-item>
+        <a-form-item label="在菜单中隐藏">
+          <a-switch v-model:checked="formData.meta.hideInMenu" />
         </a-form-item>
         <a-form-item label="路由名称">
           <a-input v-model:value="formData.route_name" placeholder="请输入路由名称" />
@@ -134,13 +143,18 @@ const menuTreeData = ref<any[]>([]);
 // 模态框相关
 const isModalVisible = ref(false);
 const modalTitle = ref('创建菜单');
-const formData = reactive<SystemApi.CreateMenuReq>({
+const formData = reactive<any>({
   name: '',
   path: '',
   parent_id: 0,
   component: '',
-  icon: '',
-  sort_order: 0,
+  meta: {
+    icon: '',
+    order: 0,
+    title: '',
+    affixTab: false,
+    hideInMenu: false
+  },
   route_name: '',
   hidden: 0,
 });
@@ -152,10 +166,9 @@ const fetchMenuList = async () => {
     const res = await listMenusApi({
       page_number: 1,
       page_size: 100,
-      is_tree: true,
     });
-    menuList.value = res.list;
-    menuTreeData.value = res.list;
+    menuList.value = res;
+    menuTreeData.value = res;
   } catch (error) {
     message.error('获取菜单列表失败');
   }
@@ -181,13 +194,13 @@ const columns = [
   },
   {
     title: '图标',
-    dataIndex: 'icon',
+    dataIndex: ['meta', 'icon'],
     key: 'icon',
   },
   {
     title: '排序',
-    dataIndex: 'sort_order',
-    key: 'sort_order',
+    dataIndex: ['meta', 'order'],
+    key: 'order',
   },
   {
     title: '显示',
@@ -214,8 +227,13 @@ const handleAdd = () => {
     path: '',
     parent_id: 0,
     component: '',
-    icon: '',
-    sort_order: 0,
+    meta: {
+      icon: '',
+      order: 0,
+      title: '',
+      affixTab: false,
+      hideInMenu: false
+    },
     route_name: '',
     hidden: 0,
   });
@@ -225,7 +243,12 @@ const handleAdd = () => {
 // 处理编辑
 const handleEdit = (record: any) => {
   modalTitle.value = '编辑菜单';
-  Object.assign(formData, record);
+  Object.assign(formData, {
+    ...record,
+    meta: {
+      ...record.meta
+    }
+  });
   isModalVisible.value = true;
 };
 
@@ -268,6 +291,7 @@ const handleParentChange = (value: number | null) => {
 // 处理模态框提交
 const handleModalSubmit = async () => {
   try {
+    formData.meta.title = formData.name;
     if (modalTitle.value === '创建菜单') {
       await createMenuApi({
         ...formData,
@@ -277,7 +301,7 @@ const handleModalSubmit = async () => {
       await updateMenuApi({
         ...formData,
         parent_id: Number(formData.parent_id)
-      } as SystemApi.UpdateMenuReq);
+      });
     }
     message.success(`${modalTitle.value}成功`);
     isModalVisible.value = false;

@@ -70,24 +70,6 @@
           />
         </a-form-item>
         <template v-if="!isBatchOperation">
-          <a-form-item label="菜单权限">
-            <a-tree
-              v-model:checkedKeys="selectedMenuIds"
-              :treeData="menuTreeData"
-              checkable
-              :defaultExpandAll="false"
-              :checkStrictly="false"
-              :selectable="false"
-              :showLine="true"
-              :autoExpandParent="true"
-              :defaultCheckedKeys="selectedMenuIds"
-              :fieldNames="{
-                title: 'name',
-                key: 'id',
-                children: 'children'
-              }"
-            />
-          </a-form-item>
           <a-form-item label="API权限">
             <a-select
               v-model:value="selectedApiIds"
@@ -109,29 +91,12 @@ import { ref, computed, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import {
   listRolesApi,
-  listMenusApi,
   listApisApi,
   assignRoleToUserApi,
   assignRoleToUsersApi,
 } from '#/api/core/system';
 import { getAllUsers } from '#/api';
 import { Icon } from '@iconify/vue';
-
-interface MenuItem {
-  id: number;
-  name: string;
-  parent_id: number;
-  path: string;
-  component?: string;
-  icon?: string;
-  sort_order: number;
-  route_name?: string;
-  hidden: number;
-  children?: MenuItem[];
-  create_time?: number;
-  update_time?: number;
-  is_deleted?: number;
-}
 
 interface ApiItem {
   id: number;
@@ -159,7 +124,6 @@ interface UserItem {
   homePath: string;
   enable: number;
   roles: any[];
-  menus: MenuItem[];
   apis: ApiItem[];
 }
 
@@ -197,8 +161,7 @@ const userList = ref<UserItem[]>([]);
 // 角色列表数据
 const roleOptions = ref<{label: string, value: number}[]>([]);
 
-// 菜单和API选项
-const menuTreeData = ref<MenuItem[]>([]);
+// API选项
 const apiOptions = ref<{label: string, value: number}[]>([]);
 
 // 选中的行
@@ -252,7 +215,6 @@ const columns = [
 
 // 权限分配模态框
 const isPermissionModalVisible = ref(false);
-const selectedMenuIds = ref<number[]>([]);
 const selectedApiIds = ref<number[]>([]);
 const selectedRoleIds = ref<number[]>([]);
 const currentUserId = ref<number>();
@@ -286,17 +248,9 @@ const fetchRoleList = async () => {
   }
 };
 
-// 获取所有菜单和API
-const fetchMenusAndApis = async () => {
+// 获取所有API
+const fetchApis = async () => {
   try {
-    // 获取菜单列表
-    const menuRes = await listMenusApi({
-      page_number: 1,
-      page_size: 1000,
-      is_tree: true
-    });
-    menuTreeData.value = menuRes.list;
-
     // 获取API列表
     const apiRes = await listApisApi({
       page_number: 1,
@@ -352,8 +306,6 @@ const handleAssignPermissions = async (record: UserItem) => {
   isBatchOperation.value = false;
   currentUserId.value = record.id;
   
-  // 直接使用record中的menus和apis数据
-  selectedMenuIds.value = record.menus?.map(menu => menu.id) || [];
   selectedApiIds.value = record.apis?.map(api => api.id) || [];
   selectedRoleIds.value = record.roles?.map(role => role.id) || [];
   isPermissionModalVisible.value = true;
@@ -377,7 +329,6 @@ const handlePermissionModalSubmit = async () => {
       await assignRoleToUserApi({
         user_id: currentUserId.value,
         role_ids: selectedRoleIds.value,
-        menu_ids: selectedMenuIds.value,
         api_ids: selectedApiIds.value
       });
     }
@@ -399,7 +350,7 @@ const handlePermissionModalCancel = () => {
 onMounted(() => {
   fetchUserList();
   fetchRoleList();
-  fetchMenusAndApis();
+  fetchApis();
 });
 </script>
 
