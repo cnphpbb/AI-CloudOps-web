@@ -262,7 +262,7 @@ export interface updateSendGroupReq {
 }
 
 export const getMonitorScrapePoolApi = () => {
-  return requestClient.get<MonitorScrapePoolItem[]>('/monitor/scrape_pools');
+  return requestClient.get<MonitorScrapePoolItem[]>('/monitor/scrape_pools/list');
 };
 
 export const createMonitorScrapePoolApi = (
@@ -282,7 +282,7 @@ export const updateMonitorScrapePoolApi = (
 };
 
 export const getMonitorScrapeJobApi = () => {
-  return requestClient.get<MonitorScrapeJobItem[]>('/monitor/scrape_jobs');
+  return requestClient.get<MonitorScrapeJobItem[]>('/monitor/scrape_jobs/list');
 };
 
 export const createScrapeJobApi = (data: createScrapeJobReq) => {
@@ -298,7 +298,7 @@ export const updateScrapeJobApi = (data: editScrapeJobReq) => {
 };
 
 export const getAlertManagerPoolsApi = () => {
-  return requestClient.get('/monitor/alertManager_pools/');
+  return requestClient.get('/monitor/alertManager_pools/list');
 };
 
 export const createAlertManagerPoolApi = (data: createAlertManagerPoolReq) => {
@@ -314,7 +314,7 @@ export const deleteAlertManagerPoolApi = (id: number) => {
 };
 
 export const getAlertRulesApi = () => {
-  return requestClient.get('/monitor/alert_rules');
+  return requestClient.get('/monitor/alert_rules/list');
 };
 
 export const createAlertRuleApi = (data: createAlertRuleReq) => {
@@ -354,7 +354,7 @@ export const silenceBatchApi = () => {
 };
 
 export const getRecordRulesApi = () => {
-  return requestClient.get('/monitor/record_rules');
+  return requestClient.get('/monitor/record_rules/list');
 };
 
 export const createRecordRuleApi = (data: createAlertManagerRecordReq) => {
@@ -412,3 +412,5 @@ export const updateMonitorSendGroupApi = (data: updateSendGroupReq) => {
 export const deleteMonitorSendGroupApi = (id: number) => {
   return requestClient.delete(`/monitor/send_groups/${id}`);
 };
+
+

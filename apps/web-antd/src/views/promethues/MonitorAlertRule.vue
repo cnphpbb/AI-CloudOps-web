@@ -64,18 +64,28 @@
         <a-form-item label="名称" name="name" :rules="[{ required: true, message: '请输入名称' }]">
           <a-input v-model:value="addForm.name" placeholder="请输入名称" />
         </a-form-item>
-        <a-form-item label="所属实例池ID" name="poolId" :rules="[{ required: true, message: '请输入所属实例池ID' }]">
-          <a-input-number v-model:value="addForm.poolId" style="width: 100%" placeholder="请输入所属实例池ID" />
-        </a-form-item>
-        <a-form-item label="发送组ID" name="sendGroupId">
-          <a-input-number v-model:value="addForm.sendGroupId" style="width: 100%" placeholder="请输入发送组ID" />
-        </a-form-item>
-        <a-form-item label="树节点" name="treeNodeId">
-          <a-select v-model:value="addForm.treeNodeId" placeholder="请选择树节点" style="width: 100%">
-            <a-select-option v-for="node in treeNodes" :key="node.id" :value="node.id">
-              {{ node.title }}
+        <a-form-item label="所属实例池" name="poolId" :rules="[{ required: true, message: '请选择所属实例池' }]">
+          <a-select v-model:value="addForm.poolId" placeholder="请选择所属实例池">
+            <a-select-option v-for="pool in scrapePools" :key="pool.id" :value="pool.id">
+              {{ pool.name }}
             </a-select-option>
           </a-select>
+        </a-form-item>
+        <a-form-item label="发送组" name="sendGroupId">
+          <a-select v-model:value="addForm.sendGroupId" placeholder="请选择发送组">
+            <a-select-option v-for="group in sendGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="树节点" name="treeNodeId">
+          <a-tree-select
+            v-model:value="addForm.treeNodeId"
+            :tree-data="leafNodes"
+            :tree-default-expand-all="true"
+            placeholder="请选择树节点"
+            style="width: 100%"
+          />
         </a-form-item>
         <a-form-item label="表达式" name="expr">
           <a-input v-model:value="addForm.expr" placeholder="请输入表达式"/>
@@ -107,19 +117,28 @@
         <a-form-item label="名称" name="name" :rules="[{ required: true, message: '请输入名称' }]">
           <a-input v-model:value="editForm.name" placeholder="请输入名称" />
         </a-form-item>
-        <a-form-item label="所属实例池ID" name="poolId" :rules="[{ required: true, message: '请输入所属实例池ID' }]">
-          <a-input-number v-model:value="editForm.poolId" style="width: 100%" placeholder="请输入所属实例池ID" />
-        </a-form-item>
-        <a-form-item label="发送组ID" name="sendGroupId">
-          <a-input-number v-model:value="editForm.sendGroupId" style="width: 100%" placeholder="请输入发送组ID" />
-        </a-form-item>
-        <a-form-item label="树节点" name="treeNodeId">
-          <a-select v-model:value="editForm.treeNodeId" placeholder="请选择树节点" style="width: 100%" show-search
-            optionFilterProp="children">
-            <a-select-option v-for="node in treeNodes" :key="node.id" :value="node.id">
-              {{ node.title }}
+        <a-form-item label="所属实例池" name="poolId" :rules="[{ required: true, message: '请选择所属实例池' }]">
+          <a-select v-model:value="editForm.poolId" placeholder="请选择所属实例池">
+            <a-select-option v-for="pool in scrapePools" :key="pool.id" :value="pool.id">
+              {{ pool.name }}
             </a-select-option>
           </a-select>
+        </a-form-item>
+        <a-form-item label="发送组" name="sendGroupId">
+          <a-select v-model:value="editForm.sendGroupId" placeholder="请选择发送组">
+            <a-select-option v-for="group in sendGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="树节点" name="treeNodeId">
+          <a-tree-select
+            v-model:value="editForm.treeNodeId"
+            :tree-data="leafNodes"
+            :tree-default-expand-all="true"
+            placeholder="请选择树节点"
+            style="width: 100%"
+          />
         </a-form-item>
         <a-form-item label="启用" name="enable">
           <a-switch v-model:checked="editForm.enable"/>
@@ -161,6 +180,8 @@ import {
   deleteAlertRuleApi,
   getAllTreeNodes,
   validateExprApi,
+  getMonitorScrapePoolApi,
+  getMonitorSendGroupApi,
 } from '#/api'; // 请根据实际路径调整
 
 // 定义数据类型
@@ -180,17 +201,31 @@ interface AlertRule {
   CreatedAt: string;
   UpdatedAt: string;
 }
+
 // 定义树节点数据类型
 interface TreeNode {
-  id: number;
+  id: string;
   title: string;
+  children?: TreeNode[];
+  isLeaf?: number;
+  value?: string;
+  key?: string;
 }
 
-// 树节点数据源
-const treeNodes = ref<TreeNode[]>([]);
+interface ScrapePool {
+  id: number;
+  name: string;
+}
+
+interface SendGroup {
+  id: number;
+  name: string;
+}
 
 // 数据源
 const data = ref<AlertRule[]>([]);
+const scrapePools = ref<ScrapePool[]>([]);
+const sendGroups = ref<SendGroup[]>([]);
 
 // 搜索文本
 const searchText = ref('');
@@ -206,13 +241,77 @@ const filteredData = computed(() => {
   );
 });
 
-// 获取所有树节点数据
+// 树形数据
+const treeData = ref<TreeNode[]>([]);
+const leafNodes = ref<TreeNode[]>([]);
+
+// 递归处理树节点数据
+const processTreeData = (nodes: any[]): TreeNode[] => {
+  return nodes.map(node => {
+    const processedNode: TreeNode = {
+      id: node.id,
+      title: node.name || node.title,
+      key: node.id,
+      value: node.id,
+      isLeaf: node.isLeaf
+    };
+
+    if (node.children && node.children.length > 0) {
+      processedNode.children = processTreeData(node.children);
+    }
+
+    return processedNode;
+  });
+};
+
+// 递归获取所有叶子节点
+const getLeafNodes = (nodes: TreeNode[]): TreeNode[] => {
+  let leaves: TreeNode[] = [];
+  nodes.forEach(node => {
+    if (node.isLeaf === 1) {
+      leaves.push(node);
+    } else if (node.children) {
+      leaves = leaves.concat(getLeafNodes(node.children));
+    }
+  });
+  return leaves;
+};
+
+// 获取树节点数据
 const fetchTreeNodes = async () => {
   try {
-    const response = await getAllTreeNodes(); // 调用获取树节点 API
-    treeNodes.value = response;
+    const response = await getAllTreeNodes();
+    if (!response) {
+      treeData.value = [];
+      leafNodes.value = [];
+      return;
+    }
+    treeData.value = processTreeData(response);
+    leafNodes.value = getLeafNodes(treeData.value);
   } catch (error) {
     message.error('获取树节点数据失败，请稍后重试');
+    console.error(error);
+  }
+};
+
+// 获取实例池数据
+const fetchScrapePools = async () => {
+  try {
+    const response = await getMonitorScrapePoolApi();
+    scrapePools.value = response;
+  } catch (error) {
+    message.error('获取实例池数据失败，请稍后重试');
+    console.error(error);
+  }
+};
+
+// 获取发送组数据
+const fetchSendGroups = async () => {
+  try {
+    const response = await getMonitorSendGroupApi();
+    sendGroups.value = response;
+  } catch (error) {
+    message.error('获取发送组数据失败，请稍后重试');
     console.error(error);
   }
 };
@@ -387,8 +486,8 @@ const handleAdd = async () => {
     const payload = {
       name: addForm.name,
       poolId: addForm.poolId,
-      sendGroupId: addForm.sendGroupId,
-      treeNodeId: addForm.treeNodeId,
+      sendGroupId: addForm.sendGroupId || 0,
+      treeNodeId: addForm.treeNodeId || 0,
       expr: addForm.expr,
       severity: addForm.severity,
       forTime: addForm.forTime,
@@ -518,6 +617,8 @@ const validateEditExpression = async () => {
 onMounted(() => {
   fetchAlertRules();
   fetchTreeNodes();
+  fetchScrapePools();
+  fetchSendGroups();
 });
 </script>
 

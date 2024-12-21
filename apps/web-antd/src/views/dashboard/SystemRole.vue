@@ -24,20 +24,24 @@
       <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="handleEdit(record)" title="编辑">
-            <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
-          </a-button>
-          <a-popconfirm
-            title="确定要删除这个角色吗?"
-            ok-text="确定"
-            cancel-text="取消"
-            placement="left"
-            @confirm="handleDelete(record)"
-          >
-            <a-button type="link" danger title="删除">
-              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+          <a-tooltip title="编辑角色">
+            <a-button type="link" @click="handleEdit(record)">
+              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
             </a-button>
-          </a-popconfirm>
+          </a-tooltip>
+          <a-tooltip title="删除角色">
+            <a-popconfirm
+              title="确定要删除这个角色吗?"
+              ok-text="确定"
+              cancel-text="取消"
+              placement="left"
+              @confirm="handleDelete(record)"
+            >
+              <a-button type="link" danger>
+                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+              </a-button>
+            </a-popconfirm>
+          </a-tooltip>
         </a-space>
       </template>
 
@@ -79,23 +83,6 @@
             @change="(checked: boolean) => formData.is_default = checked ? 1 : 0" 
           />
         </a-form-item>
-        <a-form-item label="菜单权限">
-          <a-tree
-            v-model:checkedKeys="selectedMenuIds"
-            :treeData="menuTreeData"
-            checkable
-            :defaultExpandAll="false"
-            :checkStrictly="false"
-            :selectable="false"
-            :showLine="true"
-            :autoExpandParent="true"
-            :fieldNames="{
-              title: 'name',
-              key: 'id',
-              children: 'children'
-            }"
-          />
-        </a-form-item>
         <a-form-item label="API权限">
           <a-select
             v-model:value="selectedApiIds" 
@@ -119,24 +106,10 @@ import {
   updateRoleApi, 
   deleteRoleApi,
   getRolesApi,
-  listMenusApi,
-  listApisApi
+  listApisApi,
 } from '#/api/core/system';
 import type { SystemApi } from '#/api/core/system';
 import { Icon } from '@iconify/vue';
-
-interface MenuItem {
-  id: number;
-  name: string;
-  parent_id: number;
-  path: string;
-  component?: string;
-  icon?: string;
-  sort_order: number;
-  route_name?: string;
-  hidden: number;
-  children?: MenuItem[];
-}
 
 interface ApiItem {
   id: number;
@@ -158,8 +131,7 @@ const searchText = ref('');
 // 角色列表数据
 const roleList = ref<any[]>([]);
 
-// 菜单和API选项
-const menuTreeData = ref<MenuItem[]>([]);
+// API选项
 const apiOptions = ref<{label: string, value: number}[]>([]);
 
 // 过滤后的角色列表
@@ -184,7 +156,6 @@ const formData = reactive<Partial<SystemApi.CreateRoleReq>>({
 });
 
 // 权限相关
-const selectedMenuIds = ref<number[]>([]);
 const selectedApiIds = ref<number[]>([]);
 
 // 获取HTTP方法文本
@@ -198,17 +169,9 @@ const getMethodText = (method: number) => {
   }
 };
 
-// 获取所有菜单和API
-const fetchMenusAndApis = async () => {
+// 获取所有API
+const fetchApis = async () => {
   try {
-    // 获取菜单列表
-    const menuRes = await listMenusApi({
-      page_number: 1,
-      page_size: 1000,
-      is_tree: true
-    });
-    menuTreeData.value = menuRes.list;
-
     // 获取API列表
     const apiRes = await listApisApi({
       page_number: 1,
@@ -288,7 +251,6 @@ const handleAdd = () => {
     role_type: 2,
     is_default: 0
   });
-  selectedMenuIds.value = [];
   selectedApiIds.value = [];
   isModalVisible.value = true;
 };
@@ -310,8 +272,7 @@ const handleEdit = async (record: any) => {
       is_default: data.is_default
     });
 
-    // 设置已选菜单和API
-    selectedMenuIds.value = data.menus?.map((menu: MenuItem) => menu.id) || [];
+    // 设置已选API
     selectedApiIds.value = data.apis?.map((api: ApiItem) => api.id) || [];
 
     isModalVisible.value = true;
@@ -344,7 +305,6 @@ const handleDefaultChange = async (record: any, checked: boolean) => {
       description: record.description,
       role_type: record.role_type,
       is_default: checked ? 1 : 0,
-      menu_ids: record.menus?.map((menu: MenuItem) => menu.id) || [],
       api_ids: record.apis?.map((api: ApiItem) => api.id) || []
     });
     message.success('更新成功');
@@ -359,7 +319,6 @@ const handleModalSubmit = async () => {
   try {
     const roleData = {
       ...formData,
-      menu_ids: selectedMenuIds.value,
       api_ids: selectedApiIds.value
     };
 
@@ -383,7 +342,7 @@ const handleModalCancel = () => {
 
 onMounted(() => {
   fetchRoleList();
-  fetchMenusAndApis();
+  fetchApis();
 });
 </script>
 

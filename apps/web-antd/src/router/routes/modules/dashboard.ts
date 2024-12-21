@@ -52,32 +52,13 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: '权限管理',
-        path: '/system_permission',
+        name: '角色权限',
+        path: '/system_role',
+        component: () => import('#/views/dashboard/SystemRole.vue'),
         meta: {
-          icon: 'lucide:shield',
-          title: '权限管理',
+          icon: 'lucide:users',
+          title: '角色权限',
         },
-        children: [
-          {
-            name: '角色权限',
-            path: '/system_role',
-            component: () => import('#/views/dashboard/SystemRole.vue'),
-            meta: {
-              icon: 'lucide:users',
-              title: '角色权限',
-            },
-          },
-          {
-            name: '用户权限',
-            path: '/system_user_role',
-            component: () => import('#/views/dashboard/SystemUserRole.vue'),
-            meta: {
-              icon: 'lucide:user-cog',
-              title: '用户权限',
-            },
-          }
-        ]
       },
     ],
   },

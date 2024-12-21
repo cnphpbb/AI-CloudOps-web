@@ -23,12 +23,21 @@
       <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="handleEdit(record)" title="编辑">
-            <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
-          </a-button>
-          <a-button type="link" @click="handleChangePassword(record)" title="修改密码">
-            <template #icon><Icon icon="mdi:key-outline" style="font-size: 22px" /></template>
-          </a-button>
+          <a-tooltip title="编辑用户信息">
+            <a-button type="link" @click="handleEdit(record)">
+              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
+          <a-tooltip title="修改用户密码">
+            <a-button type="link" @click="handleChangePassword(record)">
+              <template #icon><Icon icon="mdi:key-outline" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
+          <a-tooltip title="分配用户权限">
+            <a-button type="link" @click="handlePermissions(record)">
+              <template #icon><Icon icon="clarity:key-line" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
           <a-popconfirm
             title="确定要注销这个用户吗?"
             ok-text="确定"
@@ -36,9 +45,11 @@
             placement="left"
             @confirm="handleWriteOff(record)"
           >
-            <a-button type="link" danger title="注销">
-              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
-            </a-button>
+            <a-tooltip title="注销用户">
+              <a-button type="link" danger>
+                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+              </a-button>
+            </a-tooltip>
           </a-popconfirm>
         </a-space>
       </template>
@@ -113,6 +124,59 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 权限分配对话框 -->
+    <a-modal
+      v-model:visible="isPermissionModalVisible"
+      title="权限分配"
+      @ok="handlePermissionModalSubmit"
+      @cancel="handlePermissionModalCancel"
+      :okText="'保存'"
+      :cancelText="'取消'"
+      width="800px"
+    >
+      <a-tabs v-model:activeKey="activeTabKey">
+        <a-tab-pane key="role" tab="角色分配">
+          <a-form layout="vertical">
+            <a-form-item label="角色">
+              <a-select
+                v-model:value="selectedRoleIds"
+                mode="multiple"
+                placeholder="请选择角色"
+                style="width: 100%"
+                :options="roleOptions"
+              />
+            </a-form-item>
+          </a-form>
+        </a-tab-pane>
+        <a-tab-pane key="menu" tab="菜单权限">
+          <a-tree
+            v-model:checkedKeys="menuForm.selectedMenus"
+            :tree-data="menuTreeData"
+            checkable
+            :defaultExpandAll="true"
+            :fieldNames="{
+              title: 'name',
+              key: 'id',
+              children: 'children'
+            }"
+          />
+        </a-tab-pane>
+        <a-tab-pane key="api" tab="接口权限">
+          <a-form layout="vertical">
+            <a-form-item label="API权限">
+              <a-select
+                v-model:value="selectedApiIds"
+                mode="multiple"
+                style="width: 100%"
+                placeholder="请选择API权限"
+                :options="apiOptions"
+              />
+            </a-form-item>
+          </a-form>
+        </a-tab-pane>
+      </a-tabs>
+    </a-modal>
   </div>
 </template>
 
@@ -121,6 +185,7 @@ import { reactive, ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import { getAllUsers, registerApi, changePassword, deleteUser, updateUserInfo } from '#/api';
+import { updateUserMenu, listRolesApi, listApisApi, assignRoleToUserApi } from '#/api/core/system';
 
 // 表格加载状态
 const loading = ref(false);
@@ -130,6 +195,20 @@ const searchText = ref('');
 
 // 用户列表数据
 const userList = ref<any[]>([]);
+
+// 权限分配相关
+const isPermissionModalVisible = ref(false);
+const activeTabKey = ref('role');
+const menuTreeData = ref<any[]>([]);
+const menuForm = reactive({
+  selectedMenus: [] as number[],
+  userId: 0
+});
+const selectedApiIds = ref<number[]>([]);
+const selectedRoleIds = ref<number[]>([]);
+const roleOptions = ref<{label: string, value: number}[]>([]);
+const apiOptions = ref<{label: string, value: number}[]>([]);
+const currentUserId = ref<number>();
 
 // 表格列配置
 const columns = [
@@ -201,11 +280,84 @@ const fetchUserList = async () => {
   try {
     const res = await getAllUsers();
     userList.value = res;
+    // 从第一个用户的menus字段获取菜单数据
+    if (res && res.length > 0 && res[0].menus) {
+      menuTreeData.value = buildMenuTree(res[0].menus);
+    }
   } catch (error) {
     message.error('获取用户列表失败');
   } finally {
     loading.value = false;
   }
+};
+
+// 获取角色列表
+const fetchRoleList = async () => {
+  try {
+    const res = await listRolesApi({
+      page_number: 1,
+      page_size: 100
+    });
+    roleOptions.value = res.list.map((role: any) => ({
+      label: role.name,
+      value: role.id
+    }));
+  } catch (error) {
+    message.error('获取角色列表失败');
+  }
+};
+
+// 获取所有API
+const fetchApis = async () => {
+  try {
+    const apiRes = await listApisApi({
+      page_number: 1,
+      page_size: 1000
+    });
+    apiOptions.value = apiRes.list.map((api: any) => ({
+      label: `${api.name} (${api.path}) [${getMethodText(api.method)}]`,
+      value: api.id
+    }));
+  } catch (error) {
+    message.error('获取权限数据失败');
+  }
+};
+
+// 获取HTTP方法文本
+const getMethodText = (method: number) => {
+  switch (method) {
+    case 1: return 'GET';
+    case 2: return 'POST';
+    case 3: return 'PUT';
+    case 4: return 'DELETE';
+    default: return '未知';
+  }
+};
+
+// 构建菜单树结构
+const buildMenuTree = (menus: any[]) => {
+  const menuMap = new Map<number, any>();
+  const result: any[] = [];
+
+  // 先将所有菜单项放入Map中
+  menus.forEach(menu => {
+    menuMap.set(menu.id, { ...menu, children: [] });
+  });
+
+  // 构建树形结构
+  menus.forEach(menu => {
+    const menuItem = menuMap.get(menu.id);
+    if (menu.parent_id === 0) {
+      result.push(menuItem);
+    } else {
+      const parentMenu = menuMap.get(menu.parent_id);
+      if (parentMenu) {
+        parentMenu.children.push(menuItem);
+      }
+    }
+  });
+
+  return result;
 };
 
 // 处理搜索
@@ -248,6 +400,73 @@ const handleEdit = (record: any) => {
 const handleChangePassword = (record: any) => {
   passwordForm.username = record.username;
   isPasswordModalVisible.value = true;
+};
+
+// 处理权限分配
+const handlePermissions = (record: any) => {
+  currentUserId.value = record.id;
+  selectedRoleIds.value = record.roles?.map((role: any) => role.id) || [];
+  selectedApiIds.value = record.apis?.map((api: any) => api.id) || [];
+  menuForm.selectedMenus = record.menus?.map((menu: any) => menu.id) || [];
+  isPermissionModalVisible.value = true;
+};
+
+// 处理权限分配提交
+const handlePermissionModalSubmit = async () => {
+  try {
+    if (!currentUserId.value) {
+      message.error('用户ID不能为空');
+      return;
+    }
+
+    // 创建一个Promise数组来存储所有的请求
+    const promises = [];
+
+    // 添加角色分配请求
+    if (selectedRoleIds.value.length > 0) {
+      promises.push(
+        assignRoleToUserApi({
+          user_id: currentUserId.value,
+          role_ids: selectedRoleIds.value,
+        })
+      );
+    }
+
+    // 添加菜单权限请求
+    if (menuForm.selectedMenus.length > 0) {
+      promises.push(
+        updateUserMenu({
+          user_id: currentUserId.value,
+          menu_ids: menuForm.selectedMenus
+        })
+      );
+    }
+
+    // 添加API权限请求
+    if (selectedApiIds.value.length > 0) {
+      promises.push(
+        assignRoleToUserApi({
+          user_id: currentUserId.value,
+          role_ids: selectedRoleIds.value,
+          api_ids: selectedApiIds.value
+        })
+      );
+    }
+
+    // 等待所有请求完成
+    await Promise.all(promises);
+    
+    message.success('权限设置成功');
+    isPermissionModalVisible.value = false;
+    fetchUserList();
+  } catch (error) {
+    message.error('权限设置失败');
+  }
+};
+
+// 处理权限分配取消
+const handlePermissionModalCancel = () => {
+  isPermissionModalVisible.value = false;
 };
 
 // 处理注销用户
@@ -315,6 +534,8 @@ const handlePasswordCancel = () => {
 // 页面加载时获取数据
 onMounted(() => {
   fetchUserList();
+  fetchRoleList();
+  fetchApis();
 });
 
 // 添加随机颜色函数
