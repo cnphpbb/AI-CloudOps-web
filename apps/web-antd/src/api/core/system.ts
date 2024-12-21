@@ -53,6 +53,7 @@ export namespace SystemApi {
 
   export interface UpdateApiReq {
     id: number; // API ID
+    user_id: number; // 用户ID
     name: string; // API名称
     path: string; // API路径
     method: number; // 请求方法
@@ -102,7 +103,6 @@ export namespace SystemApi {
   // 权限分配相关接口
   export interface AssignPermissionsReq {
     role_id: number; // 角色ID
-    menu_ids?: number[]; // 菜单ID列表
     api_ids?: number[]; // API ID列表
   }
 
@@ -116,14 +116,12 @@ export namespace SystemApi {
   export interface AssignRoleToUserReq {
     user_id: number; // 用户ID
     role_ids: number[]; // 角色ID列表
-    menu_ids?: number[]; // 菜单ID列表
     api_ids?: number[]; // API ID列表
   }
 
   export interface AssignRoleToUsersReq {
     user_ids: number[]; // 用户ID列表
     role_ids: number[]; // 角色ID列表
-    menu_ids?: number[]; // 菜单ID列表
     api_ids?: number[]; // API ID列表
   }
 }

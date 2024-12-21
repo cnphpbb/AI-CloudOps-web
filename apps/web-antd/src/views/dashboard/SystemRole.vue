@@ -24,20 +24,24 @@
       <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="handleEdit(record)" title="编辑">
-            <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
-          </a-button>
-          <a-popconfirm
-            title="确定要删除这个角色吗?"
-            ok-text="确定"
-            cancel-text="取消"
-            placement="left"
-            @confirm="handleDelete(record)"
-          >
-            <a-button type="link" danger title="删除">
-              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+          <a-tooltip title="编辑角色">
+            <a-button type="link" @click="handleEdit(record)">
+              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
             </a-button>
-          </a-popconfirm>
+          </a-tooltip>
+          <a-tooltip title="删除角色">
+            <a-popconfirm
+              title="确定要删除这个角色吗?"
+              ok-text="确定"
+              cancel-text="取消"
+              placement="left"
+              @confirm="handleDelete(record)"
+            >
+              <a-button type="link" danger>
+                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+              </a-button>
+            </a-popconfirm>
+          </a-tooltip>
         </a-space>
       </template>
 

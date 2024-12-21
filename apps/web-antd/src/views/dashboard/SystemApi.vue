@@ -24,9 +24,11 @@
       <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="handleEdit(record)" title="编辑">
-            <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
-          </a-button>
+          <a-tooltip title="编辑API">
+            <a-button type="link" @click="handleEdit(record)">
+              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
           <a-popconfirm
             title="确定要删除这个API吗?"
             ok-text="确定"
@@ -34,9 +36,11 @@
             placement="left"
             @confirm="handleDelete(record)"
           >
-            <a-button type="link" danger title="删除">
-              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
-            </a-button>
+            <a-tooltip title="删除API">
+              <a-button type="link" danger>
+                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+              </a-button>
+            </a-tooltip>
           </a-popconfirm>
         </a-space>
       </template>

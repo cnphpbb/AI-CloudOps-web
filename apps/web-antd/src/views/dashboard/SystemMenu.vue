@@ -24,20 +24,24 @@
       <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="handleEdit(record)" title="编辑">
-            <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
-          </a-button>
-          <a-popconfirm
-            title="确定要删除这个菜单吗?"
-            ok-text="确定"
-            cancel-text="取消"
-            placement="left"
-            @confirm="handleDelete(record)"
-          >
-            <a-button type="link" danger title="删除">
-              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+          <a-tooltip title="编辑菜单">
+            <a-button type="link" @click="handleEdit(record)">
+              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
             </a-button>
-          </a-popconfirm>
+          </a-tooltip>
+          <a-tooltip title="删除菜单">
+            <a-popconfirm
+              title="确定要删除这个菜单吗?"
+              ok-text="确定"
+              cancel-text="取消"
+              placement="left"
+              @confirm="handleDelete(record)"
+            >
+              <a-button type="link" danger>
+                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+              </a-button>
+            </a-popconfirm>
+          </a-tooltip>
         </a-space>
       </template>
 
@@ -113,7 +117,6 @@
 import { ref, onMounted, reactive, computed } from 'vue';
 import { message } from 'ant-design-vue';
 import { listMenusApi, createMenuApi, updateMenuApi, deleteMenuApi } from '#/api/core/system';
-import type { SystemApi } from '#/api/core/system';
 import { Icon } from '@iconify/vue';
 
 // 表格加载状态
