@@ -334,23 +334,23 @@ export const validateExprApi = (data: validateExprApiReq) => {
 };
 
 export const getAlertEventsApi = () => {
-  return requestClient.get('/monitor/alert_events');
+  return requestClient.get('/monitor/alert_events/list');
 };
 
 export const silenceAlertApi = () => {
-  return requestClient.get('/monitor/alert_events');
+  return requestClient.get('/monitor/alert_events/silence');
 };
 
 export const claimAlertApi = () => {
-  return requestClient.get('/monitor/alert_events');
+  return requestClient.get('/monitor/alert_events/claim');
 };
 
 export const cancelSilenceAlertApi = () => {
-  return requestClient.get('/monitor/alert_events');
+  return requestClient.get('/monitor/alert_events/cancel_silence');
 };
 
 export const silenceBatchApi = () => {
-  return requestClient.get('/monitor/alert_events');
+  return requestClient.get('/monitor/alert_events/silence_batch');
 };
 
 export const getRecordRulesApi = () => {

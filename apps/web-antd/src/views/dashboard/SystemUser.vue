@@ -163,17 +163,17 @@
           />
         </a-tab-pane>
         <a-tab-pane key="api" tab="接口权限">
-          <a-form layout="vertical">
-            <a-form-item label="API权限">
-              <a-select
-                v-model:value="selectedApiIds"
-                mode="multiple"
-                style="width: 100%"
-                placeholder="请选择API权限"
-                :options="apiOptions"
-              />
-            </a-form-item>
-          </a-form>
+          <a-tree
+            v-model:checkedKeys="selectedApiIds"
+            :tree-data="apiTreeData"
+            checkable
+            :defaultExpandAll="true"
+            :fieldNames="{
+              title: 'name',
+              key: 'id',
+              children: 'children'
+            }"
+          />
         </a-tab-pane>
       </a-tabs>
     </a-modal>
@@ -186,6 +186,13 @@ import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import { getAllUsers, registerApi, changePassword, deleteUser, updateUserInfo } from '#/api';
 import { updateUserMenu, listRolesApi, listApisApi, assignRoleToUserApi } from '#/api/core/system';
+
+interface SystemApi {
+  id: number;
+  name: string;
+  path: string;
+  method: number;
+}
 
 // 表格加载状态
 const loading = ref(false);
@@ -207,7 +214,7 @@ const menuForm = reactive({
 const selectedApiIds = ref<number[]>([]);
 const selectedRoleIds = ref<number[]>([]);
 const roleOptions = ref<{label: string, value: number}[]>([]);
-const apiOptions = ref<{label: string, value: number}[]>([]);
+const apiTreeData = ref<any[]>([]);
 const currentUserId = ref<number>();
 
 // 表格列配置
@@ -307,17 +314,65 @@ const fetchRoleList = async () => {
   }
 };
 
-// 获取所有API
+// 获取所有API并构建树状结构
 const fetchApis = async () => {
   try {
     const apiRes = await listApisApi({
       page_number: 1,
       page_size: 1000
     });
-    apiOptions.value = apiRes.list.map((api: any) => ({
-      label: `${api.name} (${api.path}) [${getMethodText(api.method)}]`,
-      value: api.id
-    }));
+    
+    // 定义API分类
+    const apiCategories: {
+      [key: string]: {
+        title: string;
+        path: string;
+        children: Array<{
+          id: number;
+          name: string;
+          path: string;
+        }>;
+      };
+    } = {
+      all: { title: '所有权限', path: '/*', children: [] },
+      user: { title: '用户权限', path: '/api/user', children: [] },
+      menu: { title: '菜单权限', path: '/api/menus', children: [] },
+      api: { title: 'API权限', path: '/api/apis', children: [] },
+      role: { title: '角色权限', path: '/api/roles', children: [] },
+      permission: { title: '策略权限', path: '/api/permissions', children: [] },
+      tree: { title: '服务树权限', path: '/api/tree', children: [] },
+      monitor: { title: '监控权限', path: '/api/monitor', children: [] },
+      k8s: { title: 'K8S权限', path: '/api/k8s', children: [] },
+    };
+
+    // 将API按路径分类
+    apiRes.list.forEach((api: SystemApi) => {
+      // 如果api.id是数字类型,跳过处理
+      if (typeof api.id === 'number') {
+        const apiNode = {
+          id: api.id,
+          name: `${api.name} [${getMethodText(api.method)}]`,
+          path: api.path
+        };
+
+        // 遍历所有分类,检查API路径是否匹配分类路径前缀
+        Object.values(apiCategories).forEach(category => {
+          if (api.path && api.path.startsWith(category.path)) {
+            category.children.push(apiNode);
+          }
+        });
+      }
+    });
+
+    // 构建最终的树状数据,过滤掉空分类
+    apiTreeData.value = Object.values(apiCategories)
+      .filter(category => category.children.length > 0)
+      .map(category => ({
+        id: category.path,
+        name: category.title,
+        children: category.children.sort((a, b) => a.id - b.id) // 按id排序
+      }));
+
   } catch (error) {
     message.error('获取权限数据失败');
   }
@@ -442,13 +497,14 @@ const handlePermissionModalSubmit = async () => {
       );
     }
 
-    // 添加API权限请求
-    if (selectedApiIds.value.length > 0) {
+    // 添加API权限请求 - 只发送数字类型的ID
+    const numericApiIds = selectedApiIds.value.filter(id => typeof id === 'number');
+    if (numericApiIds.length > 0) {
       promises.push(
         assignRoleToUserApi({
           user_id: currentUserId.value,
           role_ids: selectedRoleIds.value,
-          api_ids: selectedApiIds.value
+          api_ids: numericApiIds
         })
       );
     }
