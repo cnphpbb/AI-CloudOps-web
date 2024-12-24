@@ -19,10 +19,24 @@
       <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
-          <a-button type="link" @click="handleEditNode(record)">编辑</a-button>
-          <a-button type="link" danger @click="handleDeleteNode(record)"
-            >删除</a-button
+          <a-tooltip title="编辑节点">
+            <a-button type="link" @click="handleEditNode(record)">
+              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
+          <a-popconfirm
+            title="确定要删除这个节点吗?"
+            ok-text="确定"
+            cancel-text="取消"
+            placement="left"
+            @confirm="handleDeleteNode(record)"
           >
+            <a-tooltip title="删除节点">
+              <a-button type="link" danger>
+                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+              </a-button>
+            </a-tooltip>
+          </a-popconfirm>
         </a-space>
         <!-- 编辑表单的模态框 -->
         <a-modal
@@ -166,6 +180,7 @@
 <script lang="ts" setup>
 import { reactive, ref, onMounted, watch, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
+import { Icon } from '@iconify/vue';
 import { getAllTreeNodes, deleteTreeNode, updateTreeNode, createTreeNode } from '#/api';
 import type { TreeNode, User } from '#/api/core/tree';
 

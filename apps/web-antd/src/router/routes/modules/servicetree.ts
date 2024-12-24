@@ -43,6 +43,17 @@ const routes: RouteRecordRaw[] = [
           icon: 'mdi:cloud-cog-outline'
         },
       },
+      {
+        name: 'TerminalConnect',
+        path: '/terminal_connect',
+        component: () =>
+          import('#/views/servicetree/TerminalConnect.vue'),
+        meta: {
+          hideInMenu: true,
+          title: "终端连接",
+          icon: 'mdi:terminal'
+        },
+      },
       // {
       //   name: 'RDS管理',
       //   path: '/rds_resource_operation',

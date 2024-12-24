@@ -23,21 +23,28 @@
     >
       <template #action="{ record }">
         <a-space>
-          <a-button type="primary" ghost size="small" @click="handleEditResource(record)">
-            <template #icon><EditOutlined /></template>
-            编辑
-          </a-button>
-          <a-button type="primary" danger ghost size="small" @click="handleDeleteResource(record)">
-            <template #icon><DeleteOutlined /></template>
-            删除
-          </a-button>
-          <a-button type="primary" ghost size="small" @click="record.isBound ? handleUnbindFromNode(record) : handleBindToNode(record)">
-            <template #icon>
-              <LinkOutlined v-if="!record.isBound"/>
-              <DisconnectOutlined v-else/>
-            </template>
-            {{ record.isBound ? '解绑服务树' : '绑定到服务树' }}
-          </a-button>
+          <a-tooltip title="编辑资源信息">
+            <a-button type="link" @click="handleEditResource(record)">
+              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
+          <a-tooltip title="删除资源">
+            <a-button type="link" danger @click="handleDeleteResource(record)">
+              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
+          <a-tooltip :title="record.isBound ? '解绑服务树' : '绑定到服务树'">
+            <a-button type="link" @click="record.isBound ? handleUnbindFromNode(record) : handleBindToNode(record)">
+              <template #icon>
+                <Icon :icon="record.isBound ? 'ant-design:disconnect-outlined' : 'ant-design:link-outlined'" style="font-size: 22px" />
+              </template>
+            </a-button>
+          </a-tooltip>
+          <a-tooltip title="终端连接">
+            <a-button type="link" @click="handleTerminalConnect(record)">
+              <template #icon><Icon icon="ant-design:code-outlined" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
         </a-space>
       </template>
     </a-table>
@@ -316,6 +323,7 @@
 <script lang="ts" setup>
 import { reactive, ref, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
+import { Icon } from '@iconify/vue';
 import {
   getAllECSResources,
   createECSResources,
@@ -328,7 +336,10 @@ import {
   editOtherECSResources,
   deleteOtherECSResources,
 } from '#/api';
+import { useRouter } from 'vue-router';
 import type { ResourceEcs, TreeNode } from '#/api';
+
+const router = useRouter();
 
 const vendorMap: { [key: string]: string } = {
   '1': '个人',
@@ -436,9 +447,9 @@ const columns = [
   },
   {
     title: '供应商',
-    dataIndex: 'vendor',
+    dataIndex: 'vendor', 
     key: 'vendor',
-    customRender: (vendor: string) => vendorMap[vendor.value] || '未知',
+    customRender: ({ text }: { text: string }) => vendorMap[text] || '未知',
   },
   {
     title: '状态',
@@ -836,7 +847,7 @@ const handleUnbindFromNode = (record: ResourceEcs) => {
 
         // 更新本地数据
         const index = data.findIndex(item => item.id === record.id);
-        if (index !== -1) {
+        if (index !== -1 && data[index]) {
           data[index].isBound = false;
           data[index].boundNodeId = undefined;
         }
@@ -855,19 +866,26 @@ const confirmBind = async () => {
     return;
   }
 
+  // 保存当前要绑定的资源信息,避免后续被清空导致空指针
+  const resourceToBindCopy = {
+    id: resourceToBind.value.id,
+    instanceName: resourceToBind.value.instanceName
+  };
+  const nodeId = selectedNodeId.value;
+
   try {
     await bindECSResources({
-      nodeId: selectedNodeId.value,
-      resource_ids: [resourceToBind.value.id],
+      nodeId,
+      resource_ids: [resourceToBindCopy.id],
     });
 
-    message.success(`绑定资源 "${resourceToBind.value.instanceName}" 成功`);
+    message.success(`绑定资源 "${resourceToBindCopy.instanceName}" 成功`);
 
     // 更新本地数据
-    const index = data.findIndex(item => item.id === resourceToBind.value?.id);
-    if (index !== -1) {
+    const index = data.findIndex(item => item.id === resourceToBindCopy.id);
+    if (index !== -1 && data[index]) {
       data[index].isBound = true;
-      data[index].boundNodeId = selectedNodeId.value;
+      data[index].boundNodeId = nodeId;
     }
 
     // 重置绑定状态
@@ -876,7 +894,7 @@ const confirmBind = async () => {
     isBindModalVisible.value = false;
   } catch (error) {
     console.error('绑定资源失败', error);
-    message.error(`绑定资源 "${resourceToBind.value.instanceName}" 失败，请稍后再试`);
+    message.error(`绑定资源 "${resourceToBindCopy.instanceName}" 失败，请稍后再试`);
   }
 };
 
@@ -885,6 +903,15 @@ const handleBindCancel = () => {
   resourceToBind.value = null;
   selectedNodeId.value = null;
   isBindModalVisible.value = false;
+};
+
+// 终端连接
+const handleTerminalConnect = (record: ResourceEcs) => {
+  console.log(record);
+  router.push({
+    path: '/terminal_connect',
+    query: { id: record.id.toString() }
+  });
 };
 
 onMounted(() => {

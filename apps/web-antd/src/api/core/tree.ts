@@ -272,3 +272,7 @@ export async function editOtherECSResources(data: OtherEcsResourceReq) {
 export async function deleteOtherECSResources(id: number) {
   return requestClient.delete<GeneralRes>(`/tree/ecs/ali/resource/deleteAliResource/${id}`);
 }
+
+export async function hostConsole(id: number) {
+  return requestClient.get(`/tree/ecs/console/${id}`);
+}
