@@ -27,7 +27,7 @@
       :pagination="{
         showSizeChanger: true,
         showQuickJumper: true,
-        showTotal: total => `共 ${total} 条`
+        showTotal: (total: number) => `共 ${total} 条`
       }"
     >
       <!-- 操作列 -->
