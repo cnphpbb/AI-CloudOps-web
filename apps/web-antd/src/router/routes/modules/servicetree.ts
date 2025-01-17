@@ -51,7 +51,6 @@ const routes: RouteRecordRaw[] = [
         meta: {
           hideInMenu: true,
           title: "终端连接",
-          icon: 'mdi:terminal'
         },
       },
       // {

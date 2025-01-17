@@ -56,23 +56,23 @@
                         <a-input v-model:value="editForm.desc" placeholder="请输入描述" />
                       </a-form-item>
                       <a-form-item label="运维负责人" name="ops_admins">
-                        <a-select v-model:value="editForm.ops_admins" mode="tags" placeholder="请选择运维负责人">
-                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.ops_admin_users">
-                            {{ person.ops_admin_users }}
+                        <a-select v-model:value="editForm.ops_admins" mode="multiple" placeholder="请选择运维负责人">
+                          <a-select-option v-for="user in userList" :key="user.id" :value="user.id">
+                            {{ user.username }}
                           </a-select-option>
                         </a-select>
                       </a-form-item>
                       <a-form-item label="研发负责人" name="rd_admins">
-                        <a-select v-model:value="editForm.rd_admins" mode="tags" placeholder="请选择研发负责人">
-                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.rd_admin_users">
-                            {{ person.rd_admin_users }}
+                        <a-select v-model:value="editForm.rd_admins" mode="multiple" placeholder="请选择研发负责人">
+                          <a-select-option v-for="user in userList" :key="user.id" :value="user.id">
+                            {{ user.username }}
                           </a-select-option>
                         </a-select>
                       </a-form-item>
                       <a-form-item label="研发工程师" name="rd_members">
-                        <a-select v-model:value="editForm.rd_members" mode="tags" placeholder="请选择研发工程师">
-                          <a-select-option v-for="person in flatTreeData" :key="person.id" :value="person.rd_member_users">
-                            {{ person.rd_member_users }}
+                        <a-select v-model:value="editForm.rd_members" mode="multiple" placeholder="请选择研发工程师">
+                          <a-select-option v-for="user in userList" :key="user.id" :value="user.id">
+                            {{ user.username }}
                           </a-select-option>
                         </a-select>
                       </a-form-item>
@@ -130,7 +130,7 @@
 import { ref, reactive, onMounted, computed } from 'vue';
 import type { TreeNode } from '#/api/core/tree';
 import { message } from 'ant-design-vue';
-import { getAllTreeNodes, createTreeNode, updateTreeNode } from '#/api';
+import { getAllTreeNodes, createTreeNode, updateTreeNode, getAllUsers } from '#/api';
 
 const treeData = ref<TreeNode[]>([]);
 const flatTreeData = ref<TreeNode[]>([]);
@@ -139,6 +139,7 @@ const isSelectVisible = ref(false);
 const isEditVisible = ref(false);
 const addFormRef = ref(); // 添加表单引用
 const editFormRef = ref(); // 添加表单引用
+const userList = ref<Person[]>([]); // 用户列表
 
 const addForm = reactive({
   title: '',
@@ -202,9 +203,9 @@ const editForm = reactive({
   id: 0,
   title: '',
   desc: '',
-  ops_admins: [] as Person[],
-  rd_admins: [] as Person[],
-  rd_members: [] as Person[],
+  ops_admins: [] as number[],
+  rd_admins: [] as number[],
+  rd_members: [] as number[],
 });
 
 const ecsColumns = [
@@ -314,9 +315,9 @@ const showEditModal = () => {
     editForm.id = selectedNode.value.id;
     editForm.title = selectedNode.value.title;
     editForm.desc = selectedNode.value.desc;
-    editForm.ops_admins = selectedNode.value.ops_admins ? [...selectedNode.value.ops_admins] : [];
-    editForm.rd_admins = selectedNode.value.rd_admins ? [...selectedNode.value.rd_admins] : [];
-    editForm.rd_members = selectedNode.value.rd_members ? [...selectedNode.value.rd_members] : [];
+    editForm.ops_admins = selectedNode.value.ops_admins?.map(admin => admin.id) || [];
+    editForm.rd_admins = selectedNode.value.rd_admins?.map(admin => admin.id) || [];
+    editForm.rd_members = selectedNode.value.rd_members?.map(member => member.id) || [];
     
     isEditVisible.value = true;
   }
@@ -356,7 +357,21 @@ const resetForm = (form: any) => {
   });
 };
 
-onMounted(fetchTreeData);
+const fetchUsers = async () => {
+  try {
+    const response = await getAllUsers();
+    if (response) {
+      userList.value = response;
+    }
+  } catch (error) {
+    message.error('获取用户列表失败');
+  }
+};
+
+onMounted(() => {
+  fetchTreeData();
+  fetchUsers();
+});
 </script>
 
 <style scoped>

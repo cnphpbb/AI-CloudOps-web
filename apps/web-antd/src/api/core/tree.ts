@@ -58,6 +58,8 @@ export interface ResourceEcs {
   memory: number;
   disk: number;
   osName: string;
+  mode: string;
+  password: string;
   imageId: string;
   hostname: string;
   networkInterfaces: string[];
@@ -147,12 +149,16 @@ export interface CreateECSResourceReq {
   tags: string[];
   ipAddr: string;
   osName: string;
+  mode: string;
+  password: string;
   hostname: string;
 }
 
 export interface EditECSResourceReq {
   id: number;
   instanceName: string;
+  mode: string;
+  password: string;
   vendor: string;
   description: string;
   tags: string[];
