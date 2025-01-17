@@ -79,6 +79,18 @@
             <a-input v-model:value="createForm.hostname" placeholder="请输入主机名" />
           </a-form-item>
 
+            <!-- 新增mode和password字段 -->
+            <a-form-item label="连接模式" name="mode">
+            <a-select v-model:value="createForm.mode" placeholder="请选择连接模式">
+              <a-select-option value="password">密码</a-select-option>
+              <a-select-option value="key">密钥</a-select-option>
+            </a-select>
+          </a-form-item>
+
+          <a-form-item label="密码" name="password">
+            <a-input-password v-model:value="createForm.password" placeholder="请输入密码" />
+          </a-form-item>
+
           <a-form-item label="操作系统" name="osName">
             <a-input v-model:value="createForm.osName" placeholder="请输入系统名称" />
           </a-form-item>
@@ -95,6 +107,8 @@
               </a-select-option>
             </a-select>
           </a-form-item>
+
+        
         </template>
 
         <!-- 非个人供应商特有字段 -->
@@ -177,6 +191,18 @@
           <a-form-item label="安全组描述" name="security_group_description">
             <a-input v-model:value="createForm.security_group_description" placeholder="请输入安全组描述" />
           </a-form-item>
+
+          <!-- 新增mode和password字段 -->
+          <a-form-item label="连接模式" name="mode">
+            <a-select v-model:value="createForm.mode" placeholder="请选择连接模式">
+              <a-select-option value="password">密码</a-select-option>
+              <a-select-option value="key">密钥</a-select-option>
+            </a-select>
+          </a-form-item>
+
+          <a-form-item label="密码" name="password">
+            <a-input-password v-model:value="createForm.password" placeholder="请输入密码" />
+          </a-form-item>
         </template>
       </a-form>
     </a-modal>
@@ -224,6 +250,19 @@
                 {{ tag }}
               </a-select-option>
             </a-select>
+          </a-form-item>
+          
+
+          <!-- 新增mode和password字段 -->
+          <a-form-item label="连接模式" name="mode">
+            <a-select v-model:value="editForm.mode" placeholder="请选择连接模式">
+              <a-select-option value="password">密码</a-select-option>
+              <a-select-option value="key">密钥</a-select-option>
+            </a-select>
+          </a-form-item>
+
+          <a-form-item label="密码" name="password">
+            <a-input-password v-model:value="editForm.password" placeholder="请输入密码" />
           </a-form-item>
         </template>
 
@@ -308,6 +347,18 @@
           <a-form-item label="安全组描述" name="security_group_description">
             <a-input v-model:value="editForm.security_group_description" placeholder="请输入安全组描述" />
           </a-form-item>
+
+          <!-- 新增mode和password字段 -->
+          <a-form-item label="连接模式" name="mode">
+            <a-select v-model:value="editForm.mode" placeholder="请选择连接模式">
+              <a-select-option value="password">密码</a-select-option>
+              <a-select-option value="key">密钥</a-select-option>
+            </a-select>
+          </a-form-item>
+
+          <a-form-item label="密码" name="password">
+            <a-input-password v-model:value="editForm.password" placeholder="请输入密码" />
+          </a-form-item>
         </template>
       </a-form>
     </a-modal>
@@ -358,6 +409,8 @@ const createForm = reactive({
   hostname: '',
   ipAddr: '',
   osName: '',
+  mode: '', // 新增字段
+  password: '', // 新增字段
 
   // 非个人供应商字段
   name: '',
@@ -388,6 +441,8 @@ const editForm = reactive({
   hostname: '',
   ipAddr: '',
   osName: '',
+  mode: '', 
+  password: '',
 
   // 非个人供应商字段
   name: '',
@@ -561,6 +616,8 @@ const handleCreateECS = async () => {
         hostname: createForm.hostname,
         ipAddr: createForm.ipAddr,
         osName: createForm.osName,
+        mode: createForm.mode,
+        password: createForm.password,
       });
 
       message.success('新增ECS资源成功');
@@ -667,6 +724,8 @@ const handleAddResource = () => {
     hostname: '',
     ipAddr: '',
     osName: '',
+    mode: '',
+    password: '',
 
     // 非个人供应商字段
     name: '',
@@ -696,11 +755,13 @@ const handleEditResource = (record: ResourceEcs) => {
     id: record.id,
     instanceName: record.instanceName,
     description: record.description,
-    tags: record.tags,
+    tags: record.tags?.filter(tag => tag && tag.trim() !== '') || [], // 过滤空标签
     vendor: record.vendor,
     hostname: record.hostname,
     ipAddr: record.ipAddr,
     osName: record.osName,
+    mode: record.mode,
+    password: record.password,
   });
   isEditModalVisible.value = true;
 };
@@ -733,6 +794,8 @@ const handleEditECS = async () => {
         hostname: editForm.hostname,
         ipAddr: editForm.ipAddr,
         osName: editForm.osName,
+        mode: editForm.mode,
+        password: editForm.password,
       });
     } else {
       await editOtherECSResources({
@@ -782,22 +845,20 @@ const handleDeleteResource = (record: ResourceEcs) => {
     content: `确定要删除资源 "${record.instanceName}" 吗？`,
     onOk: async () => {
       try {
-        if (record.vendor === '1') {
-          // 使用个人供应商的删除接口
-          await deleteECSResources(record.id);
+        if (record.vendor && vendorMap[record.vendor]) {
+          if (record.vendor === '1') {
+            // 使用个人供应商的删除接口
+            await deleteECSResources(record.id);
+          } else {
+            // 使用非个人供应商的删除接口
+            await deleteOtherECSResources(record.id);
+          }
         } else {
-          // 使用非个人供应商的删除接口
-          await deleteOtherECSResources(record.id);
+          // vendor不在vendorMap中,使用默认删除接口
+          await deleteECSResources(record.id);
         }
         message.success(`资源 "${record.instanceName}" 已成功删除`);
         await fetchResources();
-        // // 从本地数据中删除该资源
-        // const index = data.findIndex(item => item.id === record.id);
-        // if (index !== -1) {
-        //   data.splice(index, 1);  // 删除资源
-        //   handleSearch();  // 重新过滤数据
-        //   message.success(`资源 "${record.instanceName}" 已成功删除`);
-        // }
       } catch (error) {
         console.error('删除资源失败', error);
         message.error(`删除资源 "${record.instanceName}" 失败，请稍后再试`);
