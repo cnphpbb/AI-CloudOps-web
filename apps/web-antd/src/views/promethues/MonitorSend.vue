@@ -248,7 +248,7 @@ const fetchUsers = async () => {
       value: user.id,
     }));
   } catch (error) {
-    message.error('获取用户列表失败');
+    message.error(error.message || '获取用户列表失败');
     console.error(error);
   }
 };
@@ -318,8 +318,8 @@ const handleSubmit = async () => {
 
     resetForm();
     fetchSendGroups(); // 刷新发送组列表
-  } catch (error) {
-    message.error('提交失败，请重试');
+  } catch (error: any) {
+    message.error(error.message || '提交失败，请重试');
     console.error(error);
   }
 };
@@ -334,8 +334,8 @@ const handleDelete = (record: SendGroup) => {
         await deleteMonitorSendGroupApi(record.id);
         message.success('发送组已删除');
         fetchSendGroups(); // 刷新发送组列表
-      } catch (error) {
-        message.error('删除失败，请重试');
+      } catch (error: any) {
+        message.error(error.message || '删除失败，请重试');
         console.error(error);
       }
     },
@@ -348,8 +348,8 @@ const fetchSendGroups = async () => {
   try {
     const response = await getMonitorSendGroupApi(); // 获取发送组数据
     data.splice(0, data.length, ...response); // 清空 data 并重新赋值
-  } catch (error) {
-    message.error('获取发送组数据失败');
+  } catch (error: any) {
+    message.error(error.message || '获取发送组数据失败');
     console.error(error);
   }
 };

@@ -157,8 +157,8 @@ const getClusters = async () => {
   try {
     const res = await getAllClustersApi();
     clusters.value = res || [];
-  } catch (error) {
-    message.error('获取集群列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取集群列表失败');
   }
 };
 
@@ -173,8 +173,8 @@ const getNamespaces = async () => {
     const res = await getNamespacesByClusterIdApi(selectedCluster.value);
     namespaces.value = res.map((ns: { name: string }) => ns.name);
     selectedNamespace.value = (namespaces.value[0] || 'default') as string;
-  } catch (error) {
-    message.error('获取命名空间列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取命名空间列表失败');
     namespaces.value = ['default'];
     selectedNamespace.value = 'default';
   }
@@ -191,8 +191,8 @@ const getConfigMaps = async () => {
   try {
     const res = await getConfigMapListApi(selectedCluster.value, selectedNamespace.value);
     configMaps.value = res || [];
-  } catch (error) {
-    message.error('获取ConfigMap列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取ConfigMap列表失败');
   } finally {
     loading.value = false;
   }
@@ -205,8 +205,8 @@ const viewConfigMapYaml = async (configMap: ConfigMap) => {
     const res = await getConfigMapYamlApi(selectedCluster.value, configMap.metadata.name, configMap.metadata.namespace);
     configMapYaml.value = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
     viewYamlModalVisible.value = true;
-  } catch (error) {
-    message.error('获取ConfigMap YAML失败');
+  } catch (error: any) {
+    message.error(error.message || '获取ConfigMap YAML失败');
   }
 };
 
@@ -218,8 +218,8 @@ const handleDelete = async (configMap: ConfigMap) => {
     await deleteConfigMapApi(selectedCluster.value, configMap.metadata.namespace, configMap.metadata.name);
     message.success('ConfigMap删除成功');
     getConfigMaps();
-  } catch (error) {
-    message.error('删除ConfigMap失败');
+  } catch (error: any) {
+    message.error(error.message || '删除ConfigMap失败');
   }
 };
 
@@ -236,8 +236,8 @@ const handleBatchDelete = async () => {
     message.success('批量删除成功');
     selectedRows.value = [];
     getConfigMaps();
-  } catch (error) {
-    message.error('批量删除失败');
+  } catch (error: any) {
+    message.error(error.message || '批量删除失败');
   }
 };
 

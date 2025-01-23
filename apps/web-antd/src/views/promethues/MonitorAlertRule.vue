@@ -288,8 +288,8 @@ const fetchTreeNodes = async () => {
     }
     treeData.value = processTreeData(response);
     leafNodes.value = getLeafNodes(treeData.value);
-  } catch (error) {
-    message.error('获取树节点数据失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '获取树节点数据失败');
     console.error(error);
   }
 };
@@ -299,8 +299,8 @@ const fetchScrapePools = async () => {
   try {
     const response = await getMonitorScrapePoolApi();
     scrapePools.value = response;
-  } catch (error) {
-    message.error('获取实例池数据失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '获取实例池数据失败');
     console.error(error);
   }
 };
@@ -310,8 +310,8 @@ const fetchSendGroups = async () => {
   try {
     const response = await getMonitorSendGroupApi();
     sendGroups.value = response;
-  } catch (error) {
-    message.error('获取发送组数据失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '获取发送组数据失败');
     console.error(error);
   }
 };
@@ -500,8 +500,8 @@ const handleAdd = async () => {
     message.success('新增AlertRule成功');
     fetchAlertRules();
     closeAddModal();
-  } catch (error) {
-    message.error('新增AlertRule失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '新增AlertRule失败');
     console.error(error);
   }
 };
@@ -531,8 +531,8 @@ const handleEdit = async () => {
     message.success('更新AlertRule成功');
     fetchAlertRules();
     closeEditModal();
-  } catch (error) {
-    message.error('更新AlertRule失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '更新AlertRule失败');
     console.error(error);
   } 
 };
@@ -551,9 +551,9 @@ const handleDelete = (record: AlertRule) => {
         loading.value = false;
         message.success('AlertRule已删除');
         fetchAlertRules();
-      } catch (error) {
+      } catch (error: any) {
         loading.value = false;
-        message.error('删除AlertRule失败，请稍后重试');
+        message.error(error.message || '删除AlertRule失败');
         console.error(error);
       }
     },
@@ -566,8 +566,8 @@ const fetchAlertRules = async () => {
     loading.value = true;
     const response = await getAlertRulesApi(); // 调用获取数据 API
     data.value = response;
-  } catch (error) {
-    message.error('获取AlertRules数据失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '获取AlertRules数据失败');
     console.error(error);
   }
 };
@@ -592,8 +592,8 @@ const validateAddExpression = async (expr: string) => {
     const result = await validateExprApi(payload);
     message.success('验证表达式成功', result.message);
     return true;
-  } catch (error) {
-    message.error('验证表达式失败，请检查后重试');
+  } catch (error: any) {
+    message.error(error.message || '验证表达式失败');
     console.error(error);
     return false;
   }
@@ -606,8 +606,8 @@ const validateEditExpression = async () => {
     const result = await validateExprApi(payload);
     message.success('验证表达式成功', result.message);
     return true;
-  } catch (error) {
-    message.error('验证表达式失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '验证表达式失败');
     console.error(error);
     return false;
   }

@@ -179,6 +179,11 @@ const columns = [
     key: 'env',
   },
   {
+    title: '集群状态',
+    dataIndex: 'status',
+    key: 'status',
+  },
+  {
     title: '创建用户id',
     dataIndex: 'user_id',
     key: 'user_id',
@@ -245,8 +250,8 @@ const getClusters = async () => {
   try {
     const res = await getAllClustersApi();
     clusters.value = res;
-  } catch (error) {
-    message.error('获取集群数据失败');
+  } catch (error: any) {
+    message.error(error.message || '获取集群数据失败');
   }
 };
 
@@ -261,8 +266,8 @@ const handleAdd = async () => {
     message.success('集群新增成功');
     getClusters();
     isAddModalVisible.value = false;
-  } catch (error) {
-    message.error('新增集群失败');
+  } catch (error: any) {
+    message.error(error.message || '新增集群失败');
   }
 };
 
@@ -284,8 +289,8 @@ const handleEdit = async (id: number) => {
     editForm.kube_config_content = res.kube_config_content;
     editForm.action_timeout_seconds = res.action_timeout_seconds;
     isEditModalVisible.value = true;
-  } catch (error) {
-    message.error('获取集群数据失败');
+  } catch (error: any) {
+    message.error(error.message || '获取集群数据失败');
   }
 };
 
@@ -304,8 +309,8 @@ const handleUpdate = async () => {
     message.success('集群更新成功');
     getClusters();
     isEditModalVisible.value = false;
-  } catch (error) {
-    message.error('更新集群失败');
+  } catch (error: any) {
+    message.error(error.message || '更新集群失败');
   }
 };
 
@@ -315,8 +320,8 @@ const handleDelete = async (id: number) => {
     await deleteClusterApi(id);
     message.success('集群删除成功');
     getClusters();
-  } catch (error) {
-    message.error('删除集群失败');
+  } catch (error: any) {
+    message.error(error.message || '删除集群失败');
   }
 };
 

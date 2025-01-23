@@ -179,8 +179,8 @@ const getClusters = async () => {
   try {
     const res = await getAllClustersApi();
     clusters.value = res || [];
-  } catch (error) {
-    message.error('获取集群列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取集群列表失败');
   }
 };
 
@@ -193,8 +193,8 @@ const getTemplates = async () => {
       const res = await getYamlTemplateApi(firstCluster.id);
       templates.value = res || [];
     }
-  } catch (error) {
-    message.error('获取模板列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取模板列表失败');
   }
 };
 
@@ -204,8 +204,8 @@ const getTasks = async () => {
   try {
     const res = await getYamlTaskListApi();
     tasks.value = res || [];
-  } catch (error) {
-    message.error('获取任务列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取任务列表失败');
   } finally {
     loading.value = false;
   }
@@ -254,8 +254,8 @@ const handleApply = async (record: YamlTask) => {
   try {
     await applyYamlTaskApi(record.id);
     message.success('任务应用成功');
-  } catch (error) {
-    message.error('任务应用失败');
+  } catch (error: any) {
+    message.error(error.message || '任务应用失败');
   }
 };
 
@@ -288,8 +288,8 @@ const handleSubmit = async () => {
     
     modalVisible.value = false;
     getTasks();
-  } catch (error) {
-    message.error(isEdit.value ? '更新任务失败' : '创建任务失败');
+  } catch (error: any) {
+    message.error(error.message || (isEdit.value ? '更新任务失败' : '创建任务失败'));
   }
 };
 
@@ -299,8 +299,8 @@ const handleDelete = async (task: YamlTask) => {
     await deleteYamlTaskApi(task.id);
     message.success('删除成功');
     getTasks();
-  } catch (error) {
-    message.error('删除失败');
+  } catch (error: any) {
+    message.error(error.message || '删除失败');
   }
 };
 

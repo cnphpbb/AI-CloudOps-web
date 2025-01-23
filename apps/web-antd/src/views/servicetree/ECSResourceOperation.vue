@@ -79,8 +79,8 @@
             <a-input v-model:value="createForm.hostname" placeholder="请输入主机名" />
           </a-form-item>
 
-            <!-- 新增mode和password字段 -->
-            <a-form-item label="连接模式" name="mode">
+          <!-- 新增mode和password字段 -->
+          <a-form-item label="连接模式" name="mode">
             <a-select v-model:value="createForm.mode" placeholder="请选择连接模式">
               <a-select-option value="password">密码</a-select-option>
               <a-select-option value="key">密钥</a-select-option>
@@ -107,8 +107,6 @@
               </a-select-option>
             </a-select>
           </a-form-item>
-
-        
         </template>
 
         <!-- 非个人供应商特有字段 -->
@@ -251,7 +249,6 @@
               </a-select-option>
             </a-select>
           </a-form-item>
-          
 
           <!-- 新增mode和password字段 -->
           <a-form-item label="连接模式" name="mode">
@@ -395,7 +392,7 @@ const router = useRouter();
 const vendorMap: { [key: string]: string } = {
   '1': '个人',
   '2': '阿里云',
-  '3': '华为云',
+  '3': '华为云', 
   '4': '腾讯云',
   '5': 'AWS',
 };
@@ -405,12 +402,12 @@ const createForm = reactive({
   instanceName: '',
   description: '',
   tags: [] as string[],
-  vendor: null as string | null, // 初始化为 null 或字符串
+  vendor: null as string | null,
   hostname: '',
   ipAddr: '',
   osName: '',
-  mode: '', // 新增字段
-  password: '', // 新增字段
+  mode: '',
+  password: '',
 
   // 非个人供应商字段
   name: '',
@@ -437,11 +434,11 @@ const editForm = reactive({
   instanceName: '',
   description: '',
   tags: [] as string[],
-  vendor: null as string | null, // 初始化为 null 或字符串
+  vendor: null as string | null,
   hostname: '',
   ipAddr: '',
   osName: '',
-  mode: '', 
+  mode: '',
   password: '',
 
   // 非个人供应商字段
@@ -461,60 +458,72 @@ const editForm = reactive({
   zone_id: '',
   security_group_name: '',
   security_group_description: '',
-
 });
-
 
 // 资源数据
 const data = reactive<ResourceEcs[]>([]);
+
 // 搜索文本
 const searchText = ref('');
+
 // 过滤后的数据
 const filteredData = computed(() => {
   const searchValue = searchText.value.trim().toLowerCase();
   return data.filter(resource => 
-    resource.instanceName.toLowerCase().includes(searchValue)
+    resource.instanceName?.toLowerCase().includes(searchValue) ||
+    resource.ipAddr?.toLowerCase().includes(searchValue)
   );
 });
+
 // 模态框状态
 const isBindModalVisible = ref(false);
 const isCreateModalVisible = ref(false);
 const isEditModalVisible = ref(false);
+
 // 树节点数据
 const treeNodes = ref<TreeNode[]>([]);
+
 // 默认展开的节点
 const defaultExpandedKeys = ref<number[]>([]);
+
 // 选择的节点ID
 const selectedNodeId = ref<number | null>(null);
+
 // 资源待绑定
 const resourceToBind = ref<ResourceEcs | null>(null);
+
 // 表格列配置
 const columns = [
   {
-    title: 'id',
+    title: 'ID',
     dataIndex: 'id',
     key: 'id',
+    width: 80,
   },
   {
     title: '资源名称',
     dataIndex: 'instanceName',
     key: 'instanceName',
+    width: 200,
   },
   {
     title: '供应商',
-    dataIndex: 'vendor', 
+    dataIndex: 'vendor',
     key: 'vendor',
+    width: 100,
     customRender: ({ text }: { text: string }) => vendorMap[text] || '未知',
   },
   {
     title: '状态',
     dataIndex: 'status',
     key: 'status',
+    width: 100,
   },
   {
     title: 'IP地址',
     dataIndex: 'ipAddr',
     key: 'ipAddr',
+    width: 140,
   },
   {
     title: '描述',
@@ -526,6 +535,7 @@ const columns = [
     title: '创建时间',
     dataIndex: 'CreatedAt',
     key: 'CreatedAt',
+    width: 160,
   },
   {
     title: '操作',
@@ -544,13 +554,11 @@ const fetchResources = async () => {
       getAllTreeNodes(),
     ]);
 
-    // 如果后端返回空数据,将数据设为空数组
     if (!ecsResponse) {
       data.splice(0, data.length);
       return;
     }
 
-    // 如果树节点数据为空,则所有ECS资源都未绑定
     if (!treeResponse) {
       ecsResponse.forEach(ecs => {
         ecs.isBound = false;
@@ -560,20 +568,18 @@ const fetchResources = async () => {
       return;
     }
 
-    // 处理ECS资源的绑定状态
     ecsResponse.forEach(ecs => {
       ecs.isBound = false;
       treeResponse.forEach(node => {
-        if (node.bind_ecs && node.bind_ecs.some(boundEcs => boundEcs.id === ecs.id)) {
+        if (node.bind_ecs?.some(boundEcs => boundEcs.id === ecs.id)) {
           ecs.isBound = true;
           ecs.boundNodeId = node.id;
         }
       });
     });
     data.splice(0, data.length, ...ecsResponse);
-  } catch (error) {
-    console.log(error);
-    message.error('获取ECS资源数据失败');
+  } catch (error: any) {
+    message.error(error.message || '获取ECS资源数据失败');
   }
 };
 
@@ -587,27 +593,23 @@ const fetchTreeNodes = async () => {
       return;
     }
     treeNodes.value = response;
-    // 根据需要设置默认展开的节点
     defaultExpandedKeys.value = response.map(node => node.id);
-  } catch (error) {
-    console.error('获取树节点失败', error);
-    message.error('获取树节点失败');
+  } catch (error: any) {
+    message.error(error.message || '获取树节点失败');
   }
 };
 
 // 处理创建资源
 const handleCreateECS = async () => {
   if (createForm.vendor === '1') {
-    // 校验资源名称是否填写
     if (!createForm.instanceName) {
       message.error('请输入资源名称');
       return;
     }
-    // 清理标签数据，移除空白标签
+
     createForm.tags = createForm.tags.filter(tag => tag.trim() !== '');
 
     try {
-      // 调用个人供应商的创建接口
       await createECSResources({
         instanceName: createForm.instanceName,
         description: createForm.description,
@@ -624,12 +626,10 @@ const handleCreateECS = async () => {
       fetchResources();
       isCreateModalVisible.value = false;
 
-    } catch (error) {
-      console.error('创建ECS资源失败', error);
-      message.error('创建ECS资源失败，请稍后再试');
+    } catch (error: any) {
+      message.error(error.message || '创建ECS资源失败');
     }
-  } else if (createForm.vendor == '2') {
-    // 校验必填字段
+  } else if (createForm.vendor === '2') {
     const requiredFields = [
       'name', 'region',
       'instance_availability_zone', 'instance_type', 'system_disk_category',
@@ -645,16 +645,14 @@ const handleCreateECS = async () => {
       }
     }
 
-    // 确保 internet_max_bandwidth_out 不为 null
     if (createForm.internet_max_bandwidth_out === null) {
       message.error('请输入公网出带宽');
       return;
     }
 
-    // 清理标签数据，移除空白标签
     createForm.tags = createForm.tags.filter(tag => tag.trim() !== '');
+
     try {
-      // 构建非个人供应商的请求数据
       const payload = {
         name: createForm.name,
         region: createForm.region,
@@ -678,7 +676,6 @@ const handleCreateECS = async () => {
           security_group_name: createForm.security_group_name,
           security_group_description: createForm.security_group_description,
         },
-        // 其他通用字段
         instanceName: createForm.instanceName,
         description: createForm.description,
         tags: createForm.tags,
@@ -688,16 +685,14 @@ const handleCreateECS = async () => {
         osName: createForm.osName,
       };
 
-      // 调用非个人供应商的创建接口
       await createAliECSResources(payload);
 
       message.success('新增ECS资源成功');
       fetchResources();
       isCreateModalVisible.value = false;
 
-    } catch (error) {
-      console.error('创建ECS资源失败', error);
-      message.error('创建ECS资源失败，请稍后再试');
+    } catch (error: any) {
+      message.error(error.message || '创建ECS资源失败');
     }
   }
 };
@@ -707,7 +702,6 @@ const handleCancel = () => {
   isCreateModalVisible.value = false;
 };
 
-
 // 取消编辑按钮点击事件
 const handleEditCancel = () => {
   isEditModalVisible.value = false;
@@ -716,7 +710,6 @@ const handleEditCancel = () => {
 // 处理新增资源
 const handleAddResource = () => {
   Object.assign(createForm, {
-    // 个人供应商字段
     instanceName: '',
     description: '',
     tags: [],
@@ -727,7 +720,6 @@ const handleAddResource = () => {
     mode: '',
     password: '',
 
-    // 非个人供应商字段
     name: '',
     region: '',
     instance_availability_zone: '',
@@ -748,14 +740,13 @@ const handleAddResource = () => {
   isCreateModalVisible.value = true;
 };
 
-
 // 处理编辑资源
 const handleEditResource = (record: ResourceEcs) => {
   Object.assign(editForm, {
     id: record.id,
     instanceName: record.instanceName,
     description: record.description,
-    tags: record.tags?.filter(tag => tag && tag.trim() !== '') || [], // 过滤空标签
+    tags: record.tags?.filter(tag => tag && tag.trim() !== '') || [],
     vendor: record.vendor,
     hostname: record.hostname,
     ipAddr: record.ipAddr,
@@ -768,25 +759,22 @@ const handleEditResource = (record: ResourceEcs) => {
 
 // 处理编辑资源
 const handleEditECS = async () => {
-  // 校验供应商是否选择
   if (editForm.vendor === null) {
     message.error('请选择供应商');
     return;
   }
 
-  // 校验资源名称是否填写
   if (!editForm.instanceName) {
     message.error('请输入资源名称');
     return;
   }
 
-  // 清理标签数据，移除空白标签
   editForm.tags = editForm.tags.filter(tag => tag.trim() !== '');
 
   try {
-    if (editForm.vendor == '1') {
+    if (editForm.vendor === '1') {
       await editECSResources({
-        id: editForm.id, // 确保传递资源的id
+        id: editForm.id,
         instanceName: editForm.instanceName,
         description: editForm.description,
         tags: editForm.tags,
@@ -817,29 +805,20 @@ const handleEditECS = async () => {
         zone_id: editForm.zone_id,
         security_group_name: editForm.security_group_name,
         security_group_description: editForm.security_group_description,
-      })
+      });
     }
 
-
-    // 显示成功提示
     message.success('编辑ECS资源成功');
-
-    // 更新本地数据
     fetchResources();
-
-    // 隐藏模态框
     isEditModalVisible.value = false;
 
-  } catch (error) {
-    // 捕获异常并显示错误提示
-    console.error('编辑ECS资源失败', error);
-    message.error('编辑ECS资源失败，请稍后再试');
+  } catch (error: any) {
+    message.error(error.message || '编辑ECS资源失败');
   }
 };
 
 // 处理删除资源
 const handleDeleteResource = (record: ResourceEcs) => {
-  // 弹出确认对话框，防止误删除
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除资源 "${record.instanceName}" 吗？`,
@@ -847,21 +826,17 @@ const handleDeleteResource = (record: ResourceEcs) => {
       try {
         if (record.vendor && vendorMap[record.vendor]) {
           if (record.vendor === '1') {
-            // 使用个人供应商的删除接口
             await deleteECSResources(record.id);
           } else {
-            // 使用非个人供应商的删除接口
             await deleteOtherECSResources(record.id);
           }
         } else {
-          // vendor不在vendorMap中,使用默认删除接口
           await deleteECSResources(record.id);
         }
         message.success(`资源 "${record.instanceName}" 已成功删除`);
         await fetchResources();
-      } catch (error) {
-        console.error('删除资源失败', error);
-        message.error(`删除资源 "${record.instanceName}" 失败，请稍后再试`);
+      } catch (error: any) {
+        message.error(error.message || `删除资源 "${record.instanceName}" 失败`);
       }
     },
   });
@@ -869,28 +844,20 @@ const handleDeleteResource = (record: ResourceEcs) => {
 
 // 选择节点事件
 const onNodeSelect = (selectedKeys: any) => {
-  if (selectedKeys.length > 0) {
-    selectedNodeId.value = Number(selectedKeys[0]); // 转换为整数
-  } else {
-    selectedNodeId.value = null;
-  }
+  selectedNodeId.value = selectedKeys.length > 0 ? Number(selectedKeys[0]) : null;
 };
 
 // 处理绑定资源
 const handleBindToNode = (record: ResourceEcs) => {
-  // 设置要绑定的资源
   resourceToBind.value = record;
-  // 显示绑定模态框
   isBindModalVisible.value = true;
 };
 
 // 处理解绑资源
 const handleUnbindFromNode = (record: ResourceEcs) => {
-  // 查找绑定的节点
   const boundNode = treeNodes.value.find(node => node.id === record.boundNodeId);
   const boundNodeName = boundNode ? boundNode.title : '未知节点';
 
-  // 弹出确认对话框
   Modal.confirm({
     title: '确认解绑',
     content: `确定要将资源 "${record.instanceName}" 从节点 "${boundNodeName}" 解绑吗？`,
@@ -898,7 +865,6 @@ const handleUnbindFromNode = (record: ResourceEcs) => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        // 调用解绑接口
         await unbindECSResources({
           nodeId: record.boundNodeId!,
           resource_ids: [record.id]
@@ -906,15 +872,13 @@ const handleUnbindFromNode = (record: ResourceEcs) => {
 
         message.success(`解绑资源 "${record.instanceName}" 成功`);
 
-        // 更新本地数据
         const index = data.findIndex(item => item.id === record.id);
         if (index !== -1 && data[index]) {
           data[index].isBound = false;
           data[index].boundNodeId = undefined;
         }
-      } catch (error) {
-        console.error('解绑资源失败', error);
-        message.error(`解绑资源 "${record.instanceName}" 失败，请稍后再试`);
+      } catch (error: any) {
+        message.error(error.message || `解绑资源 "${record.instanceName}" 失败`);
       }
     },
   });
@@ -927,7 +891,6 @@ const confirmBind = async () => {
     return;
   }
 
-  // 保存当前要绑定的资源信息,避免后续被清空导致空指针
   const resourceToBindCopy = {
     id: resourceToBind.value.id,
     instanceName: resourceToBind.value.instanceName
@@ -942,20 +905,17 @@ const confirmBind = async () => {
 
     message.success(`绑定资源 "${resourceToBindCopy.instanceName}" 成功`);
 
-    // 更新本地数据
     const index = data.findIndex(item => item.id === resourceToBindCopy.id);
     if (index !== -1 && data[index]) {
       data[index].isBound = true;
       data[index].boundNodeId = nodeId;
     }
 
-    // 重置绑定状态
     resourceToBind.value = null;
     selectedNodeId.value = null;
     isBindModalVisible.value = false;
-  } catch (error) {
-    console.error('绑定资源失败', error);
-    message.error(`绑定资源 "${resourceToBindCopy.instanceName}" 失败，请稍后再试`);
+  } catch (error: any) {
+    message.error(error.message || `绑定资源 "${resourceToBindCopy.instanceName}" 失败`);
   }
 };
 
@@ -968,7 +928,6 @@ const handleBindCancel = () => {
 
 // 终端连接
 const handleTerminalConnect = (record: ResourceEcs) => {
-  console.log(record);
   router.push({
     path: '/terminal_connect',
     query: { id: record.id.toString() }

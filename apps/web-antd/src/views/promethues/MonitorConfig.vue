@@ -131,7 +131,8 @@ const downloadConfig = async (type: string) => {
     loading.value[type] = true;
     const response = await fetch(url);
     if (!response.ok) {
-      throw new Error('网络响应不是OK');
+      const errorData = await response.json();
+      throw new Error(errorData.message || '下载配置文件失败');
     }
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
@@ -143,8 +144,8 @@ const downloadConfig = async (type: string) => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
     message.success(`${type} 配置文件下载开始`);
-  } catch (error) {
-    message.error('下载配置文件失败');
+  } catch (error: any) {
+    message.error(error.message || '下载配置文件失败');
     console.error(error);
   } finally {
     loading.value[type] = false;

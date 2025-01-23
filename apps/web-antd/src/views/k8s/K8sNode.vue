@@ -288,8 +288,8 @@ const getNodes = async () => {
     }
     const res = await getNodeListApi(cluster_id);
     nodes.value = res || [];
-  } catch {
-    message.error('获取节点数据失败');
+  } catch (error: any) {
+    message.error(error.message || '获取节点数据失败');
   }
 };
 
@@ -299,8 +299,8 @@ const handleViewDetails = async (data: any) => {
     const res = await getNodeDetailsApi(data.name, data.cluster_id);
     selectedNodeDetails.value = res;
     isViewDetailsModalVisible.value = true;
-  } catch {
-    message.error('获取节点详情失败');
+  } catch (error: any) {
+    message.error(error.message || '获取节点详情失败');
   }
 };
 
@@ -327,8 +327,8 @@ const handleAddLabel = async () => {
     labelForm.value = '';
     getNodes();
     isAddLabelModalVisible.value = false;
-  } catch {
-    message.error('标签添加失败');
+  } catch (error: any) {
+    message.error(error.message || '标签添加失败');
   }
 };
 
@@ -360,8 +360,8 @@ const handleDeleteLabel = async () => {
     });
     message.success('标签删除成功');
     closeDeleteLabelModal();
-  } catch {
-    message.error('删除标签失败');
+  } catch (error: any) {
+    message.error(error.message || '删除标签失败');
   }
 };
 
@@ -380,8 +380,8 @@ const handleAddTaint = async (nodeName: string) => {
     taintForm.taintYaml = '';
     // 关闭模态框
     isAddTaintModalVisible.value = false;
-  } catch (error) {
-    message.error('添加Taint失败');
+  } catch (error: any) {
+    message.error(error.message || '添加Taint失败');
   }
 };
 
@@ -400,8 +400,8 @@ const handleDeleteTaint = async (nodeName: string) => {
     deleteTaintForm.taintYaml = '';
     // 关闭模态框
     isDeleteTaintModalVisible.value = false;
-  } catch (error) {
-    message.error('删除Taint失败');
+  } catch (error: any) {
+    message.error(error.message || '删除Taint失败');
   }
 };
 
@@ -414,8 +414,8 @@ const checkTaintYaml = async (nodeName: string) => {
       taint_yaml: taintForm.taintYaml,
     });
     message.success('YAML格式校验通过');
-  } catch (error) {
-    message.error('YAML格式校验失败');
+  } catch (error: any) {
+    message.error(error.message || 'YAML格式校验失败');
   }
 };
 

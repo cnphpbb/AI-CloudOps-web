@@ -155,8 +155,8 @@ const getClusters = async () => {
   try {
     const res = await getAllClustersApi();
     clusters.value = res || [];
-  } catch (error) {
-    message.error('获取集群列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取集群列表失败');
   }
 };
 
@@ -171,8 +171,8 @@ const getTemplates = async () => {
   try {
     const res = await getYamlTemplateApi(selectedCluster.value);
     templates.value = res || [];
-  } catch (error) {
-    message.error('获取模板列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取模板列表失败');
   } finally {
     loading.value = false;
   }
@@ -216,14 +216,8 @@ const handleCheck = async (record: YamlTemplate) => {
       content: record.content,
     });
     message.success('YAML格式检查通过');
-  } catch (error) {
-    if (error instanceof Error) {
-      message.error(`YAML格式检查失败: ${error.message}`);
-    } else if (typeof error === 'string') {
-      message.error(`YAML格式检查失败: ${error}`);
-    } else {
-      message.error('YAML格式检查失败: 未知错误');
-    }
+  } catch (error: any) {
+    message.error(error.message || 'YAML格式检查失败');
   }
 };
 
@@ -253,8 +247,8 @@ const handleSubmit = async () => {
     
     modalVisible.value = false;
     getTemplates();
-  } catch (error) {
-    message.error(isEdit.value ? '更新模板失败' : '创建模板失败');
+  } catch (error: any) {
+    message.error(error.message || (isEdit.value ? '更新模板失败' : '创建模板失败'));
   }
 };
 
@@ -269,8 +263,8 @@ const handleDelete = async (template: YamlTemplate) => {
     await deleteYamlTemplateApi(template.id, selectedCluster.value);
     message.success('删除成功');
     getTemplates();
-  } catch (error) {
-    message.error('删除失败');
+  } catch (error: any) {
+    message.error(error.message || '删除失败');
   }
 };
 

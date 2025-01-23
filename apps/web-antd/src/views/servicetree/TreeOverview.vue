@@ -247,8 +247,7 @@ const fetchTreeData = () => {
     flatTreeData.value = [];
     flattenTree(treeData.value, flatTreeData.value);
   }).catch(error => {
-    message.error('获取树数据失败');
-    console.error(error);
+    message.error(error.message || '获取树数据失败');
   });
 };
 
@@ -302,11 +301,9 @@ const handleAdd = async () => {
       isSelectVisible.value = false;
       resetForm(addForm);
       fetchTreeData();
-    } else {
-      message.error('新增节点失败');
     }
   } catch (error) {
-    console.error(error);
+    message.error(error.message || '新增节点失败');
   }
 };
 
@@ -339,7 +336,7 @@ const handleEdit = async () => {
     isEditVisible.value = false;
     fetchTreeData();
   } catch (error) {
-    console.error(error);
+    message.error(error.message || '编辑节点失败');
   }
 };
 
@@ -364,7 +361,7 @@ const fetchUsers = async () => {
       userList.value = response;
     }
   } catch (error) {
-    message.error('获取用户列表失败');
+    message.error(error.message || '获取用户列表失败');
   }
 };
 

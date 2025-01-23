@@ -302,7 +302,7 @@ const handleDeleteNode = (record: TreeNode) => {
         await refreshTreeData(); // 刷新节点数据
         message.success(`节点 "${record.title}" 已删除`);
       } catch (err: any) {
-        message.error(String(err.message));
+        message.error(err.message);
       }
     },
   });
@@ -367,9 +367,8 @@ const handleSaveAddNode = async () => {
     message.success('新增节点成功');
     isAddModalVisible.value = false;
     await refreshTreeData(); // 刷新节点数据
-  } catch (error) {
-    message.error('新增节点失败');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message);
   }
 };
 
@@ -395,9 +394,8 @@ const handleSaveNode = async () => {
     message.success('节点信息已保存');
     isEditModalVisible.value = false;
     await refreshTreeData();
-  } catch (error) {
-    message.error('保存节点信息失败');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message);
   }
 };
 
@@ -422,9 +420,8 @@ const refreshTreeData = async () => {
       return;
     }
     data.splice(0, data.length, ...response);
-  } catch (error) {
-    message.error('刷新树节点数据失败');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message);
   }
 };
 
@@ -436,9 +433,8 @@ onMounted(async () => {
     } else {
       data.splice(0, data.length);
     }
-  } catch (error) {
-    message.error('获取树数据失败');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message);
   }
 });
 </script>
