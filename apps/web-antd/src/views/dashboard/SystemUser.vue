@@ -86,16 +86,16 @@
           <a-input-password v-model:value="formData.confirmPassword" placeholder="请再次输入密码" />
         </a-form-item>
         <a-form-item label="真实姓名" required>
-          <a-input v-model:value="formData.realName" placeholder="请输入真实姓名" />
+          <a-input v-model:value="formData.real_name" placeholder="请输入真实姓名" />
         </a-form-item>
         <a-form-item label="手机号码">
           <a-input v-model:value="formData.mobile" placeholder="请输入手机号码" />
         </a-form-item>
         <a-form-item label="飞书用户ID">
-          <a-input v-model:value="formData.feiShuUserId" placeholder="请输入飞书用户ID" />
+          <a-input v-model:value="formData.fei_shu_user_id" placeholder="请输入飞书用户ID" />
         </a-form-item>
         <a-form-item label="首页路径">
-          <a-input v-model:value="formData.homePath" placeholder="请输入首页路径" />
+          <a-input v-model:value="formData.home_path" placeholder="请输入首页路径" />
         </a-form-item>
         <a-form-item label="描述">
           <a-textarea v-model:value="formData.desc" placeholder="请输入描述" />
@@ -231,8 +231,8 @@ const columns = [
   },
   {
     title: '真实姓名',
-    dataIndex: 'realName',
-    key: 'realName',
+    dataIndex: 'real_name',
+    key: 'real_name',
   },
   {
     title: '手机号码',
@@ -241,8 +241,8 @@ const columns = [
   },
   {
     title: '飞书用户ID',
-    dataIndex: 'feiShuUserId',
-    key: 'feiShuUserId',
+    dataIndex: 'fei_shu_user_id',
+    key: 'fei_shu_user_id',
   },
   {
     title: '角色',
@@ -264,10 +264,10 @@ const formData = reactive({
   username: '',
   password: '',
   confirmPassword: '',
-  realName: '',
+  real_name: '',
   mobile: '',
-  feiShuUserId: '',
-  homePath: '',
+  fei_shu_user_id: '',
+  home_path: '',
   desc: '',
   userId: 0
 });
@@ -291,8 +291,8 @@ const fetchUserList = async () => {
     if (res && res.length > 0 && res[0].menus) {
       menuTreeData.value = buildMenuTree(res[0].menus);
     }
-  } catch (error) {
-    message.error('获取用户列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取用户列表失败');
   } finally {
     loading.value = false;
   }
@@ -309,8 +309,8 @@ const fetchRoleList = async () => {
       label: role.name,
       value: role.id
     }));
-  } catch (error) {
-    message.error('获取角色列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取角色列表失败');
   }
 };
 
@@ -373,8 +373,8 @@ const fetchApis = async () => {
         children: category.children.sort((a, b) => a.id - b.id) // 按id排序
       }));
 
-  } catch (error) {
-    message.error('获取权限数据失败');
+  } catch (error: any) {
+    message.error(error.message || '获取权限数据失败');
   }
 };
 
@@ -427,10 +427,10 @@ const handleAdd = () => {
     username: '',
     password: '',
     confirmPassword: '',
-    realName: '',
+    real_name: '',
     mobile: '',
-    feiShuUserId: '',
-    homePath: '',
+    fei_shu_user_id: '',
+    home_path: '',
     desc: '',
     userId: 0
   });
@@ -441,10 +441,10 @@ const handleAdd = () => {
 const handleEdit = (record: any) => {
   modalTitle.value = '编辑用户';
   Object.assign(formData, {
-    realName: record.realName,
+    real_name: record.real_name,
     mobile: record.mobile,
-    feiShuUserId: record.feiShuUserId,
-    homePath: record.homePath,
+    fei_shu_user_id: record.fei_shu_user_id,
+    home_path: record.home_path,
     desc: record.desc,
     userId: record.id
   });
@@ -515,8 +515,8 @@ const handlePermissionModalSubmit = async () => {
     message.success('权限设置成功');
     isPermissionModalVisible.value = false;
     fetchUserList();
-  } catch (error) {
-    message.error('权限设置失败');
+  } catch (error: any) {
+    message.error(error.message || '权限设置失败');
   }
 };
 
@@ -531,8 +531,8 @@ const handleWriteOff = async (record: any) => {
     await deleteUser(record.id);
     message.success('用户删除成功');
     fetchUserList();
-  } catch (error) {
-    message.error('用户删除失败');
+  } catch (error: any) {
+    message.error(error.message || '用户删除失败');
   }
 };
 
@@ -543,26 +543,31 @@ const handleModalSubmit = async () => {
       await registerApi({
         username: formData.username,
         password: formData.password,
-        confirmPassword: formData.confirmPassword
+        confirmPassword: formData.confirmPassword,
+        fei_shu_user_id: formData.fei_shu_user_id,
+        desc: formData.desc,
+        real_name: formData.real_name,
+        mobile: formData.mobile,
+        home_path: formData.home_path
       });
       message.success('新增用户成功');
     } else {
       await updateUserInfo({
         user_id: formData.userId,
-        real_name: formData.realName,
+        real_name: formData.real_name,
         desc: formData.desc,
         mobile: formData.mobile,
-        fei_shu_user_id: formData.feiShuUserId,
+        fei_shu_user_id: formData.fei_shu_user_id,
         account_type: 1,
-        home_path: formData.homePath,
+        home_path: formData.home_path,
         enable: 1
       });
       message.success('编辑用户成功');
     }
     isModalVisible.value = false;
     fetchUserList();
-  } catch (error) {
-    message.error(modalTitle.value === '新增用户' ? '新增用户失败' : '编辑用户失败');
+  } catch (error: any) {
+    message.error(error.message || (modalTitle.value === '新增用户' ? '新增用户失败' : '编辑用户失败'));
   }
 };
 
@@ -572,8 +577,8 @@ const handlePasswordSubmit = async () => {
     await changePassword(passwordForm);
     message.success('密码修改成功');
     isPasswordModalVisible.value = false;
-  } catch (error) {
-    message.error('密码修改失败');
+  } catch (error: any) {
+    message.error(error.message || '密码修改失败');
   }
 };
 

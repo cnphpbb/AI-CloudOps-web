@@ -172,8 +172,8 @@ const fetchMenuList = async () => {
     });
     menuList.value = res;
     menuTreeData.value = res;
-  } catch (error) {
-    message.error('获取菜单列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取菜单列表失败');
   }
   loading.value = false;
 };
@@ -267,8 +267,8 @@ const handleDelete = async (record: any) => {
     await deleteMenuApi(record.id);
     message.success('删除成功');
     fetchMenuList();
-  } catch (error) {
-    message.error('删除失败');
+  } catch (error: any) {
+    message.error(error.message || '删除失败');
   }
 };
 
@@ -281,8 +281,8 @@ const handleHiddenChange = async (record: any, hidden: boolean) => {
     });
     message.success('更新成功');
     fetchMenuList();
-  } catch (error) {
-    message.error('更新失败');
+  } catch (error: any) {
+    message.error(error.message || '更新失败');
   }
 };
 
@@ -309,8 +309,8 @@ const handleModalSubmit = async () => {
     message.success(`${modalTitle.value}成功`);
     isModalVisible.value = false;
     fetchMenuList();
-  } catch (error) {
-    message.error(`${modalTitle.value}失败`);
+  } catch (error: any) {
+    message.error(error.message || `${modalTitle.value}失败`);
   }
 };
 

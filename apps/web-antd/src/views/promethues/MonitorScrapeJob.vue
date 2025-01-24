@@ -397,9 +397,8 @@ const fetchTreeNodes = async () => {
     }
     treeData.value = processTreeData(response);
     leafNodes.value = getLeafNodes(treeData.value);
-  } catch (error) {
-    message.error('获取树节点数据失败，请稍后重试');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message || '获取树节点数据失败');
   }
 };
 
@@ -470,9 +469,8 @@ const fetchPools = async () => {
       id: pool.id,
       name: pool.name,
     }));
-  } catch (error) {
-    message.error('获取采集池数据失败，请稍后重试');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message || '获取采集池数据失败');
   }
 };
 
@@ -488,9 +486,8 @@ const fetchResources = async () => {
       treeNodeIds: Array.isArray(item.treeNodeIds) ? item.treeNodeIds.map(String) : [],
       treeNodeNames: Array.isArray(item.treeNodeNames) ? item.treeNodeNames : []
     }));
-  } catch (error) {
-    message.error('获取采集任务数据失败，请稍后重试');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message || '获取采集任务数据失败');
   } finally {
     loading.value = false;
   }
@@ -560,9 +557,8 @@ const handleAdd = async () => {
     message.success('新增采集任务成功');
     fetchResources(); // 重新获取数据
     closeAddModal();
-  } catch (error) {
-    message.error('新增采集任务失败，请稍后重试');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message || '新增采集任务失败');
   } finally {
     confirmLoading.value = false;
   }
@@ -611,9 +607,8 @@ const handleUpdate = async () => {
     message.success('更新采集任务成功');
     fetchResources(); // 重新获取数据
     closeEditModal();
-  } catch (error) {
-    message.error('更新采集任务失败，请稍后重试');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message || '更新采集任务失败');
   } finally {
     confirmLoading.value = false;
   }
@@ -629,9 +624,8 @@ const handleDelete = (record: ScrapeJob) => {
         await deleteScrapeJobApi(record.id);
         message.success('删除采集任务成功');
         fetchResources(); // 重新获取数据
-      } catch (error) {
-        message.error('删除采集任务失败，请稍后重试');
-        console.error(error);
+      } catch (error: any) {
+        message.error(error.message || '删除采集任务失败');
       }
     },
   });

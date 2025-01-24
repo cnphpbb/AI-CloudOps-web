@@ -152,8 +152,8 @@ const fetchApiList = async () => {
       page_size: 999
     });
     apiList.value = res.list;
-  } catch (error) {
-    message.error('获取API列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取API列表失败');
   }
   loading.value = false;
 };
@@ -255,8 +255,8 @@ const handleDelete = async (record: any) => {
     await deleteApiApi(record.id);
     message.success('删除成功');
     fetchApiList();
-  } catch (error) {
-    message.error('删除失败');
+  } catch (error: any) {
+    message.error(error.message || '删除失败');
   }
 };
 
@@ -269,8 +269,8 @@ const handlePublicChange = async (record: any, isPublic: number) => {
     });
     message.success('更新成功');
     fetchApiList();
-  } catch (error) {
-    message.error('更新失败');
+  } catch (error: any) {
+    message.error(error.message || '更新失败');
   }
 };
 
@@ -279,14 +279,15 @@ const handleModalOk = async () => {
   try {
     if (modalTitle.value === '新增API') {
       await createApiApi(formData);
+      message.success('新增API成功');
     } else {
       await updateApiApi(formData as SystemApi.UpdateApiReq);
+      message.success('编辑API成功');
     }
-    message.success(`${modalTitle.value}成功`);
     modalVisible.value = false;
     fetchApiList();
-  } catch (error) {
-    message.error(`${modalTitle.value}失败`);
+  } catch (error: any) {
+    message.error(error.message || `${modalTitle.value}失败`);
   }
 };
 

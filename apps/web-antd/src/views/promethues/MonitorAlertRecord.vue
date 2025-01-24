@@ -484,9 +484,9 @@ const handleAdd = async () => {
     message.success('新增记录规则成功');
     fetchRecordRules();
     closeAddModal();
-  } catch (error) {
+  } catch (error: any) {
     loading.value = false;
-    message.error('新增记录规则失败，请稍后重试');
+    message.error(error.message || '新增记录规则失败，请稍后重试');
     console.error(error);
   }
 };
@@ -524,9 +524,9 @@ const handleUpdate = async () => {
     message.success('更新记录规则成功');
     fetchRecordRules();
     closeEditModal();
-  } catch (error) {
+  } catch (error: any) {
     loading.value = false;
-    message.error('更新记录规则失败，请稍后重试');
+    message.error(error.message || '更新记录规则失败，请稍后重试');
     console.error(error);
   }
 };
@@ -545,9 +545,9 @@ const handleDelete = (record: RecordRule) => {
         loading.value = false;
         message.success('记录规则已删除');
         fetchRecordRules();
-      } catch (error) {
+      } catch (error: any) {
         loading.value = false;
-        message.error('删除记录规则失败，请稍后重试');
+        message.error(error.message || '删除记录规则失败，请稍后重试');
         console.error(error);
       }
     },
@@ -559,9 +559,9 @@ const fetchRecordRules = async () => {
   try {
     const response = await getRecordRulesApi(); // 调用获取数据 API
     data.value = response;
-  } catch (error) {
+  } catch (error: any) {
     loading.value = false;
-    message.error('获取记录规则数据失败，请稍后重试');
+    message.error(error.message || '获取记录规则数据失败，请稍后重试');
     console.error(error);
   }
 };
@@ -571,8 +571,8 @@ const fetchPools = async () => {
   try {
     const response = await getMonitorScrapePoolApi(); // 调用获取实例池 API
     poolOptions.value = response;
-  } catch (error) {
-    message.error('获取实例池数据失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '获取实例池数据失败，请稍后重试');
     console.error(error);
   }
 };
@@ -582,8 +582,8 @@ const fetchTreeNodes = async () => {
   try {
     const response = await getAllTreeNodes(); // 调用获取树节点 API
     treeNodeOptions.value = response;
-  } catch (error) {
-    message.error('获取树节点数据失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '获取树节点数据失败，请稍后重试');
     console.error(error);
   }
 };
@@ -598,8 +598,8 @@ const validateAddExpression = async () => {
     const payload = { promqlExpr: addForm.expr };
     await validateExprApi(payload); // 调用验证 API
     message.success('表达式验证成功');
-  } catch (error) {
-    message.error('表达式验证失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '表达式验证失败，请稍后重试');
     console.error(error);
   }
 };
@@ -614,8 +614,8 @@ const validateEditExpression = async () => {
     const payload = { promqlExpr: editForm.expr };
     await validateExprApi(payload); // 调用验证 API
     message.success('表达式验证成功');
-  } catch (error) {
-    message.error('表达式验证失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '表达式验证失败，请稍后重试');
     console.error(error);
   }
 };

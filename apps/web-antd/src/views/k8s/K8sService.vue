@@ -191,8 +191,8 @@ const getClusters = async () => {
   try {
     const res = await getAllClustersApi();
     clusters.value = res || [];
-  } catch (error) {
-    message.error('获取集群列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取集群列表失败');
   }
 };
 
@@ -209,8 +209,8 @@ const getNamespaces = async () => {
     if (namespaces.value.length > 0) {
       selectedNamespace.value = namespaces.value[0];
     }
-  } catch (error) {
-    message.error('获取命名空间列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取命名空间列表失败');
     namespaces.value = ['default'];
     selectedNamespace.value = 'default';
   }
@@ -225,9 +225,9 @@ const getServices = async () => {
   
   try {
     const res = await getServiceListApi(selectedCluster.value, selectedNamespace.value);
-    services.value = res || []; // 直接使用返回的列表,不需要 .data
-  } catch (error) {
-    message.error('获取Service列表失败');
+    services.value = res || [];
+  } catch (error: any) {
+    message.error(error.message || '获取Service列表失败');
   } finally {
     loading.value = false;
   }
@@ -240,8 +240,8 @@ const viewServiceYaml = async (service: Service) => {
     const res = await getServiceYamlApi(selectedCluster.value, service.metadata.name, service.metadata.namespace);
     serviceYaml.value = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
     viewYamlModalVisible.value = true;
-  } catch (error) {
-    message.error('获取Service YAML失败');
+  } catch (error: any) {
+    message.error(error.message || '获取Service YAML失败');
   }
 };
 
@@ -253,8 +253,8 @@ const handleDelete = async (service: Service) => {
     await deleteServiceApi(selectedCluster.value, service.metadata.namespace, service.metadata.name);
     message.success('Service删除成功');
     getServices();
-  } catch (error) {
-    message.error('删除Service失败');
+  } catch (error: any) {
+    message.error(error.message || '删除Service失败');
   }
 };
 
@@ -271,8 +271,8 @@ const handleBatchDelete = async () => {
     message.success('批量删除成功');
     selectedRows.value = [];
     getServices();
-  } catch (error) {
-    message.error('批量删除失败');
+  } catch (error: any) {
+    message.error(error.message || '批量删除失败');
   }
 };
 

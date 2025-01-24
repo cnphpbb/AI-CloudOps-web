@@ -339,9 +339,9 @@ const handleAdd = async () => {
     message.success('新增值班组成功');
     await fetchOnDutyChanges();
     closeAddModal();
-  } catch (error) {
+  } catch (error: any) {
     console.error('新增值班组失败:', error);
-    message.error('新增值班组失败，请稍后重试');
+    message.error(error.message || '新增值班组失败');
   } finally {
     loading.value = false;
   }
@@ -363,9 +363,9 @@ const handleUpdate = async () => {
     message.success('更新值班组成功');
     await fetchOnDutyChanges();
     closeEditModal();
-  } catch (error) {
+  } catch (error: any) {
     console.error('更新值班组失败:', error);
-    message.error('更新值班组失败，请稍后重试');
+    message.error(error.message || '更新值班组失败');
   } finally {
     loading.value = false;
   }
@@ -384,9 +384,9 @@ const handleDelete = (record: OnDutyChange) => {
         await deleteOnDutyApi(record.id);
         message.success('删除值班组成功');
         await fetchOnDutyChanges();
-      } catch (error) {
+      } catch (error: any) {
         console.error('删除值班组失败:', error);
-        message.error('删除值班组失败，请稍后重试');
+        message.error(error.message || '删除值班组失败');
       } finally {
         loading.value = false;
       }
@@ -399,9 +399,9 @@ const fetchUserList = async () => {
     loading.value = true;
     const response = await getUserList();
     availableUsers.value = response.map((user: any) => user.username);
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取用户列表失败:', error);
-    message.error('获取用户列表失败，请稍后重试');
+    message.error(error.message || '获取用户列表失败');
   } finally {
     loading.value = false;
   }
@@ -419,9 +419,9 @@ const fetchOnDutyChanges = async () => {
     loading.value = true;
     const response = await getAllOnDutyApi();
     data.value = response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取值班组列表失败:', error);
-    message.error('获取值班组列表失败，请稍后重试');
+    message.error(error.message || '获取值班组列表失败');
   } finally {
     loading.value = false;
   }

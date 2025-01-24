@@ -200,8 +200,8 @@ const getClusters = async () => {
   try {
     const res = await getAllClustersApi();
     clusters.value = res || [];
-  } catch (error) {
-    message.error('获取集群列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取集群列表失败');
   }
 };
 
@@ -216,10 +216,10 @@ const getNamespaces = async () => {
     const res = await getNamespacesByClusterIdApi(selectedCluster.value);
     namespaces.value = res.map((ns: { name: string }) => ns.name);
     if (namespaces.value.length > 0) {
-      selectedNamespace.value = namespaces.value[0];
+      selectedNamespace.value = namespaces.value[0] || 'default';
     }
-  } catch (error) {
-    message.error('获取命名空间列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取命名空间列表失败');
     namespaces.value = ['default'];
     selectedNamespace.value = 'default';
   }
@@ -236,8 +236,8 @@ const getDeployments = async () => {
   try {
     const res = await getDeployListApi(selectedCluster.value, selectedNamespace.value);
     deployments.value = res || [];
-  } catch (error) {
-    message.error('获取Deployment列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取Deployment列表失败');
   } finally {
     loading.value = false;
   }
@@ -250,8 +250,8 @@ const viewDeploymentYaml = async (deployment: Deployment) => {
     const res = await getDeployYamlApi(selectedCluster.value, deployment.metadata.name, deployment.metadata.namespace);
     deploymentYaml.value = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
     viewYamlModalVisible.value = true;
-  } catch (error) {
-    message.error('获取Deployment YAML失败');
+  } catch (error: any) {
+    message.error(error.message || '获取Deployment YAML失败');
   }
 };
 
@@ -263,8 +263,8 @@ const handleDelete = async (deployment: Deployment) => {
     await deleteDeployApi(selectedCluster.value, deployment.metadata.namespace, deployment.metadata.name);
     message.success('Deployment删除成功');
     getDeployments();
-  } catch (error) {
-    message.error('删除Deployment失败');
+  } catch (error: any) {
+    message.error(error.message || '删除Deployment失败');
   }
 };
 
@@ -276,8 +276,8 @@ const handleRestart = async (deployment: Deployment) => {
     await restartDeployApi(selectedCluster.value, deployment.metadata.namespace, deployment.metadata.name);
     message.success('Deployment重启成功');
     getDeployments();
-  } catch (error) {
-    message.error('重启Deployment失败');
+  } catch (error: any) {
+    message.error(error.message || '重启Deployment失败');
   }
 };
 
@@ -294,8 +294,8 @@ const handleBatchDelete = async () => {
     message.success('批量删除成功');
     selectedRows.value = [];
     getDeployments();
-  } catch (error) {
-    message.error('批量删除失败');
+  } catch (error: any) {
+    message.error(error.message || '批量删除失败');
   }
 };
 

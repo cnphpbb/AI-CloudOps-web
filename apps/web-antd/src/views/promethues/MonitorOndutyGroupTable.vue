@@ -118,9 +118,9 @@ const fetchDutyGroups = async () => {
     } else {
       message.error('返回数据格式不正确');
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取值班组信息失败:', error);
-    message.error('获取值班组信息失败，请稍后重试');
+    message.error(error.message || '获取值班组信息失败');
   }
 };
 
@@ -183,8 +183,8 @@ const fetchDutySchedule = async () => {
         userId: detail.user?.id || null,
       });
     }
-  } catch (error) {
-    message.error('获取值班情况失败');
+  } catch (error: any) {
+    message.error(error.message || '获取值班情况失败');
   }
 };
 
@@ -206,8 +206,8 @@ const handleSwap = async () => {
     message.success('换班成功');
     closeSwapModal();
     fetchDutySchedule(); // 刷新值班表
-  } catch (error) {
-    message.error('换班失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '换班失败');
   }
 };
 

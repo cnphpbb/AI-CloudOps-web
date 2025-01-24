@@ -293,9 +293,8 @@ const handleAdd = async () => {
     message.success('新增实例池成功');
     fetchAlertManagerPools(); // 重新获取数据
     closeAddModal();
-  } catch (error) {
-    message.error('新增实例池失败，请稍后重试');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message || '新增实例池失败');
   }
 };
 
@@ -338,9 +337,8 @@ const handleEdit = async () => {
     message.success('更新实例池成功');
     fetchAlertManagerPools(); // 重新获取数据
     closeEditModal();
-  } catch (error) {
-    message.error('更新实例池失败，请稍后重试');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message || '更新实例池失败');
   }
 };
 
@@ -354,9 +352,8 @@ const handleDelete = (record: AlertManagerPool) => {
         await deleteAlertManagerPoolApi(record.id); // 调用删除 API
         message.success('实例池已删除');
         fetchAlertManagerPools(); // 重新获取数据
-      } catch (error) {
-        message.error('删除实例池失败，请稍后重试');
-        console.error(error);
+      } catch (error: any) {
+        message.error(error.message || '删除实例池失败');
       }
     },
   });
@@ -367,9 +364,8 @@ const fetchAlertManagerPools = async () => {
   try {
     const response = await getAlertManagerPoolsApi(); // 调用获取数据 API
     data.value = response;
-  } catch (error) {
-    message.error('获取实例池数据失败，请稍后重试');
-    console.error(error);
+  } catch (error: any) {
+    message.error(error.message || '获取实例池数据失败');
   }
 };
 

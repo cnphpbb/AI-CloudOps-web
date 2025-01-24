@@ -167,8 +167,8 @@ const fetchResources = async () => {
   try {
     const response = await getAlertEventsApi();
     data.value = response; // 假设后端返回的数据格式与 AlertEvent[] 匹配
-  } catch (error) {
-    message.error('获取告警事件数据失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '获取告警事件数据失败，请稍后重试');
     console.error(error);
   } finally {
     loading.value = false;
@@ -194,8 +194,8 @@ const handleBatchSilence = () => {
         await silenceBatchApi(alertIds); // 替换为实际的 API 接口
         message.success('批量屏蔽告警成功');
         fetchResources(); // 刷新数据
-      } catch (error) {
-        message.error('批量屏蔽告警失败');
+      } catch (error: any) {
+        message.error(error.message || '批量屏蔽告警失败');
         console.error(error);
       } finally {
         loading.value = false;
@@ -217,8 +217,8 @@ const handleSilence = async (record: AlertEvent) => {
         await silenceAlertApi(record.id); // 替换为实际的 API 接口
         message.success(`屏蔽告警 "${record.alertName}" 成功`);
         fetchResources(); // 刷新数据
-      } catch (error) {
-        message.error(`屏蔽告警 "${record.alertName}" 失败`);
+      } catch (error: any) {
+        message.error(error.message || `屏蔽告警 "${record.alertName}" 失败`);
         console.error(error);
       } finally {
         loading.value = false;
@@ -240,8 +240,8 @@ const handleClaim = async (record: AlertEvent) => {
         await claimAlertApi(record.id); // 替换为实际的 API 接口
         message.success(`认领告警 "${record.alertName}" 成功`);
         fetchResources(); // 刷新数据
-      } catch (error) {
-        message.error(`认领告警 "${record.alertName}" 失败`);
+      } catch (error: any) {
+        message.error(error.message || `认领告警 "${record.alertName}" 失败`);
         console.error(error);
       } finally {
         loading.value = false;
@@ -263,8 +263,8 @@ const handleCancelSilence = async (record: AlertEvent) => {
         await cancelSilenceAlertApi(record.id); // 替换为实际的 API 接口
         message.success(`取消屏蔽告警 "${record.alertName}" 成功`);
         fetchResources(); // 刷新数据
-      } catch (error) {
-        message.error(`取消屏蔽告警 "${record.alertName}" 失败`);
+      } catch (error: any) {
+        message.error(error.message || `取消屏蔽告警 "${record.alertName}" 失败`);
         console.error(error);
       } finally {
         loading.value = false;

@@ -181,8 +181,8 @@ const fetchApis = async () => {
       label: `${api.name} (${api.path}) [${getMethodText(api.method)}]`,
       value: api.id
     }));
-  } catch (error) {
-    message.error('获取权限数据失败');
+  } catch (error: any) {
+    message.error(error.message || '获取权限数据失败');
   }
 };
 
@@ -231,8 +231,8 @@ const fetchRoleList = async () => {
       page_size: 100
     });
     roleList.value = res.list;
-  } catch (error) {
-    message.error('获取角色列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取角色列表失败');
   }
   loading.value = false;
 };
@@ -276,8 +276,8 @@ const handleEdit = async (record: any) => {
     selectedApiIds.value = data.apis?.map((api: ApiItem) => api.id) || [];
 
     isModalVisible.value = true;
-  } catch (error) {
-    message.error('获取角色详情失败');
+  } catch (error: any) {
+    message.error(error.message || '获取角色详情失败');
   }
 };
 
@@ -291,8 +291,8 @@ const handleDelete = async (record: any) => {
     await deleteRoleApi(record.id);
     message.success('删除成功');
     fetchRoleList();
-  } catch (error) {
-    message.error('删除失败');
+  } catch (error: any) {
+    message.error(error.message || '删除失败');
   }
 };
 
@@ -309,8 +309,8 @@ const handleDefaultChange = async (record: any, checked: boolean) => {
     });
     message.success('更新成功');
     fetchRoleList();
-  } catch (error) {
-    message.error('更新失败');
+  } catch (error: any) {
+    message.error(error.message || '更新失败');
   }
 };
 
@@ -330,8 +330,8 @@ const handleModalSubmit = async () => {
     message.success(`${modalTitle.value}成功`);
     isModalVisible.value = false;
     fetchRoleList();
-  } catch (error) {
-    message.error(`${modalTitle.value}失败`);
+  } catch (error: any) {
+    message.error(error.message || `${modalTitle.value}失败`);
   }
 };
 

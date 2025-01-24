@@ -340,8 +340,8 @@ const handleAdd = async () => {
     message.success('新增采集池成功');
     fetchResources(); // 重新获取数据
     closeAddModal();
-  } catch (error) {
-    message.error('新增采集池失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '新增采集池失败');
     console.error(error);
   }
 };
@@ -357,8 +357,8 @@ const handleDelete = (record: ScrapePool) => {
         await deleteMonitorScrapePoolApi(record.id);
         message.success('删除采集池成功');
         fetchResources(); // 重新获取数据，刷新列表
-      } catch (error) {
-        message.error('删除采集池失败，请稍后重试');
+      } catch (error: any) {
+        message.error(error.message || '删除采集池失败');
         console.error(error);
       }
     },
@@ -378,8 +378,8 @@ const handleUpdate = async () => {
     message.success('更新采集池成功');
     fetchResources(); // 重新获取数据
     closeEditModal();
-  } catch (error) {
-    message.error('更新采集池失败，请稍后重试');
+  } catch (error: any) {
+    message.error(error.message || '更新采集池失败');
     console.error(error);
   }
 };
@@ -400,9 +400,9 @@ const fetchResources = async () => {
     }));
 
     data.value = formattedResponse;
-  } catch (error) {
+  } catch (error: any) {
     // 如果请求出错，显示错误信息
-    message.error('获取采集池数据失败，请稍后重试');
+    message.error(error.message || '获取采集池数据失败');
     console.error(error);
   }
 };

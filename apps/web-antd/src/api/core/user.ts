@@ -16,12 +16,12 @@ type RegisterParams = {
   username: string;
   password: string;
   confirmPassword: string;
+  mobile: string;
+  fei_shu_user_id: string;
+  real_name: string;
+  desc: string;
+  home_path: string
 };
-
-type writeOffUserReq = {
-  username: string;
-  password: string;
-}
 
 type updateUserInfoReq = {
   user_id: number;

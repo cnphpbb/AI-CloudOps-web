@@ -224,8 +224,8 @@ const getPods = async () => {
   try {
     const res = await getPodsByNamespaceApi(selectedCluster.value, selectedNamespace.value);
     pods.value = res || [];
-  } catch (error) {
-    message.error('获取Pod列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取Pod列表失败');
   } finally {
     loading.value = false;
   }
@@ -250,8 +250,8 @@ const getNamespaces = async () => {
     if (namespaces.value.length > 0) {
       selectedNamespace.value = selectedNamespace.value || namespaces.value[0];
     }
-  } catch (error) {
-    message.error('获取命名空间列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取命名空间列表失败');
     namespaces.value = ['default'];
     selectedNamespace.value = 'default';
   }
@@ -261,8 +261,8 @@ const getClusters = async () => {
   try {
     const res = await getAllClustersApi();
     clusters.value = res || [];
-  } catch (error) {
-    message.error('获取集群列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取集群列表失败');
     clusters.value = [];
   }
 };
@@ -274,8 +274,8 @@ const viewPodYaml = async (pod: Pod) => {
     const res = await getPodYamlApi(selectedCluster.value, pod.name, pod.namespace);
     podYaml.value = res;
     yamlModalVisible.value = true;
-  } catch (error) {
-    message.error('获取Pod YAML失败');
+  } catch (error: any) {
+    message.error(error.message || '获取Pod YAML失败');
   }
 };
 
@@ -292,8 +292,8 @@ const viewPodLogs = async (pod: Pod) => {
     if (res) {
       containers.value = res.map((container: { name: string }) => container.name);
     }
-  } catch (error) {
-    message.error('获取容器列表失败');
+  } catch (error: any) {
+    message.error(error.message || '获取容器列表失败');
   }
 };
 
@@ -309,8 +309,8 @@ const fetchPodLogs = async () => {
       selectedPod.value.namespace
     );
     podLogs.value = logs || '暂无日志';
-  } catch (error) {
-    message.error('获取容器日志失败');
+  } catch (error: any) {
+    message.error(error.message || '获取容器日志失败');
     podLogs.value = '';
   }
 };
@@ -339,8 +339,8 @@ const handleDelete = async (pod: Pod) => {
     await deletePodApi(selectedCluster.value, pod.name, pod.namespace);
     message.success('Pod删除成功');
     await getPods(); // 删除成功后立即刷新数据
-  } catch (error) {
-    message.error('删除Pod失败');
+  } catch (error: any) {
+    message.error(error.message || '删除Pod失败');
   }
 };
 
@@ -357,8 +357,8 @@ const handleBatchDelete = async () => {
     message.success('批量删除成功');
     selectedRows.value = [];
     await getPods(); // 删除成功后立即刷新数据
-  } catch (error) {
-    message.error('批量删除失败');
+  } catch (error: any) {
+    message.error(error.message || '批量删除失败');
   }
 };
 
