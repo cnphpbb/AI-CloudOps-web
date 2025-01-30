@@ -2,161 +2,208 @@ import { requestClient } from '#/api/request';
 
 export interface MonitorScrapePoolItem {
   id: number;
-  CreatedAt: string;
-  UpdatedAt: string;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
   name: string;
-  prometheusInstances: string[];
-  alertManagerInstances: string[];
-  userId: number;
-  scrapeInterval: number;
-  scrapeTimeout: number;
-  externalLabels: string[];
-  supportAlert: number;
-  supportRecord: number;
-  remoteReadUrl: string;
-  alertManagerUrl: string;
-  ruleFilePath: string;
-  recordFilePath: string;
-  remoteWriteUrl: string;
-  remoteTimeoutSeconds: number;
-}
-
-export interface GeneralRes {
-  code: number;
-  data: any;
-  message: string;
-  type: string;
+  prometheus_instances: string[];
+  alert_manager_instances: string[];
+  user_id: number;
+  scrape_interval: number;
+  scrape_timeout: number;
+  remote_timeout_seconds: number;
+  support_alert: boolean;
+  support_record: boolean;
+  external_labels: string[];
+  remote_write_url: string;
+  remote_read_url: string;
+  alert_manager_url: string;
+  rule_file_path: string;
+  record_file_path: string;
+  create_user_name: string;
 }
 
 export interface createMonitorScrapePoolReq {
   name: string;
-  prometheusInstances: string[];
-  alertManagerInstances: string[];
-  scrapeInterval: number;
-  scrapeTimeout: number;
-  externalLabels: string[];
-  supportAlert: number;
-  supportRecord: number;
-  remoteReadUrl: string;
-  alertManagerUrl: string;
-  ruleFilePath: string;
-  recordFilePath: string;
-  remoteWriteUrl: string;
-  remoteTimeoutSeconds: number;
+  prometheus_instances: string[];
+  alert_manager_instances: string[];
+  scrape_interval: number;
+  scrape_timeout: number;
+  remote_timeout_seconds: number;
+  support_alert: boolean;
+  support_record: boolean;
+  external_labels: string[];
+  remote_write_url: string;
+  remote_read_url: string;
+  alert_manager_url: string;
+  rule_file_path: string;
+  record_file_path: string;
 }
 
 export interface updateMonitorScrapePoolReq {
   id: number;
   name: string;
-  prometheusInstances: string[];
-  alertManagerInstances: string[];
-  scrapeInterval: number;
-  scrapeTimeout: number;
-  externalLabels: string[];
-  supportAlert: number;
-  supportRecord: number;
-  remoteReadUrl: string;
-  alertManagerUrl: string;
-  ruleFilePath: string;
-  recordFilePath: string;
-  remoteWriteUrl: string;
-  remoteTimeoutSeconds: number;
+  prometheus_instances: string[];
+  alert_manager_instances: string[];
+  scrape_interval: number;
+  scrape_timeout: number;
+  remote_timeout_seconds: number;
+  support_alert: boolean;
+  support_record: boolean;
+  external_labels: string[];
+  remote_write_url: string;
+  remote_read_url: string;
+  alert_manager_url: string;
+  rule_file_path: string;
+  record_file_path: string;
 }
 
 export interface MonitorScrapeJobItem {
   id: number;
-  CreatedAt: string;
-  UpdatedAt: string;
-  DeletedAt: string | null;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
   name: string;
-  userId: number;
-  enable: number;
-  serviceDiscoveryType: string;
-  metricsPath: string;
+  user_id: number;
+  enable: boolean;
+  service_discovery_type: string;
+  metrics_path: string;
   scheme: string;
-  scrapeInterval: number;
-  scrapeTimeout: number;
-  poolId: number;
-  refreshInterval: number;
+  scrape_interval: number;
+  scrape_timeout: number;
+  pool_id: number;
+  relabel_configs_yaml_string: string;
+  refresh_interval: number;
   port: number;
-  treeNodeIds: string[];
-  key: string;
+  tree_node_ids: string[];
+  kube_config_file_path: string;
+  tls_ca_file_path: string;
+  tls_ca_content: string;
+  bearer_token: string;
+  bearer_token_file: string;
+  kubernetes_sd_role: string;
+  tree_node_names: string[];
+  create_user_name: string;
 }
 
 export interface createScrapeJobReq {
   name: string;
-  enable: number;
-  serviceDiscoveryType: string;
-  metricsPath: string;
+  enable: boolean;
+  service_discovery_type: string;
+  metrics_path: string;
   scheme: string;
-  scrapeInterval: number;
-  scrapeTimeout: number;
-  poolId: number | null;
-  refreshInterval: number;
+  scrape_interval: number;
+  scrape_timeout: number;
+  pool_id: number;
+  relabel_configs_yaml_string: string;
+  refresh_interval: number;
   port: number;
-  treeNodeIds: string[];
+  tree_node_ids: string[];
+  kube_config_file_path: string;
+  tls_ca_file_path: string;
+  tls_ca_content: string;
+  bearer_token: string;
+  bearer_token_file: string;
+  kubernetes_sd_role: string;
 }
 
-export interface editScrapeJobReq {
+export interface updateScrapeJobReq {
   id: number;
   name: string;
-  enable: number;
-  serviceDiscoveryType: string;
-  metricsPath: string;
+  enable: boolean;
+  service_discovery_type: string;
+  metrics_path: string;
   scheme: string;
-  scrapeInterval: number;
-  scrapeTimeout: number;
-  poolId: number | null;
-  refreshInterval: number;
+  scrape_interval: number;
+  scrape_timeout: number;
+  pool_id: number;
+  relabel_configs_yaml_string: string;
+  refresh_interval: number;
   port: number;
-  treeNodeIds: string[];
+  tree_node_ids: string[];
+  kube_config_file_path: string;
+  tls_ca_file_path: string;
+  tls_ca_content: string;
+  bearer_token: string;
+  bearer_token_file: string;
+  kubernetes_sd_role: string;
 }
 
 export interface MonitorAlertPoolItem {
+  id: number;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
   name: string;
-  userId: number;
-  alertManagerInstances: string[];
-  resolveTimeout: string;
-  groupWait: string;
-  groupInterval: string;
-  repeatInterval: string;
-  groupBy: string[];
+  alert_manager_instances: string[];
+  user_id: number;
+  resolve_timeout: string;
+  group_wait: string;
+  group_interval: string;
+  repeat_interval: string;
+  group_by: string[];
   receiver: string;
-  CreatedAt: string;
+  create_user_name: string;
+  data_length: number;
 }
 
 export interface createAlertManagerPoolReq {
   name: string;
-  alertManagerInstances: string[];
-  resolveTimeout: string;
-  groupWait: string;
-  groupInterval: string;
-  repeatInterval: string;
-  groupBy: string[];
+  alert_manager_instances: string[];
+  resolve_timeout: string;
+  group_wait: string;
+  group_interval: string;
+  repeat_interval: string;
+  group_by: string[];
   receiver: string;
 }
 
-export interface editAlertManagerPoolReq {
+export interface updateAlertManagerPoolReq {
   id: number;
   name: string;
-  alertManagerInstances: string[];
-  resolveTimeout: string;
-  groupWait: string;
-  groupInterval: string;
-  repeatInterval: string;
-  groupBy: string[];
+  alert_manager_instances: string[];
+  resolve_timeout: string;
+  group_wait: string;
+  group_interval: string;
+  repeat_interval: string;
+  group_by: string[];
   receiver: string;
+}
+
+export interface AlertRuleItem {
+  id: number;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
+  name: string;
+  user_id: number;
+  pool_id: number;
+  send_group_id: number;
+  tree_node_id: number;
+  enable: boolean;
+  expr: string;
+  severity: string;
+  grafana_link: string;
+  for_time: string;
+  labels: string[];
+  annotations: string[];
+  node_path: string;
+  tree_node_names: string[];
+  pool_name: string;
+  send_group_name: string;
+  create_user_name: string;
 }
 
 export interface createAlertRuleReq {
   name: string;
-  poolId: number;
-  sendGroupId: number;
-  treeNodeId: number;
+  pool_id?: number | null;
+  send_group_id?: number | null;
+  tree_node_id?: number | null;
+  enable: boolean;
   expr: string;
   severity: string;
-  forTime: string;
-  enable: number;
+  grafana_link: string;
+  for_time: string;
   labels: string[];
   annotations: string[];
 }
@@ -164,105 +211,196 @@ export interface createAlertRuleReq {
 export interface updateAlertRuleReq {
   id: number;
   name: string;
-  poolId: number;
-  sendGroupId: number;
-  treeNodeId: number;
+  pool_id?: number | null;
+  send_group_id?: number | null;
+  tree_node_id?: number | null;
+  enable: boolean;
   expr: string;
   severity: string;
-  forTime: string;
-  enable: number;
+  grafana_link: string;
+  for_time: string;
   labels: string[];
   annotations: string[];
 }
 
-export interface validateExprApiReq {
-  promqlExpr: string;
-}
-
 export interface MonitorAlertEventItem {
   id: number;
-  alertName: string;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
+  alert_name: string;
   fingerprint: string;
   status: string;
-  sendGroupId: string;
-  eventTimes: number;
-  renLingUserId: string;
+  rule_id: number;
+  send_group_id: number;
+  event_times: number;
+  silence_id: string;
+  ren_ling_user_id: number;
   labels: string[];
-  createTime: string;
-  silenceId: string;
+  alert_rule_name: string;
+  send_group_name: string;
+  alert: any;
+  send_group: any;
+  ren_ling_user: any;
+  rule: any;
+}
+
+export interface AlertRecordItem {
+  id: number;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
+  name: string;
+  user_id: number;
+  pool_id: number;
+  tree_node_id: number;
+  enable: boolean;
+  for_time: string;
+  expr: string;
+  labels: string[];
+  annotations: string[];
+  node_path: string;
+  tree_node_names: string[];
+  pool_name: string;
+  send_group_name: string;
+  create_user_name: string;
 }
 
 export interface createAlertManagerRecordReq {
   name: string;
-  recordName: string;
-  poolId: number;
-  treeNodeId: number;
-  enable: number;
-  forTime: string;
+  pool_id: number;
+  tree_node_id: number;
+  enable: boolean;
+  for_time: string;
   expr: string;
+  labels: string[];
+  annotations: string[];
 }
 
 export interface updateAlertManagerRecordReq {
   id: number;
   name: string;
-  recordName: string;
-  poolId: number;
-  treeNodeId: number;
-  enable: number;
-  forTime: string;
+  pool_id: number;
+  tree_node_id: number;
+  enable: boolean;
+  for_time: string;
   expr: string;
+  labels: string[];
+  annotations: string[];
 }
 
-export interface getOnDutyFuturePlan {
+export interface SendGroupItem {
   id: number;
-  startTime: string;
-  endTime: string;
-}
-
-export interface createOnDutychangeItem {
-  onDutyGroupId: number;
-  date: string;
-  originUserId: number;
-  onDutyUserId: number;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
+  name: string;
+  name_zh: string;
+  enable: boolean;
+  user_id: number;
+  pool_id: number;
+  on_duty_group_id: number;
+  static_receive_users: any[];
+  fei_shu_qun_robot_token: string;
+  repeat_interval: string;
+  send_resolved: boolean;
+  notify_methods: string[];
+  need_upgrade: boolean;
+  first_upgrade_users: any[];
+  upgrade_minutes: number;
+  second_upgrade_users: any[];
+  tree_node_names: string[];
+  static_receive_user_names: string[];
+  first_user_names: string[];
+  second_user_names: string[];
+  pool_name: string;
+  on_duty_group_name: string;
+  create_user_name: string;
 }
 
 export interface createSendGroupReq {
   name: string;
-  nameZh: string;
-  enable: number;
-  poolId: number;
-  onDutyGroupId: number;
-  staticReceiveUsers: string[];
-  feiShuQunRobotToken: string; 
-  repeatInterval: string; 
-  sendResolved: number;
-  notifyMethods: string[];
-  needUpgrade: number;
-  firstUpgradeUsers: string[];
-  upgradeMinutes: number;
-  secondUpgradeUsers: string[];
+  name_zh: string;
+  enable: boolean;
+  pool_id: number;
+  on_duty_group_id: number;
+  static_receive_users: any[];
+  fei_shu_qun_robot_token: string;
+  repeat_interval: string;
+  send_resolved: boolean;
+  notify_methods: string[];
+  need_upgrade: boolean;
+  first_upgrade_users: any[];
+  upgrade_minutes: number;
+  second_upgrade_users: any[];
 }
 
 export interface updateSendGroupReq {
   id: number;
   name: string;
-  nameZh: string;
-  enable: number;
-  poolId: number;
-  onDutyGroupId: number;
-  staticReceiveUsers: string[];
-  feiShuQunRobotToken: string; 
-  repeatInterval: string; 
-  sendResolved: number;
-  notifyMethods: string[];
-  needUpgrade: number;
-  firstUpgradeUsers: string[];
-  upgradeMinutes: number;
-  secondUpgradeUsers: string[];
+  name_zh: string;
+  enable: boolean;
+  pool_id: number;
+  on_duty_group_id: number;
+  static_receive_users: any[];
+  fei_shu_qun_robot_token: string;
+  repeat_interval: string;
+  send_resolved: boolean;
+  notify_methods: string[];
+  need_upgrade: boolean;
+  first_upgrade_users: any[];
+  upgrade_minutes: number;
+  second_upgrade_users: any[];
 }
 
-export const getMonitorScrapePoolApi = () => {
-  return requestClient.get<MonitorScrapePoolItem[]>('/monitor/scrape_pools/list');
+export interface OnDutyGroupItem {
+  id: number;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
+  on_duty_group_id: number;
+  user_id: number;
+  date: string;
+  origin_user_id: number;
+  on_duty_user_id: number;
+  target_user_name: string;
+  origin_user_name: string;
+  pool_name: string;
+  create_user_name: string;
+}
+
+export interface createOnDutychangeReq {
+  on_duty_group_id: number;
+  date: string;
+  origin_user_id: number;
+  on_duty_user_id: number;
+}
+
+export interface updateOnDutyReq {
+  id: number;
+  on_duty_group_id: number;
+  date: string;
+  origin_user_id: number;
+  on_duty_user_id: number;
+}
+
+export interface getOnDutyFuturePlan {
+  id: number;
+  start_time: string;
+  end_time: string;
+}
+
+
+export interface validateExprApiReq {
+  promql_expr: string;
+}
+
+export const getMonitorScrapePoolListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<MonitorScrapePoolItem[]>(`/monitor/scrape_pools/list?page=${page}&size=${size}&search=${search}`);
+};
+
+export const getAllMonitorScrapePoolApi = () => {
+  return requestClient.get('/monitor/scrape_pools/all');
 };
 
 export const createMonitorScrapePoolApi = (
@@ -271,41 +409,49 @@ export const createMonitorScrapePoolApi = (
   return requestClient.post('/monitor/scrape_pools/create', data);
 };
 
-export const deleteMonitorScrapePoolApi = (id: number) => {
-  return requestClient.delete(`/monitor/scrape_pools/${id}`);
-};
-
 export const updateMonitorScrapePoolApi = (
   data: updateMonitorScrapePoolReq,
 ) => {
   return requestClient.post('/monitor/scrape_pools/update', data);
 };
 
-export const getMonitorScrapeJobApi = () => {
-  return requestClient.get<MonitorScrapeJobItem[]>('/monitor/scrape_jobs/list');
+export const deleteMonitorScrapePoolApi = (id: number) => {
+  return requestClient.delete(`/monitor/scrape_pools/${id}`);
+};
+
+export const getMonitorScrapePoolTotalApi = () => {
+  return requestClient.get('/monitor/scrape_pools/total');
+};
+
+export const getMonitorScrapeJobListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<MonitorScrapeJobItem[]>(`/monitor/scrape_jobs/list?page=${page}&size=${size}&search=${search}`);
 };
 
 export const createScrapeJobApi = (data: createScrapeJobReq) => {
   return requestClient.post('/monitor/scrape_jobs/create', data);
 };
 
+export const updateScrapeJobApi = (data: updateScrapeJobReq) => {
+  return requestClient.post('/monitor/scrape_jobs/update', data);
+};
+
 export const deleteScrapeJobApi = (id: number) => {
   return requestClient.delete(`/monitor/scrape_jobs/${id}`);
 };
 
-export const updateScrapeJobApi = (data: editScrapeJobReq) => {
-  return requestClient.post('/monitor/scrape_jobs/update', data);
+export const getScrapeJobTotalApi = () => {
+  return requestClient.get('/monitor/scrape_jobs/total');
 };
 
-export const getAlertManagerPoolsApi = () => {
-  return requestClient.get('/monitor/alertManager_pools/list');
+export const getAlertManagerPoolListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<MonitorAlertPoolItem[]>(`/monitor/alertManager_pools/list?page=${page}&size=${size}&search=${search}`);
 };
 
 export const createAlertManagerPoolApi = (data: createAlertManagerPoolReq) => {
   return requestClient.post('/monitor/alertManager_pools/create', data);
 };
 
-export const updateAlertManagerPoolApi = (data: editAlertManagerPoolReq) => {
+export const updateAlertManagerPoolApi = (data: updateAlertManagerPoolReq) => {
   return requestClient.post('/monitor/alertManager_pools/update', data);
 };
 
@@ -313,8 +459,12 @@ export const deleteAlertManagerPoolApi = (id: number) => {
   return requestClient.delete(`/monitor/alertManager_pools/${id}`);
 };
 
-export const getAlertRulesApi = () => {
-  return requestClient.get('/monitor/alert_rules/list');
+export const getAlertManagerPoolTotalApi = () => {
+  return requestClient.get('/monitor/alertManager_pools/total');
+};
+
+export const getAlertRulesListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<AlertRuleItem[]>(`/monitor/alert_rules/list?page=${page}&size=${size}&search=${search}`);
 };
 
 export const createAlertRuleApi = (data: createAlertRuleReq) => {
@@ -329,32 +479,24 @@ export const deleteAlertRuleApi = (id: number) => {
   return requestClient.delete(`/monitor/alert_rules/${id}`);
 };
 
+export const getAlertRuleTotalApi = () => {
+  return requestClient.get('/monitor/alert_rules/total');
+};
+
 export const validateExprApi = (data: validateExprApiReq) => {
   return requestClient.post('/monitor/alert_rules/promql_check', data);
 };
 
-export const getAlertEventsApi = () => {
-  return requestClient.get('/monitor/alert_events/list');
+export const getAlertEventsListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<MonitorAlertEventItem[]>(`/monitor/alert_events/list?page=${page}&size=${size}&search=${search}`);
 };
 
-export const silenceAlertApi = () => {
-  return requestClient.get('/monitor/alert_events/silence');
+export const getAlertEventsTotalApi = () => {
+  return requestClient.get('/monitor/alert_events/total');
 };
 
-export const claimAlertApi = () => {
-  return requestClient.get('/monitor/alert_events/claim');
-};
-
-export const cancelSilenceAlertApi = () => {
-  return requestClient.get('/monitor/alert_events/cancel_silence');
-};
-
-export const silenceBatchApi = () => {
-  return requestClient.get('/monitor/alert_events/silence_batch');
-};
-
-export const getRecordRulesApi = () => {
-  return requestClient.get('/monitor/record_rules/list');
+export const getRecordRulesListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<AlertRecordItem[]>(`/monitor/record_rules/list?page=${page}&size=${size}&search=${search}`);
 };
 
 export const createRecordRuleApi = (data: createAlertManagerRecordReq) => {
@@ -369,15 +511,59 @@ export const deleteRecordRuleApi = (id: number) => {
   return requestClient.delete(`/monitor/record_rules/${id}`);
 };
 
-export const getAllOnDutyApi = () => {
-  return requestClient.get('/monitor/onDuty_groups/list');
+export const getRecordRuleTotalApi = () => {
+  return requestClient.get('/monitor/record_rules/total');
+};
+
+export const getMonitorSendGroupListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<SendGroupItem[]>(`/monitor/send_groups/list?page=${page}&size=${size}&search=${search}`);
+};
+
+export const getAllMonitorSendGroupApi = () => {
+  return requestClient.get('/monitor/send_groups/all');
+};
+
+export const createMonitorSendGroupApi = (data: createSendGroupReq) => {
+  return requestClient.post('/monitor/send_groups/create', data);
+};
+
+export const updateMonitorSendGroupApi = (data: updateSendGroupReq) => {
+  return requestClient.post('/monitor/send_groups/update', data);
+};
+
+export const deleteMonitorSendGroupApi = (id: number) => {
+  return requestClient.delete(`/monitor/send_groups/${id}`);
+};
+
+export const getSendGroupTotalApi = () => {
+  return requestClient.get('/monitor/send_groups/total');
+};
+
+export const silenceAlertApi = (id: number) => {
+  return requestClient.get(`/monitor/alert_events/silence/${id}`);
+};
+
+export const claimAlertApi = (id: number) => {
+  return requestClient.get(`/monitor/alert_events/claim/${id}`);
+};
+
+export const cancelSilenceAlertApi = (id: number) => {
+  return requestClient.get(`/monitor/alert_events/cancel_silence/${id}`);
+};
+
+export const silenceBatchApi = (ids: number[]) => {
+  return requestClient.post('/monitor/alert_events/silence_batch', ids);
+};
+
+export const getOnDutyListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<OnDutyGroupItem[]>(`/monitor/onDuty_groups/list?page=${page}&size=${size}&search=${search}`);
 };
 
 export const getOnDutyApi = (id: number) => {
   return requestClient.get(`/monitor/onDuty_groups/${id}`);
 };
 
-export const createOnDutyApi = (data: any) => {
+export const createOnDutyApi = (data: createOnDutychangeReq) => {
   return requestClient.post('/monitor/onDuty_groups/create', data);
 };
 
@@ -393,24 +579,11 @@ export const getOnDutyFuturePlanApi = (data: getOnDutyFuturePlan) => {
   return requestClient.post('/monitor/onDuty_groups/future_plan', data);
 };
 
-export const createOnDutyChangeApi = (data: createOnDutychangeItem) => {
+export const createOnDutyChangeApi = (data: createOnDutychangeReq) => {
   return requestClient.post('/monitor/onDuty_groups/changes', data);
 };
 
-export const getMonitorSendGroupApi = () => {
-  return requestClient.get('/monitor/send_groups/list');
+export const getOnDutyTotalApi = () => {
+  return requestClient.get('/monitor/onDuty_groups/total');
 };
-
-export const createMonitorSendGroupApi = (data: createSendGroupReq) => {
-  return requestClient.post('/monitor/send_groups/create', data);
-};
-
-export const updateMonitorSendGroupApi = (data: updateSendGroupReq) => {
-  return requestClient.post('/monitor/send_groups/update', data);
-};
-
-export const deleteMonitorSendGroupApi = (id: number) => {
-  return requestClient.delete(`/monitor/send_groups/${id}`);
-};
-
 

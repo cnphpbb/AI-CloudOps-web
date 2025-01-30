@@ -719,7 +719,6 @@ const handleAddResource = () => {
     osName: '',
     mode: '',
     password: '',
-
     name: '',
     region: '',
     instance_availability_zone: '',
