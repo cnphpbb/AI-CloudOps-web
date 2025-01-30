@@ -103,12 +103,29 @@ import {
   silenceBatchApi,
   getAlertEventsTotalApi
 } from '#/api';
+<<<<<<< HEAD
 import type { MonitorAlertEventItem } from '#/api/core/prometheus';
+=======
+
+interface MonitorAlertEventItem {
+  id: number;
+  alertName: string;
+  fingerprint: string;
+  status: string;
+  sendGroupId: string;
+  eventTimes: number;
+  renLingUserId: string;
+  labels: string[];
+  CreatedAt: string;
+  silenceId: string;
+}
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 
 // 状态变量
 const data = ref<MonitorAlertEventItem[]>([]);
 const loading = ref<boolean>(false);
 const searchText = ref('');
+<<<<<<< HEAD
 
 
 // 分页相关
@@ -116,6 +133,12 @@ const pageSizeOptions = ref<string[]>(['10', '20', '30', '40', '50']);
 const current = ref(1);
 const pageSizeRef = ref(10);
 const total = ref(0);
+=======
+const current = ref(1);
+const pageSizeRef = ref(10);
+const total = ref(0);
+const pageSizeOptions = ['10', '20', '50'];
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 
 // 表格列配置
 const columns: TableColumnsType = [
@@ -128,10 +151,17 @@ const columns: TableColumnsType = [
   },
   {
     title: '告警名称',
+<<<<<<< HEAD
     dataIndex: 'alert_name',
     key: 'alert_name',
     width: 200,
     sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => a.alert_name.localeCompare(b.alert_name),
+=======
+    dataIndex: 'alertName',
+    key: 'alertName',
+    width: 200,
+    sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => a.alertName.localeCompare(b.alertName),
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   },
   {
     title: '告警状态',
@@ -149,12 +179,18 @@ const columns: TableColumnsType = [
   },
   {
     title: '关联发送组',
+<<<<<<< HEAD
     dataIndex: 'send_group_id',
     key: 'send_group_id',
+=======
+    dataIndex: 'sendGroupId',
+    key: 'sendGroupId',
+>>>>>>> eaaa7dd (完成监控模块部分改造)
     width: 150,
   },
   {
     title: '触发次数',
+<<<<<<< HEAD
     dataIndex: 'event_times',
     key: 'event_times',
     width: 100,
@@ -164,12 +200,28 @@ const columns: TableColumnsType = [
     title: '静默id',
     dataIndex: 'silence_id',
     key: 'silence_id',
+=======
+    dataIndex: 'eventTimes',
+    key: 'eventTimes',
+    width: 100,
+    sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => a.eventTimes - b.eventTimes,
+  },
+  {
+    title: '静默id',
+    dataIndex: 'silenceId',
+    key: 'silenceId',
+>>>>>>> eaaa7dd (完成监控模块部分改造)
     width: 120,
   },
   {
     title: '认领用户',
+<<<<<<< HEAD
     dataIndex: 'ren_ling_user_id',
     key: 'ren_ling_user_id',
+=======
+    dataIndex: 'renLingUserId',
+    key: 'renLingUserId',
+>>>>>>> eaaa7dd (完成监控模块部分改造)
     width: 120,
   },
   {
@@ -192,11 +244,19 @@ const columns: TableColumnsType = [
   },
   {
     title: '创建时间',
+<<<<<<< HEAD
     dataIndex: 'created_at',
     key: 'created_at',
     width: 180,
     sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => 
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+=======
+    dataIndex: 'CreatedAt',
+    key: 'CreatedAt',
+    width: 180,
+    sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => 
+      new Date(a.CreatedAt).getTime() - new Date(b.CreatedAt).getTime(),
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   },
   {
     title: '操作',
@@ -214,7 +274,10 @@ const handleSearch = () => {
 };
 
 const handleReset = () => {
+<<<<<<< HEAD
   searchText.value = '';
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   fetchResources();
 };
 
@@ -225,7 +288,11 @@ const handlePageChange = (page: number, pageSize: number) => {
   fetchResources();
 };
 
+<<<<<<< HEAD
 const handleSizeChange = (_: number, size: number) => {
+=======
+const handleSizeChange = (current: number, size: number) => {
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   pageSizeRef.value = size;
   fetchResources();
 };
@@ -241,7 +308,10 @@ const fetchResources = async () => {
     );
     data.value = response as unknown as MonitorAlertEventItem[];
     total.value = await getAlertEventsTotalApi();
+<<<<<<< HEAD
 
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   } catch (error: any) {
     message.error(error.message || '获取告警事件数据失败，请稍后重试');
     console.error(error);
@@ -269,7 +339,10 @@ const handleBatchSilence = () => {
         await silenceBatchApi(alertIds);
         message.success('批量屏蔽告警成功');
         fetchResources();
+<<<<<<< HEAD
 
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
       } catch (error: any) {
         message.error(error.message || '批量屏蔽告警失败');
         console.error(error);
@@ -291,7 +364,11 @@ const handleSilence = async (record: MonitorAlertEventItem) => {
       try {
         loading.value = true;
         await silenceAlertApi(record.id);
+<<<<<<< HEAD
         message.success(`屏蔽告警 "${record.alert_name}" 成功`);
+=======
+        message.success(`屏蔽告警 "${record.alertName}" 成功`);
+>>>>>>> eaaa7dd (完成监控模块部分改造)
         fetchResources();
       } catch (error: any) {
         message.error(error.message || `屏蔽告警 "${record.alert_name}" 失败`);
@@ -315,7 +392,11 @@ const handleClaim = async (record: MonitorAlertEventItem) => {
       try {
         loading.value = true;
         await claimAlertApi(record.id);
+<<<<<<< HEAD
         message.success(`认领告警 "${record.alert_name}" 成功`);
+=======
+        message.success(`认领告警 "${record.alertName}" 成功`);
+>>>>>>> eaaa7dd (完成监控模块部分改造)
         fetchResources();
       } catch (error: any) {
         message.error(error.message || `认领告警 "${record.alert_name}" 失败`);
@@ -339,7 +420,11 @@ const handleCancelSilence = async (record: MonitorAlertEventItem) => {
       try {
         loading.value = true;
         await cancelSilenceAlertApi(record.id);
+<<<<<<< HEAD
         message.success(`取消屏蔽告警 "${record.alert_name}" 成功`);
+=======
+        message.success(`取消屏蔽告警 "${record.alertName}" 成功`);
+>>>>>>> eaaa7dd (完成监控模块部分改造)
         fetchResources();
       } catch (error: any) {
         message.error(error.message || `取消屏蔽告警 "${record.alert_name}" 失败`);

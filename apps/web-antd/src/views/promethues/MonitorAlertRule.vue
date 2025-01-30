@@ -313,9 +313,14 @@ import {
   deleteAlertRuleApi,
   getAllTreeNodes,
   validateExprApi,
+<<<<<<< HEAD
   getAllAlertManagerPoolApi,
   getAllMonitorSendGroupApi,
   getMonitorAlertRuleTotalApi
+=======
+  getAllMonitorScrapePoolApi,
+  getAllMonitorSendGroupApi,
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 } from '#/api';
 import { Icon } from '@iconify/vue';
 import type { AlertRuleItem} from '#/api/core/prometheus';
@@ -381,19 +386,31 @@ const columns = [
     title: '所属实例池ID',
     dataIndex: 'pool_id',
     key: 'pool_id',
+<<<<<<< HEAD
     sorter: (a: AlertRuleItem, b: AlertRuleItem) => (a.pool_id || 0) - (b.pool_id || 0),
+=======
+    sorter: (a: AlertRuleItem, b: AlertRuleItem) => a.pool_id - b.pool_id,
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   },
   {
     title: '绑定发送组ID',
     dataIndex: 'send_group_id',
     key: 'send_group_id',
+<<<<<<< HEAD
     sorter: (a: AlertRuleItem, b: AlertRuleItem) => (a.send_group_id || 0) - (b.send_group_id || 0),
+=======
+    sorter: (a: AlertRuleItem, b: AlertRuleItem) => a.send_group_id - b.send_group_id,
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   },
   {
     title: '绑定树节点ID',
     dataIndex: 'tree_node_id',
     key: 'tree_node_id',
+<<<<<<< HEAD
     sorter: (a: AlertRuleItem, b: AlertRuleItem) => (a.tree_node_id || 0) - (b.tree_node_id || 0),
+=======
+    sorter: (a: AlertRuleItem, b: AlertRuleItem) => a.tree_node_id - b.tree_node_id,
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   },
   {
     title: '严重性',
@@ -550,7 +567,11 @@ const fetchTreeNodes = async () => {
 // 获取实例池数据
 const fetchScrapePools = async () => {
   try {
+<<<<<<< HEAD
     const response = await getAllAlertManagerPoolApi();
+=======
+    const response = await getAllMonitorScrapePoolApi();
+>>>>>>> eaaa7dd (完成监控模块部分改造)
     scrapePools.value = response;
   } catch (error: any) {
     message.error(error.message || '获取实例池数据失败');
@@ -577,6 +598,10 @@ const handleSearch = () => {
 
 // 重置处理
 const handleReset = () => {
+<<<<<<< HEAD
+=======
+  current.value = 1;
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   searchText.value = '';
   fetchAlertRules();
 };
@@ -592,6 +617,7 @@ const addForm = reactive({
   severity: '',
   grafana_link: '',
   for_time: '',
+<<<<<<< HEAD
   labels: [
     {labelKey: 'severity', labelValue: '', key: Date.now()},
     {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
@@ -603,6 +629,10 @@ const addForm = reactive({
     {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
     {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2}
   ],
+=======
+  labels: [{labelKey: '', labelValue: '', key: Date.now()}],
+  annotations: [{labelKey: '', labelValue: '', key: Date.now()}],
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 });
 
 // 编辑表单
@@ -637,6 +667,7 @@ const resetAddForm = () => {
   addForm.severity = '';
   addForm.grafana_link = '';
   addForm.for_time = '';
+<<<<<<< HEAD
   addForm.labels = [
     {labelKey: 'severity', labelValue: '', key: Date.now()},
     {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
@@ -648,6 +679,10 @@ const resetAddForm = () => {
     {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
     {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2}
   ];
+=======
+  addForm.labels = [{labelKey: '', labelValue: '', key: Date.now()}];
+  addForm.annotations = [{labelKey: '', labelValue: '', key: Date.now()}];
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 };
 
 // 关闭新增模态框
@@ -660,9 +695,15 @@ const showEditModal = (record: AlertRuleItem) => {
   Object.assign(editForm, {
     id: record.id,
     name: record.name,
+<<<<<<< HEAD
     pool_id: record.pool_id || null,
     send_group_id: record.send_group_id || null,
     tree_node_id: record.tree_node_id || null,
+=======
+    pool_id: record.pool_id,
+    send_group_id: record.send_group_id,
+    tree_node_id: record.tree_node_id,
+>>>>>>> eaaa7dd (完成监控模块部分改造)
     enable: record.enable,
     expr: record.expr,
     severity: record.severity,
@@ -766,7 +807,10 @@ const handleDelete = (record: AlertRuleItem) => {
         message.success('AlertRule已删除');
         fetchAlertRules();
       } catch (error: any) {
+<<<<<<< HEAD
 
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
         message.error(error.message || '删除AlertRule失败');
         console.error(error);
       } finally {

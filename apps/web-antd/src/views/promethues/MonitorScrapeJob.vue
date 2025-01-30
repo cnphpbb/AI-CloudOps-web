@@ -5,6 +5,7 @@
       <!-- 查询功能 -->
       <div class="search-filters">
         <!-- 搜索输入框 -->
+<<<<<<< HEAD
         <a-input v-model:value="searchText" placeholder="请输入采集任务名称" style="width: 200px" allow-clear
           @pressEnter="handleSearch" />
         <a-button type="primary" @click="handleSearch">
@@ -17,15 +18,34 @@
           <template #icon>
             <ReloadOutlined />
           </template>
+=======
+        <a-input 
+          v-model:value="searchText" 
+          placeholder="请输入采集任务名称" 
+          style="width: 200px"
+          allow-clear
+          @pressEnter="handleSearch"
+        />
+        <a-button type="primary" @click="handleSearch">
+          <template #icon><SearchOutlined /></template>
+          搜索
+        </a-button>
+        <a-button @click="handleReset">
+          <template #icon><ReloadOutlined /></template>
+>>>>>>> eaaa7dd (完成监控模块部分改造)
           重置
         </a-button>
       </div>
       <!-- 操作按钮 -->
       <div class="action-buttons">
         <a-button type="primary" @click="openAddModal">
+<<<<<<< HEAD
           <template #icon>
             <PlusOutlined />
           </template>
+=======
+          <template #icon><PlusOutlined /></template>
+>>>>>>> eaaa7dd (完成监控模块部分改造)
           新增采集任务
         </a-button>
       </div>
@@ -34,7 +54,31 @@
     <!-- 数据加载状态 -->
     <a-spin :spinning="loading">
       <!-- 表格 -->
+<<<<<<< HEAD
       <a-table :dataSource="data" :columns="columns" :pagination="false">
+=======
+      <a-table 
+        :dataSource="data"
+        :columns="columns"
+        :pagination="false"
+      >
+        <!-- 分页器 -->
+        <a-pagination
+          v-model:current="current"
+          v-model:pageSize="pageSizeRef"
+          :page-size-options="pageSizeOptions"
+          :total="total"
+          show-size-changer
+          @change="handlePageChange"
+          @showSizeChange="handleSizeChange"
+          class="pagination"
+        >
+          <template #buildOptionText="props">
+            <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
+            <span v-else>全部</span>
+          </template>
+        </a-pagination>
+>>>>>>> eaaa7dd (完成监控模块部分改造)
         <!-- 服务发现类型列 -->
         <template #serviceDiscoveryType="{ record }">
           <a-tag :color="record.service_discovery_type === 'k8s' ? 'blue' : 'green'">
@@ -54,22 +98,35 @@
           <a-space>
             <a-tooltip title="编辑资源信息">
               <a-button type="link" @click="openEditModal(record)">
+<<<<<<< HEAD
                 <template #icon>
                   <Icon icon="clarity:note-edit-line" style="font-size: 22px" />
                 </template>
+=======
+                <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+>>>>>>> eaaa7dd (完成监控模块部分改造)
               </a-button>
             </a-tooltip>
             <a-tooltip title="删除资源">
               <a-button type="link" danger @click="handleDelete(record)">
+<<<<<<< HEAD
                 <template #icon>
                   <Icon icon="ant-design:delete-outlined" style="font-size: 22px" />
                 </template>
+=======
+                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+>>>>>>> eaaa7dd (完成监控模块部分改造)
               </a-button>
             </a-tooltip>
           </a-space>
         </template>
+<<<<<<< HEAD
         <!-- 树节点列 -->
         <template #treeNodeNames="{ record }">
+=======
+        <!-- 树节点 ID 列 -->
+        <template #treeNodeIds="{ record }">
+>>>>>>> eaaa7dd (完成监控模块部分改造)
           <a-tooltip :title="formatTreeNodeNames(record.tree_node_names)">
             <span>{{ formatTreeNodeNames(record.tree_node_names) }}</span>
           </a-tooltip>
@@ -94,8 +151,22 @@
     </a-spin>
 
     <!-- 新增采集任务模态框 -->
+<<<<<<< HEAD
     <a-modal v-model:visible="isAddModalVisible" title="新增采集任务" @ok="handleAdd" @cancel="closeAddModal" :okText="'提交'"
       :cancelText="'取消'" :confirmLoading="confirmLoading" :maskClosable="false" width="600px">
+=======
+    <a-modal 
+      v-model:visible="isAddModalVisible" 
+      title="新增采集任务" 
+      @ok="handleAdd" 
+      @cancel="closeAddModal" 
+      :okText="'提交'"
+      :cancelText="'取消'" 
+      :confirmLoading="confirmLoading"
+      :maskClosable="false"
+      width="600px"
+    >
+>>>>>>> eaaa7dd (完成监控模块部分改造)
       <a-form :model="addForm" layout="vertical" ref="addFormRef">
         <a-row :gutter="16">
           <a-col :span="12">
@@ -112,8 +183,12 @@
 
         <a-row :gutter="16">
           <a-col :span="12">
+<<<<<<< HEAD
             <a-form-item label="服务发现类型" name="service_discovery_type"
               :rules="[{ required: true, message: '请选择服务发现类型' }]">
+=======
+            <a-form-item label="服务发现类型" name="service_discovery_type" :rules="[{ required: true, message: '请选择服务发现类型' }]">
+>>>>>>> eaaa7dd (完成监控模块部分改造)
               <a-select v-model:value="addForm.service_discovery_type" placeholder="请选择服务发现类型">
                 <a-select-option value="http">HTTP</a-select-option>
                 <a-select-option value="k8s">Kubernetes</a-select-option>
@@ -183,23 +258,54 @@
               { required: true, message: '请输入端口' },
               { type: 'number', min: 1, max: 65535, message: '端口必须在1-65535之间' }
             ]">
+<<<<<<< HEAD
               <a-input-number v-model:value="addForm.port" :min="1" :max="65535" style="width: 100%;"
                 placeholder="请输入端口" />
+=======
+              <a-input-number v-model:value="addForm.port" :min="1" :max="65535" style="width: 100%;" placeholder="请输入端口" />
+>>>>>>> eaaa7dd (完成监控模块部分改造)
             </a-form-item>
           </a-col>
         </a-row>
 
+<<<<<<< HEAD
         <a-form-item label="树节点" name="tree_node_ids">
           <a-tree-select v-model:value="addForm.tree_node_ids" :tree-data="leafNodes" :tree-checkable="true"
             :tree-default-expand-all="true" :show-checked-strategy="SHOW_PARENT" placeholder="请选择树节点"
             style="width: 100%" />
+=======
+        <a-form-item label="树节点" name="tree_node_ids" >
+          <a-tree-select
+            v-model:value="addForm.tree_node_ids"
+            :tree-data="leafNodes"
+            :tree-checkable="true"
+            :tree-default-expand-all="true"
+            :show-checked-strategy="SHOW_PARENT"
+            placeholder="请选择树节点"
+            style="width: 100%"
+          />
+>>>>>>> eaaa7dd (完成监控模块部分改造)
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- 编辑采集任务模态框 -->
+<<<<<<< HEAD
     <a-modal v-model:visible="isEditModalVisible" title="编辑采集任务" @ok="handleUpdate" @cancel="closeEditModal"
       :okText="'提交'" :cancelText="'取消'" :confirmLoading="confirmLoading" :maskClosable="false" width="600px">
+=======
+    <a-modal 
+      v-model:visible="isEditModalVisible" 
+      title="编辑采集任务" 
+      @ok="handleUpdate" 
+      @cancel="closeEditModal"
+      :okText="'提交'" 
+      :cancelText="'取消'" 
+      :confirmLoading="confirmLoading"
+      :maskClosable="false"
+      width="600px"
+    >
+>>>>>>> eaaa7dd (完成监控模块部分改造)
       <a-form :model="editForm" layout="vertical" ref="editFormRef" @submit.prevent>
         <a-row :gutter="16">
           <a-col :span="12">
@@ -216,8 +322,12 @@
 
         <a-row :gutter="16">
           <a-col :span="12">
+<<<<<<< HEAD
             <a-form-item label="服务发现类型" name="service_discovery_type"
               :rules="[{ required: true, message: '请选择服务发现类型' }]">
+=======
+            <a-form-item label="服务发现类型" name="service_discovery_type" :rules="[{ required: true, message: '请选择服务发现类型' }]">
+>>>>>>> eaaa7dd (完成监控模块部分改造)
               <a-select v-model:value="editForm.service_discovery_type" placeholder="请选择服务发现类型">
                 <a-select-option value="http">HTTP</a-select-option>
                 <a-select-option value="k8s">Kubernetes</a-select-option>
@@ -287,16 +397,32 @@
               { required: true, message: '请输入端口' },
               { type: 'number', min: 1, max: 65535, message: '端口必须在1-65535之间' }
             ]">
+<<<<<<< HEAD
               <a-input-number v-model:value="editForm.port" :min="1" :max="65535" style="width: 100%;"
                 placeholder="请输入端口" />
+=======
+              <a-input-number v-model:value="editForm.port" :min="1" :max="65535" style="width: 100%;" placeholder="请输入端口" />
+>>>>>>> eaaa7dd (完成监控模块部分改造)
             </a-form-item>
           </a-col>
         </a-row>
 
         <a-form-item label="树节点" name="tree_node_ids" :rules="[{ required: true, message: '请选择树节点' }]">
+<<<<<<< HEAD
           <a-tree-select v-model:value="editForm.tree_node_ids" :tree-data="leafNodes" :tree-checkable="true"
             :tree-default-expand-all="true" :show-checked-strategy="SHOW_PARENT" placeholder="请选择树节点"
             style="width: 100%" />
+=======
+          <a-tree-select
+            v-model:value="editForm.tree_node_ids"
+            :tree-data="leafNodes"
+            :tree-checkable="true"
+            :tree-default-expand-all="true"
+            :show-checked-strategy="SHOW_PARENT"
+            placeholder="请选择树节点"
+            style="width: 100%"
+          />
+>>>>>>> eaaa7dd (完成监控模块部分改造)
         </a-form-item>
       </a-form>
     </a-modal>
@@ -313,6 +439,10 @@ import {
   SearchOutlined,
   ReloadOutlined,
   PlusOutlined,
+<<<<<<< HEAD
+=======
+  MinusCircleOutlined
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 } from '@ant-design/icons-vue';
 import {
   getMonitorScrapeJobListApi,
@@ -320,8 +450,12 @@ import {
   updateScrapeJobApi,
   deleteScrapeJobApi,
   getAllMonitorScrapePoolApi,
+<<<<<<< HEAD
   getAllTreeNodes,
   getMonitorScrapeJobTotalApi
+=======
+  getAllTreeNodes
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 } from '#/api';
 import type { MonitorScrapeJobItem, createScrapeJobReq, updateScrapeJobReq } from '#/api/core/prometheus';
 const { SHOW_PARENT } = TreeSelect;
@@ -334,6 +468,7 @@ const total = ref(0);
 
 // 搜索处理
 const handleSearch = () => {
+<<<<<<< HEAD
   fetchResources();
 };
 
@@ -343,11 +478,28 @@ const handleSizeChange = (_current: number, size: number) => {
 };
 
 // 处理分页变化
+=======
+  // 实现搜索逻辑
+  fetchResources();
+};
+
+// 分页处理
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 const handlePageChange = (page: number) => {
   current.value = page;
   fetchResources();
 };
 
+<<<<<<< HEAD
+=======
+const handleSizeChange = (page: number, size: number) => {
+  current.value = page;
+  pageSizeRef.value = size;
+  fetchResources();
+};
+
+
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 const handleReset = () => {
   searchText.value = '';
   fetchResources();
@@ -648,7 +800,11 @@ const handleAdd = async () => {
       pool_id: addForm.pool_id!,
       refresh_interval: addForm.refresh_interval,
       port: addForm.port,
+<<<<<<< HEAD
       tree_node_ids: addForm.tree_node_ids.map(String),
+=======
+      tree_node_ids: addForm.tree_node_ids,
+>>>>>>> eaaa7dd (完成监控模块部分改造)
       relabel_configs_yaml_string: addForm.relabel_configs_yaml_string,
       kube_config_file_path: addForm.kube_config_file_path,
       tls_ca_file_path: addForm.tls_ca_file_path,
@@ -715,7 +871,11 @@ const handleUpdate = async () => {
       pool_id: editForm.pool_id!,
       refresh_interval: editForm.refresh_interval,
       port: editForm.port,
+<<<<<<< HEAD
       tree_node_ids: editForm.tree_node_ids.map(String),
+=======
+      tree_node_ids: editForm.tree_node_ids,
+>>>>>>> eaaa7dd (完成监控模块部分改造)
       relabel_configs_yaml_string: editForm.relabel_configs_yaml_string,
       kube_config_file_path: editForm.kube_config_file_path,
       tls_ca_file_path: editForm.tls_ca_file_path,

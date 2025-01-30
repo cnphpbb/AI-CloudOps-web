@@ -82,6 +82,7 @@ const chatHistory = reactive<ChatHistoryItem[]>([
   }
 ]);
 
+
 const handleSearch = () => {
   const msg = globalInputMessage.value.trim();
   if (!msg) return;

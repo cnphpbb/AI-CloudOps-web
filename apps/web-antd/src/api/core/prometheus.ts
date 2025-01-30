@@ -177,9 +177,15 @@ export interface AlertRuleItem {
   deleted_at: number;
   name: string;
   user_id: number;
+<<<<<<< HEAD
   pool_id?: number | null;
   send_group_id?: number | null;
   tree_node_id?: number | null;
+=======
+  pool_id: number;
+  send_group_id: number;
+  tree_node_id: number;
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   enable: boolean;
   expr: string;
   severity: string;
@@ -268,8 +274,13 @@ export interface AlertRecordItem {
 
 export interface createAlertManagerRecordReq {
   name: string;
+<<<<<<< HEAD
   pool_id?: number | null;
   tree_node_id?: number | null;
+=======
+  pool_id: number;
+  tree_node_id: number;
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   enable: boolean;
   for_time: string;
   expr: string;
@@ -280,8 +291,13 @@ export interface createAlertManagerRecordReq {
 export interface updateAlertManagerRecordReq {
   id: number;
   name: string;
+<<<<<<< HEAD
   pool_id?: number | null;
   tree_node_id?: number | null;
+=======
+  pool_id: number;
+  tree_node_id: number;
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   enable: boolean;
   for_time: string;
   expr: string;
@@ -358,6 +374,7 @@ export interface OnDutyGroupItem {
   created_at: number;
   updated_at: number;
   deleted_at: number;
+<<<<<<< HEAD
   name: string;
   user_id: number;
   members: any[];
@@ -373,6 +390,8 @@ export interface OnDutyGroupChangeItem {
   created_at: number;
   updated_at: number;
   deleted_at: number;
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   on_duty_group_id: number;
   user_id: number;
   date: string;
@@ -384,6 +403,7 @@ export interface OnDutyGroupChangeItem {
   create_user_name: string;
 }
 
+<<<<<<< HEAD
 export interface OnDutyGroupHistoryItem {
   id: number;
   created_at: number;
@@ -405,6 +425,8 @@ export interface createOnDutyReq {
   user_names: string[];
 }
 
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 export interface createOnDutychangeReq {
   on_duty_group_id: number;
   date: string;
@@ -461,10 +483,13 @@ export const getMonitorScrapePoolTotalApi = () => {
 
 export const getMonitorScrapeJobListApi = (page: number, size: number, search: string) => {
   return requestClient.get<MonitorScrapeJobItem[]>(`/monitor/scrape_jobs/list?page=${page}&size=${size}&search=${search}`);
+<<<<<<< HEAD
 };
 
 export const getMonitorScrapeJobTotalApi = () => {
   return requestClient.get('/monitor/scrape_jobs/total');
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 };
 
 export const createScrapeJobApi = (data: createScrapeJobReq) => {
@@ -485,10 +510,13 @@ export const getScrapeJobTotalApi = () => {
 
 export const getAlertManagerPoolListApi = (page: number, size: number, search: string) => {
   return requestClient.get<MonitorAlertPoolItem[]>(`/monitor/alertManager_pools/list?page=${page}&size=${size}&search=${search}`);
+<<<<<<< HEAD
 };
 
 export const getAllAlertManagerPoolApi = () => {
   return requestClient.get('/monitor/alertManager_pools/all');
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 };
 
 export const createAlertManagerPoolApi = (data: createAlertManagerPoolReq) => {
@@ -509,10 +537,13 @@ export const getAlertManagerPoolTotalApi = () => {
 
 export const getAlertRulesListApi = (page: number, size: number, search: string) => {
   return requestClient.get<AlertRuleItem[]>(`/monitor/alert_rules/list?page=${page}&size=${size}&search=${search}`);
+<<<<<<< HEAD
 };
 
 export const getMonitorAlertRuleTotalApi = () => {
   return requestClient.get('/monitor/alert_rules/total');
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 };
 
 export const createAlertRuleApi = (data: createAlertRuleReq) => {
@@ -545,10 +576,13 @@ export const getAlertEventsTotalApi = () => {
 
 export const getRecordRulesListApi = (page: number, size: number, search: string) => {
   return requestClient.get<AlertRecordItem[]>(`/monitor/record_rules/list?page=${page}&size=${size}&search=${search}`);
+<<<<<<< HEAD
 };
 
 export const getRecordRulesTotalApi = () => {
   return requestClient.get('/monitor/record_rules/total');
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
 };
 
 export const createRecordRuleApi = (data: createAlertManagerRecordReq) => {
@@ -565,12 +599,60 @@ export const deleteRecordRuleApi = (id: number) => {
 
 export const getRecordRuleTotalApi = () => {
   return requestClient.get('/monitor/record_rules/total');
+<<<<<<< HEAD
+=======
 };
 
 export const getMonitorSendGroupListApi = (page: number, size: number, search: string) => {
   return requestClient.get<SendGroupItem[]>(`/monitor/send_groups/list?page=${page}&size=${size}&search=${search}`);
 };
 
+export const getAllMonitorSendGroupApi = () => {
+  return requestClient.get('/monitor/send_groups/all');
+};
+
+export const createMonitorSendGroupApi = (data: createSendGroupReq) => {
+  return requestClient.post('/monitor/send_groups/create', data);
+};
+
+export const updateMonitorSendGroupApi = (data: updateSendGroupReq) => {
+  return requestClient.post('/monitor/send_groups/update', data);
+};
+
+export const deleteMonitorSendGroupApi = (id: number) => {
+  return requestClient.delete(`/monitor/send_groups/${id}`);
+};
+
+export const getSendGroupTotalApi = () => {
+  return requestClient.get('/monitor/send_groups/total');
+};
+
+export const silenceAlertApi = (id: number) => {
+  return requestClient.get(`/monitor/alert_events/silence/${id}`);
+};
+
+export const claimAlertApi = (id: number) => {
+  return requestClient.get(`/monitor/alert_events/claim/${id}`);
+};
+
+export const cancelSilenceAlertApi = (id: number) => {
+  return requestClient.get(`/monitor/alert_events/cancel_silence/${id}`);
+};
+
+export const silenceBatchApi = (ids: number[]) => {
+  return requestClient.post('/monitor/alert_events/silence_batch', ids);
+};
+
+export const getOnDutyListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<OnDutyGroupItem[]>(`/monitor/onDuty_groups/list?page=${page}&size=${size}&search=${search}`);
+>>>>>>> eaaa7dd (完成监控模块部分改造)
+};
+
+export const getMonitorSendGroupListApi = (page: number, size: number, search: string) => {
+  return requestClient.get<SendGroupItem[]>(`/monitor/send_groups/list?page=${page}&size=${size}&search=${search}`);
+};
+
+<<<<<<< HEAD
 export const getAllMonitorSendGroupApi = () => {
   return requestClient.get('/monitor/send_groups/all');
 };
@@ -647,3 +729,29 @@ export const createOnDutyChangeApi = (data: createOnDutychangeReq) => {
   return requestClient.post('/monitor/onDuty_groups/changes', data);
 };
 
+=======
+export const createOnDutyApi = (data: createOnDutychangeReq) => {
+  return requestClient.post('/monitor/onDuty_groups/create', data);
+};
+
+export const updateOnDutyApi = (data: any) => {
+  return requestClient.post('/monitor/onDuty_groups/update', data);
+};
+
+export const deleteOnDutyApi = (id: number) => {
+  return requestClient.delete(`/monitor/onDuty_groups/${id}`);
+};
+
+export const getOnDutyFuturePlanApi = (data: getOnDutyFuturePlan) => {
+  return requestClient.post('/monitor/onDuty_groups/future_plan', data);
+};
+
+export const createOnDutyChangeApi = (data: createOnDutychangeReq) => {
+  return requestClient.post('/monitor/onDuty_groups/changes', data);
+};
+
+export const getOnDutyTotalApi = () => {
+  return requestClient.get('/monitor/onDuty_groups/total');
+};
+
+>>>>>>> eaaa7dd (完成监控模块部分改造)

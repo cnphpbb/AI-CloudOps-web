@@ -494,7 +494,10 @@ const removeLabel = (label: any) => {
 };
 
 const handleReset = () => {
+<<<<<<< HEAD
   searchText.value = '';
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   fetchAlertManagerPools();
 };
 
@@ -615,7 +618,10 @@ const handleDelete = (record: MonitorAlertPoolItem) => {
         await deleteAlertManagerPoolApi(record.id);
         message.success('实例池已删除');
         await fetchAlertManagerPools();
+<<<<<<< HEAD
 
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
       } catch (error: any) {
         message.error(error.message || '删除实例池失败');
       }
@@ -633,7 +639,10 @@ const fetchAlertManagerPools = async () => {
     );
     data.value = response;
     total.value = await getAlertManagerPoolTotalApi();
+<<<<<<< HEAD
 
+=======
+>>>>>>> eaaa7dd (完成监控模块部分改造)
   } catch (error: any) {
     message.error(error.message || '获取实例池数据失败');
   }
