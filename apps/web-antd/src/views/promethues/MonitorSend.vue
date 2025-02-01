@@ -2,42 +2,87 @@
   <div>
     <!-- 查询和操作 -->
     <div class="custom-toolbar">
+      <!-- 查询功能 -->
       <div class="search-filters">
-        <a-input
-          v-model:value="searchText"
-          placeholder="请输入发送组名称"
+        <!-- 搜索输入框 -->
+        <a-input 
+          v-model:value="searchText" 
+          placeholder="请输入发送组名称" 
           style="width: 200px"
+          allow-clear
+          @pressEnter="handleSearch"
         />
+        <a-button type="primary" @click="handleSearch">
+          <template #icon><SearchOutlined /></template>
+          搜索
+        </a-button>
+        <a-button @click="handleReset">
+          <template #icon><ReloadOutlined /></template>
+          重置
+        </a-button>
       </div>
+      <!-- 操作按钮 -->
       <div class="action-buttons">
-        <a-button type="primary" @click="showAddModal">新增发送组</a-button>
+        <a-button type="primary" @click="showAddModal">
+          <template #icon><PlusOutlined /></template>
+          新增发送组
+        </a-button>
       </div>
     </div>
 
-    <!-- 发送组列表表格 -->
-    <a-table :columns="columns" :data-source="filteredData" row-key="id">
-      <template #enable="{ record }">
-        {{ record.enable === 1 ? '启用' : '禁用' }}
-      </template>
-      <template #sendResolved="{ record }">
-        {{ record.sendResolved === 1 ? '是' : '否' }}
-      </template>
-      <template #upgradeUsers="{ record }">
-        {{ record.upgradeUsers.join(', ') }}
-      </template>
+    <!-- 数据加载状态 -->
+    <a-spin :spinning="loading">
+      <!-- 发送组列表表格 -->
+      <a-table 
+        :columns="columns" 
+        :data-source="data"
+        :pagination="false"
+        row-key="id"
+      >
+        <template #enable="{ record }">
+          {{ record.enable ? '启用' : '禁用' }}
+        </template>
+        <template #sendResolved="{ record }">
+          {{ record.send_resolved ? '是' : '否' }}
+        </template>
+        <template #upgradeUsers="{ record }">
+          {{ record.first_user_names.join(', ') }}
+        </template>
+        
+      <!-- 操作列 -->
       <template #action="{ record }">
         <a-space>
-          <a-button type="primary" ghost size="small" @click="showEditModal(record)">
-            <template #icon><EditOutlined /></template>
-            编辑
-          </a-button>
-          <a-button type="primary" danger ghost size="small" @click="handleDelete(record)">
-            <template #icon><DeleteOutlined /></template>
-            删除
-          </a-button>
+          <a-tooltip title="编辑资源信息">
+            <a-button type="link" @click="showEditModal(record)">
+              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
+          <a-tooltip title="删除资源">
+            <a-button type="link" danger @click="handleDelete(record)">
+              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
         </a-space>
       </template>
-    </a-table>
+      </a-table>
+
+      <!-- 分页器 -->
+      <a-pagination
+        v-model:current="current"
+        v-model:pageSize="pageSizeRef"
+        :page-size-options="pageSizeOptions"
+        :total="total"
+        show-size-changer
+        @change="handlePageChange"
+        @showSizeChange="handleSizeChange"
+        class="pagination"
+      >
+        <template #buildOptionText="props">
+          <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
+          <span v-else>全部</span>
+        </template>
+      </a-pagination>
+    </a-spin>
 
     <!-- 新增/编辑模态框 -->
     <a-modal
@@ -56,40 +101,45 @@
         </a-form-item>
         <a-form-item
           label="发送组中文名称"
-          name="nameZh"
+          name="name_zh"
           :rules="[{ required: true, message: '请输入发送组中文名称' }]"
         >
-          <a-input v-model:value="form.nameZh" />
+          <a-input v-model:value="form.name_zh" />
         </a-form-item>
         <a-form-item label="是否启用" name="enable">
-          <a-select v-model:value="form.enable">
-            <a-select-option :value="1">启用</a-select-option>
-            <a-select-option :value="2">禁用</a-select-option>
+          <a-switch v-model:checked="form.enable" :checked-children="'启用'" :un-checked-children="'禁用'" />
+        </a-form-item>
+        <a-form-item label="关联采集池" name="pool_id">
+          <a-select v-model:value="form.pool_id">
+            <a-select-option v-for="pool in scrapePools" :key="pool.id" :value="pool.id">
+              {{ pool.name }}
+            </a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="关联采集池ID" name="poolId">
-          <a-input-number v-model:value="form.poolId" :min="1" />
-        </a-form-item>
-        <a-form-item label="关联值班组ID" name="onDutyGroupId">
-          <a-input-number v-model:value="form.onDutyGroupId" :min="1" />
-        </a-form-item>
-        <a-form-item label="重复发送时间" name="repeatInterval">
-          <a-input v-model:value="form.repeatInterval" placeholder="默认30s" />
-        </a-form-item>
-        <a-form-item label="是否发送恢复消息" name="sendResolved">
-          <a-select v-model:value="form.sendResolved">
-            <a-select-option :value="1">发送</a-select-option>
-            <a-select-option :value="2">不发送</a-select-option>
+        <a-form-item label="关联值班组" name="on_duty_group_id">
+          <a-select v-model:value="form.on_duty_group_id">
+            <a-select-option v-for="group in onDutyGroups" :key="group.id" :value="group.id">
+              {{ group.name }}
+            </a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="需要升级" name="needUpgrade">
-          <a-select v-model:value="form.needUpgrade">
-            <a-select-option :value="1">需要</a-select-option>
-            <a-select-option :value="2">不需要</a-select-option>
+        <a-form-item label="重复发送时间" name="repeat_interval">
+          <a-input v-model:value="form.repeat_interval" placeholder="默认30s" />
+        </a-form-item>
+        <a-form-item label="是否发送恢复消息" name="send_resolved">
+          <a-select v-model:value="form.send_resolved">
+            <a-select-option :value="true">发送</a-select-option>
+            <a-select-option :value="false">不发送</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="飞书群机器人 Token" name="feiShuQunRobotToken">
-          <a-input v-model:value="form.feiShuQunRobotToken" />
+        <a-form-item label="需要升级" name="need_upgrade">
+          <a-select v-model:value="form.need_upgrade">
+            <a-select-option :value="true">需要</a-select-option>
+            <a-select-option :value="false">不需要</a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item label="飞书群机器人 Token" name="fei_shu_qun_robot_token">
+          <a-input v-model:value="form.fei_shu_qun_robot_token" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -97,15 +147,28 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, reactive, ref } from 'vue';
+import { reactive, ref, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
+import { SearchOutlined, ReloadOutlined, PlusOutlined} from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
 import {
-  getMonitorSendGroupApi,
+  getMonitorSendGroupListApi,
   createMonitorSendGroupApi,
   updateMonitorSendGroupApi,
   deleteMonitorSendGroupApi,
   getUserList,
-} from '#/api'; // 你的 API 方法
+  getMonitorSendGroupTotalApi,
+  getAllMonitorScrapePoolApi,
+  getAllOnDutyGroupApi,
+} from '#/api';
+import type { SendGroupItem, MonitorScrapePoolItem, OnDutyGroupItem } from '#/api';
+
+// 分页相关
+const current = ref(1);
+const pageSizeRef = ref(10);
+const total = ref(0);
+const pageSizeOptions = ['10', '20', '30', '50'];
+const loading = ref(false);
 
 const columns = [
   {
@@ -120,44 +183,44 @@ const columns = [
   },
   {
     title: '发送组中文名称',
-    dataIndex: 'nameZh',
-    key: 'nameZh',
+    dataIndex: 'name_zh',
+    key: 'name_zh',
   },
   {
     title: '关联采集池ID',
-    dataIndex: 'poolId',
-    key: 'poolId',
+    dataIndex: 'pool_id',
+    key: 'pool_id',
   },
   {
     title: '关联值班组ID',
-    dataIndex: 'onDutyGroupId',
-    key: 'onDutyGroupId',
+    dataIndex: 'on_duty_group_id',
+    key: 'on_duty_group_id',
   },
   {
     title: '是否启用',
     dataIndex: 'enable',
     key: 'enable',
-    customRender: ({ record }: { record: SendGroup }) =>
-      record.enable === 1 ? '启用' : '禁用',
+    customRender: ({ record }: { record: SendGroupItem }) =>
+      record.enable ? '启用' : '禁用',
   },
   {
     title: '重复发送时间',
-    dataIndex: 'repeatInterval',
-    key: 'repeatInterval',
+    dataIndex: 'repeat_interval',
+    key: 'repeat_interval',
   },
   {
     title: '是否发送恢复消息',
-    dataIndex: 'sendResolved',
-    key: 'sendResolved',
-    customRender: ({ record }: { record: SendGroup }) =>
-      record.sendResolved === 1 ? '是' : '否',
+    dataIndex: 'send_resolved',
+    key: 'send_resolved',
+    customRender: ({ record }: { record: SendGroupItem }) =>
+      record.send_resolved ? '是' : '否',
   },
   {
     title: '需要升级',
-    dataIndex: 'needUpgrade',
-    key: 'needUpgrade',
-    customRender: ({ record }: { record: SendGroup }) =>
-      record.needUpgrade === 1 ? '需要' : '不需要',
+    dataIndex: 'need_upgrade',
+    key: 'need_upgrade',
+    customRender: ({ record }: { record: SendGroupItem }) =>
+      record.need_upgrade ? '需要' : '不需要',
   },
   {
     title: '操作',
@@ -167,87 +230,70 @@ const columns = [
   },
 ];
 
-interface SendGroup {
-  id: number;
-  name: string;
-  nameZh: string;
-  enable: number;
-  poolId: number;
-  onDutyGroupId: number;
-  staticReceiveUsers: string[];
-  feiShuQunRobotToken: string;
-  repeatInterval: string;
-  sendResolved: number;
-  notifyMethods: string[];
-  needUpgrade: number;
-  firstUpgradeUsers: string[];
-  upgradeMinutes: number;
-  secondUpgradeUsers: string[];
-}
-
-const data = reactive<SendGroup[]>([]); // 后端数据
+const data = reactive<SendGroupItem[]>([]); 
 const searchText = ref('');
-const filteredData = computed(() => {
-  const searchValue = searchText.value.trim().toLowerCase();
-  return data.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchValue) ||
-      item.nameZh.toLowerCase().includes(searchValue),
-  );
-});
-
+const scrapePools = ref<MonitorScrapePoolItem[]>([]);
+const onDutyGroups = ref<OnDutyGroupItem[]>([]);
 const isModalVisible = ref(false);
 const form = reactive({
   id: 0,
   name: '',
-  nameZh: '',
-  enable: 0,
-  poolId: 0,
-  onDutyGroupId: 0,
-  staticReceiveUsers: null,
-  feiShuQunRobotToken: '',
-  repeatInterval: '',
-  sendResolved: 0,
-  notifyMethods: null,
-  needUpgrade: 0,
-  firstUpgradeUsers: null,
-  upgradeMinutes: 0,
-  secondUpgradeUsers: null,
+  name_zh: '',
+  enable: false,
+  pool_id: null,
+  on_duty_group_id: null,
+  static_receive_users: [] as any[],
+  fei_shu_qun_robot_token: '',
+  repeat_interval: '',
+  send_resolved: false,
+  notify_methods: [] as string[],
+  need_upgrade: false,
+  first_upgrade_users: [] as any[],
+  upgrade_minutes: 0,
+  second_upgrade_users: [] as any[],
 });
 
-const createForm = reactive({
-  name: '',
-  nameZh: '',
-  enable: 0,
-  poolId: 0,
-  onDutyGroupId: 0,
-  staticReceiveUsers: null,
-  feiShuQunRobotToken: '',
-  repeatInterval: '',
-  sendResolved: 0,
-  notifyMethods: null,
-  needUpgrade: 0,
-  firstUpgradeUsers: null,
-  upgradeMinutes: 0,
-  secondUpgradeUsers: null,
-});
-
-const userOptions = ref([]); // 用户下拉框选项
+const userOptions = ref([]);
 
 const rules = {
   name: [{ required: true, message: '请输入发送组名称' }],
-  nameZh: [{ required: true, message: '请输入发送组中文名称' }],
+  name_zh: [{ required: true, message: '请输入发送组中文名称' }],
+};
+
+// 搜索功能
+const handleSearch = () => {
+  current.value = 1;
+  fetchSendGroups();
+};
+
+const handleReset = () => {
+  searchText.value = '';
+  current.value = 1;
+  fetchSendGroups();
+};
+
+// 分页功能
+const handlePageChange = (page: number, pageSize: number) => {
+  current.value = page;
+  pageSizeRef.value = pageSize;
+  fetchSendGroups();
+};
+
+const handleSizeChange = (current: number, size: number) => {
+  pageSizeRef.value = size;
+  fetchSendGroups();
 };
 
 // 获取用户列表
 const fetchUsers = async () => {
   try {
-    const users = await getUserList(); // 调用获取用户的 API
+    const users = await getUserList();
     userOptions.value = users.map((user: { username: any; id: any }) => ({
       label: user.username,
       value: user.id,
     }));
-  } catch (error) {
+  } catch (error: any) {
+
     message.error(error.message || '获取用户列表失败');
     console.error(error);
   }
@@ -258,16 +304,16 @@ const showAddModal = () => {
   isModalVisible.value = true;
 };
 
-const showEditModal = (record: SendGroup) => {
+const showEditModal = (record: SendGroupItem) => {
   Object.assign(form, {
     ...record,
-    enable: record.enable || 1,
-    sendResolved: record.sendResolved || 1,
-    needUpgrade: record.needUpgrade || 1,
-    staticReceiveUsers: record.staticReceiveUsers || [],
-    notifyMethods: record.notifyMethods || [],
-    firstUpgradeUsers: record.firstUpgradeUsers || [],
-    secondUpgradeUsers: record.secondUpgradeUsers || [],
+    enable: record.enable,
+    send_resolved: record.send_resolved,
+    need_upgrade: record.need_upgrade,
+    static_receive_users: record.static_receive_users || [],
+    notify_methods: record.notify_methods || [],
+    first_upgrade_users: record.first_upgrade_users || [],
+    second_upgrade_users: record.second_upgrade_users || [],
   });
 
   isModalVisible.value = true;
@@ -277,15 +323,15 @@ const resetForm = () => {
   Object.assign(form, {
     id: 0,
     name: '',
-    nameZh: '',
-    enable: 1,
-    repeatInterval: '30s',
-    sendResolved: 1,
-    needUpgrade: 1,
-    staticReceiveUsers: [],
-    notifyMethods: [],
-    firstUpgradeUsers: [],
-    secondUpgradeUsers: [],
+    name_zh: '',
+    enable: false,
+    repeat_interval: '30s',
+    send_resolved: false,
+    need_upgrade: false,
+    static_receive_users: [],
+    notify_methods: [],
+    first_upgrade_users: [],
+    second_upgrade_users: [],
   });
   isModalVisible.value = false;
 };
@@ -293,47 +339,50 @@ const resetForm = () => {
 const handleSubmit = async () => {
   try {
     const submitData = {
-      id : form.id,
+      id: form.id,
       name: form.name,
-      nameZh: form.nameZh,
-      enable: parseInt(form.enable),
-      poolId: form.poolId,
-      sendResolved: parseInt(form.sendResolved),
-      onDutyGroupId: form.onDutyGroupId,
-      needUpgrade: parseInt(form.needUpgrade),
-      repeatInterval: form.repeatInterval,
-      feiShuQunRobotToken: form.feiShuQunRobotToken,
+      name_zh: form.name_zh,
+      enable: form.enable,
+      pool_id: form.pool_id,
+      send_resolved: form.send_resolved,
+      on_duty_group_id: form.on_duty_group_id,
+      need_upgrade: form.need_upgrade,
+      repeat_interval: form.repeat_interval,
+      fei_shu_qun_robot_token: form.fei_shu_qun_robot_token,
+      static_receive_users: form.static_receive_users,
+      notify_methods: form.notify_methods,
+      first_upgrade_users: form.first_upgrade_users,
+      upgrade_minutes: form.upgrade_minutes,
+      second_upgrade_users: form.second_upgrade_users,
     };
 
     if (form.id === 0) {
-      // 新增发送组
-      await createMonitorSendGroupApi(submitData);
+      await createMonitorSendGroupApi(submitData as any);
       message.success('新增发送组成功');
     } else {
-      // 编辑发送组，添加 id 字段
-      submitData.id = form.id;
-      await updateMonitorSendGroupApi(submitData);
+      await updateMonitorSendGroupApi(submitData as any);
       message.success('编辑发送组成功');
     }
 
     resetForm();
-    fetchSendGroups(); // 刷新发送组列表
+    fetchSendGroups();
+
   } catch (error: any) {
     message.error(error.message || '提交失败，请重试');
     console.error(error);
   }
 };
 
-const handleDelete = (record: SendGroup) => {
+const handleDelete = (record: SendGroupItem) => {
   Modal.confirm({
     title: '确认删除',
-    content: `您确定要删除发送组 "${record.nameZh}" 吗？`,
+    content: `您确定要删除发送组 "${record.name_zh}" 吗？`,
     onOk: async () => {
       try {
-        // 删除逻辑，假设有一个 deleteMonitorSendGroupApi 方法
         await deleteMonitorSendGroupApi(record.id);
         message.success('发送组已删除');
-        fetchSendGroups(); // 刷新发送组列表
+        fetchSendGroups();
+
       } catch (error: any) {
         message.error(error.message || '删除失败，请重试');
         console.error(error);
@@ -342,19 +391,55 @@ const handleDelete = (record: SendGroup) => {
   });
 };
 
-// 组件加载时获取用户列表和发送组
-fetchUsers();
+// 获取发送组列表
 const fetchSendGroups = async () => {
+  loading.value = true;
   try {
-    const response = await getMonitorSendGroupApi(); // 获取发送组数据
-    data.splice(0, data.length, ...response); // 清空 data 并重新赋值
+    const response = await getMonitorSendGroupListApi(
+      current.value,
+      pageSizeRef.value,
+      searchText.value,
+    );
+    data.splice(0, data.length, ...response);
+    const totalCount = await getMonitorSendGroupTotalApi();
+    total.value = totalCount;
   } catch (error: any) {
     message.error(error.message || '获取发送组数据失败');
+    console.error(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 获取采集池列表
+const fetchScrapePools = async () => {
+  try {
+    const response = await getAllMonitorScrapePoolApi();
+    scrapePools.value = response;
+  } catch (error: any) {
+    message.error(error.message || '获取采集池列表失败');
+
     console.error(error);
   }
 };
 
-fetchSendGroups(); // 初始加载发送组
+// 获取值班组列表 
+const fetchOnDutyGroups = async () => {
+  try {
+    const response = await getAllOnDutyGroupApi();
+    onDutyGroups.value = response;
+  } catch (error: any) {
+    message.error(error.message || '获取值班组列表失败');
+    console.error(error); 
+  }
+};
+
+onMounted(() => {
+  fetchUsers();
+  fetchSendGroups();
+  fetchScrapePools();
+  fetchOnDutyGroups();
+});
 </script>
 
 <style scoped>
@@ -377,4 +462,28 @@ fetchSendGroups(); // 初始加载发送组
   gap: 8px;
   align-items: center;
 }
+
+.pagination {
+  margin-top: 16px;
+  text-align: right;
+  margin-right: 12px;
+}
+
+.dynamic-delete-button {
+  cursor: pointer;
+  position: relative;
+  top: 4px;
+  font-size: 24px;
+  color: #999;
+  transition: all 0.3s;
+}
+.dynamic-delete-button:hover {
+  color: #777;
+}
+.dynamic-delete-button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 </style>
+

@@ -19,7 +19,7 @@
             <div class="day-number">{{ day.date }}</div>
             <div class="day-weekday">{{ day.weekday }}</div>
             <div class="day-user">
-              {{ day.userId ? `值班人ID: ${day.userId}` : '没有找到值班人' }}
+              {{ day.user_id ? `值班人: ${createUserName}` : '没有找到值班人' }}
             </div>
           </div>
 
@@ -29,15 +29,15 @@
             :key="day.date"
             @click="isCurrentMonth(day.date) ? openSwapModal(day) : null"
             :class="{
-              'has-user': day.userId,
-              'no-user': !day.userId,
+              'has-user': day.user_id,
+              'no-user': !day.user_id,
               disabled: !isCurrentMonth(day.date),
             }"
           >
             <div class="day-number">{{ day.date }}</div>
             <div class="day-weekday">{{ day.weekday }}</div>
             <div class="day-user">
-              {{ day.userId ? `值班人ID: ${day.userId}` : '没有找到值班人' }}
+              {{ day.user_id ? `值班人: ${createUserName}` : '没有找到值班人' }}
             </div>
           </div>
         </div>
@@ -52,7 +52,7 @@
         <a-form layout="vertical">
           <a-form-item label="值班人ID" required>
             <a-input-number
-              v-model:value="swapForm.onDutyUserId"
+              v-model:value="swapForm.on_duty_user_id"
               placeholder="请输入新值班人ID"
             />
           </a-form-item>
@@ -70,17 +70,21 @@ import { message } from 'ant-design-vue';
 import { getOnDutyApi, getOnDutyFuturePlanApi, createOnDutyChangeApi } from '#/api'; 
 
 const dutyGroupName = ref('');
+const createUserName = ref('');
 const totalOnDutyUsers = ref(0);
 const isSwapModalVisible = ref(false);
 const swapForm = reactive({
   date: '',
-  onDutyUserId: 0,
+  on_duty_group_id: 0,
+  origin_user_id: 0,
+  on_duty_user_id: 0,
 });
 
 interface Day {
   date: string;
   weekday: string;
-  userId: number | null;
+  user_id: number | null;
+  create_user_name: string;
 }
 const daysInMonth = ref<Day[]>([]);
 const previousMonthDays = ref<Day[]>([]);
@@ -115,6 +119,7 @@ const fetchDutyGroups = async () => {
     if (response) {
       dutyGroupName.value = response.name || '未知值班组';
       totalOnDutyUsers.value = response.members ? response.members.length : 0;
+      createUserName.value = response.create_user_name || '';
     } else {
       message.error('返回数据格式不正确');
     }
@@ -139,14 +144,14 @@ const fetchDutySchedule = async () => {
   try {
     const currentMonthResponse = await getOnDutyFuturePlanApi({
       id: id,
-      startTime: startTime.toISOString().split('T')[0] as string,
-      endTime: endTime.toISOString().split('T')[0] as string,
+      start_time: startTime.toISOString().split('T')[0] as string,
+      end_time: endTime.toISOString().split('T')[0] as string,
     });
 
     const previousMonthResponse = await getOnDutyFuturePlanApi({
       id: id,
-      startTime: previousMonthStartTime.toISOString().split('T')[0] as string,
-      endTime: previousMonthEndTime.toISOString().split('T')[0] as string,
+      start_time: previousMonthStartTime.toISOString().split('T')[0] as string,
+      end_time: previousMonthEndTime.toISOString().split('T')[0] as string,
     });
 
     const currentDutyDetails = currentMonthResponse.details || [];
@@ -161,7 +166,8 @@ const fetchDutySchedule = async () => {
       daysInMonth.value.push({
         date: dateStr,
         weekday: getWeekday(currentDate) as string,
-        userId: detail.user?.id || null,
+        user_id: detail.user?.id || null,
+        create_user_name: createUserName.value || '',
       });
     }
 
@@ -180,7 +186,8 @@ const fetchDutySchedule = async () => {
       previousMonthDays.value.unshift({
         date: dateStr,
         weekday: getWeekday(day) as string,
-        userId: detail.user?.id || null,
+        user_id: detail.user?.id || null,
+        create_user_name: createUserName.value || '',
       });
     }
   } catch (error: any) {
@@ -195,10 +202,10 @@ const openSwapModal = (day: { date: string }) => {
 
 const handleSwap = async () => {
   const payload = {
-    onDutyGroupId: parseInt(route.query.id as string),
+    on_duty_group_id: parseInt(route.query.id as string),
     date: swapForm.date,
-    originUserId: getOriginUserId(swapForm.date) as number, // 动态获取原值班人ID
-    onDutyUserId: swapForm.onDutyUserId,
+    origin_user_id: getOriginUserId(swapForm.date) as number, // 动态获取原值班人ID
+    on_duty_user_id: swapForm.on_duty_user_id,
   };
   
   try {
@@ -214,7 +221,7 @@ const handleSwap = async () => {
 // 获取指定日期的原值班人ID
 const getOriginUserId = (date: string) => {
   const day = daysInMonth.value.find(d => d.date === date);
-  return day ? day.userId : null;
+  return day ? day.user_id : null;
 };
 
 const closeSwapModal = () => {
