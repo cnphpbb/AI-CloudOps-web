@@ -356,10 +356,10 @@ const handleSubmit = async () => {
     };
 
     if (form.id === 0) {
-      await createMonitorSendGroupApi(submitData);
+      await createMonitorSendGroupApi(submitData as any);
       message.success('新增发送组成功');
     } else {
-      await updateMonitorSendGroupApi(submitData);
+      await updateMonitorSendGroupApi(submitData as any);
       message.success('编辑发送组成功');
     }
 
