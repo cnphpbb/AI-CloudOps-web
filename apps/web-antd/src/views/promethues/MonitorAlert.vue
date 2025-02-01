@@ -494,6 +494,7 @@ const removeLabel = (label: any) => {
 };
 
 const handleReset = () => {
+  searchText.value = '';
   fetchAlertManagerPools();
 };
 

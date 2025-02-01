@@ -103,28 +103,19 @@ import {
   silenceBatchApi,
   getAlertEventsTotalApi
 } from '#/api';
-
-interface MonitorAlertEventItem {
-  id: number;
-  alertName: string;
-  fingerprint: string;
-  status: string;
-  sendGroupId: string;
-  eventTimes: number;
-  renLingUserId: string;
-  labels: string[];
-  CreatedAt: string;
-  silenceId: string;
-}
+import type { MonitorAlertEventItem } from '#/api/core/prometheus';
 
 // 状态变量
 const data = ref<MonitorAlertEventItem[]>([]);
 const loading = ref<boolean>(false);
 const searchText = ref('');
+
+
+// 分页相关
+const pageSizeOptions = ref<string[]>(['10', '20', '30', '40', '50']);
 const current = ref(1);
 const pageSizeRef = ref(10);
 const total = ref(0);
-const pageSizeOptions = ['10', '20', '50'];
 
 // 表格列配置
 const columns: TableColumnsType = [
@@ -137,10 +128,10 @@ const columns: TableColumnsType = [
   },
   {
     title: '告警名称',
-    dataIndex: 'alertName',
-    key: 'alertName',
+    dataIndex: 'alert_name',
+    key: 'alert_name',
     width: 200,
-    sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => a.alertName.localeCompare(b.alertName),
+    sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => a.alert_name.localeCompare(b.alert_name),
   },
   {
     title: '告警状态',
@@ -158,27 +149,27 @@ const columns: TableColumnsType = [
   },
   {
     title: '关联发送组',
-    dataIndex: 'sendGroupId',
-    key: 'sendGroupId',
+    dataIndex: 'send_group_id',
+    key: 'send_group_id',
     width: 150,
   },
   {
     title: '触发次数',
-    dataIndex: 'eventTimes',
-    key: 'eventTimes',
+    dataIndex: 'event_times',
+    key: 'event_times',
     width: 100,
-    sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => a.eventTimes - b.eventTimes,
+    sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => a.event_times - b.event_times,
   },
   {
     title: '静默id',
-    dataIndex: 'silenceId',
-    key: 'silenceId',
+    dataIndex: 'silence_id',
+    key: 'silence_id',
     width: 120,
   },
   {
     title: '认领用户',
-    dataIndex: 'renLingUserId',
-    key: 'renLingUserId',
+    dataIndex: 'ren_ling_user_id',
+    key: 'ren_ling_user_id',
     width: 120,
   },
   {
@@ -188,12 +179,24 @@ const columns: TableColumnsType = [
     slots: { customRender: 'labels' },
   },
   {
+    title: '发送组',
+    dataIndex: 'send_group_name',
+    key: 'send_group_name',
+    width: 120,
+  },
+  {
+    title: '规则名称',
+    dataIndex: 'alert_rule_name',
+    key: 'alert_rule_name',
+    width: 120,
+  },
+  {
     title: '创建时间',
-    dataIndex: 'CreatedAt',
-    key: 'CreatedAt',
+    dataIndex: 'created_at',
+    key: 'created_at',
     width: 180,
     sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => 
-      new Date(a.CreatedAt).getTime() - new Date(b.CreatedAt).getTime(),
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   },
   {
     title: '操作',
@@ -211,6 +214,7 @@ const handleSearch = () => {
 };
 
 const handleReset = () => {
+  searchText.value = '';
   fetchResources();
 };
 
@@ -221,7 +225,7 @@ const handlePageChange = (page: number, pageSize: number) => {
   fetchResources();
 };
 
-const handleSizeChange = (current: number, size: number) => {
+const handleSizeChange = (_: number, size: number) => {
   pageSizeRef.value = size;
   fetchResources();
 };
@@ -278,17 +282,17 @@ const handleBatchSilence = () => {
 const handleSilence = async (record: MonitorAlertEventItem) => {
   Modal.confirm({
     title: '确认屏蔽',
-    content: `您确定要屏蔽告警 "${record.alertName}" 吗？`,
+    content: `您确定要屏蔽告警 "${record.alert_name}" 吗？`,
     okText: '确认',
     cancelText: '取消',
     onOk: async () => {
       try {
         loading.value = true;
         await silenceAlertApi(record.id);
-        message.success(`屏蔽告警 "${record.alertName}" 成功`);
+        message.success(`屏蔽告警 "${record.alert_name}" 成功`);
         fetchResources();
       } catch (error: any) {
-        message.error(error.message || `屏蔽告警 "${record.alertName}" 失败`);
+        message.error(error.message || `屏蔽告警 "${record.alert_name}" 失败`);
         console.error(error);
       } finally {
         loading.value = false;
@@ -301,17 +305,17 @@ const handleSilence = async (record: MonitorAlertEventItem) => {
 const handleClaim = async (record: MonitorAlertEventItem) => {
   Modal.confirm({
     title: '确认认领',
-    content: `您确定要认领告警 "${record.alertName}" 吗？`,
+    content: `您确定要认领告警 "${record.alert_name}" 吗？`,
     okText: '确认',
     cancelText: '取消',
     onOk: async () => {
       try {
         loading.value = true;
         await claimAlertApi(record.id);
-        message.success(`认领告警 "${record.alertName}" 成功`);
+        message.success(`认领告警 "${record.alert_name}" 成功`);
         fetchResources();
       } catch (error: any) {
-        message.error(error.message || `认领告警 "${record.alertName}" 失败`);
+        message.error(error.message || `认领告警 "${record.alert_name}" 失败`);
         console.error(error);
       } finally {
         loading.value = false;
@@ -324,17 +328,17 @@ const handleClaim = async (record: MonitorAlertEventItem) => {
 const handleCancelSilence = async (record: MonitorAlertEventItem) => {
   Modal.confirm({
     title: '确认取消屏蔽',
-    content: `您确定要取消屏蔽告警 "${record.alertName}" 吗？`,
+    content: `您确定要取消屏蔽告警 "${record.alert_name}" 吗？`,
     okText: '确认',
     cancelText: '取消',
     onOk: async () => {
       try {
         loading.value = true;
         await cancelSilenceAlertApi(record.id);
-        message.success(`取消屏蔽告警 "${record.alertName}" 成功`);
+        message.success(`取消屏蔽告警 "${record.alert_name}" 成功`);
         fetchResources();
       } catch (error: any) {
-        message.error(error.message || `取消屏蔽告警 "${record.alertName}" 失败`);
+        message.error(error.message || `取消屏蔽告警 "${record.alert_name}" 失败`);
         console.error(error);
       } finally {
         loading.value = false;

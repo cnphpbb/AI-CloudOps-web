@@ -315,6 +315,7 @@ import {
   validateExprApi,
   getAllMonitorScrapePoolApi,
   getAllMonitorSendGroupApi,
+  getMonitorAlertRuleTotalApi
 } from '#/api';
 import { Icon } from '@iconify/vue';
 import type { AlertRuleItem} from '#/api/core/prometheus';
@@ -576,7 +577,6 @@ const handleSearch = () => {
 
 // 重置处理
 const handleReset = () => {
-  current.value = 1;
   searchText.value = '';
   fetchAlertRules();
 };
@@ -764,6 +764,7 @@ const fetchAlertRules = async () => {
     loading.value = true;
     const response = await getAlertRulesListApi(current.value, pageSizeRef.value, searchText.value); 
     data.value = response;
+    total.value = await getMonitorAlertRuleTotalApi();
   } catch (error: any) {
     message.error(error.message || '获取AlertRules数据失败');
     console.error(error);

@@ -38,64 +38,66 @@
         :columns="columns"
         :pagination="false"
       >
+      </a-table>
+      <!-- 服务发现类型列 -->
+      <template #serviceDiscoveryType="{ record }">
+        <a-tag :color="record.service_discovery_type === 'k8s' ? 'blue' : 'green'">
+          {{ record.service_discovery_type === 'k8s' ? 'Kubernetes' : 'HTTP' }}
+        </a-tag>
+      </template>
+      <!-- 关联采集池列 -->
+      <template #poolName="{ record }">
+        <a-tag color="purple">{{ getPoolName(record.pool_id) }}</a-tag>
+      </template>
+      <!-- 创建者列 -->
+      <template #createUserName="{ record }">
+        <a-tag color="cyan">{{ record.create_user_name }}</a-tag>
+      </template>
+      <!-- 操作列 -->
+      <template #action="{ record }">
+        <a-space>
+          <a-tooltip title="编辑资源信息">
+            <a-button type="link" @click="openEditModal(record)">
+              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
+          <a-tooltip title="删除资源">
+            <a-button type="link" danger @click="handleDelete(record)">
+              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+            </a-button>
+          </a-tooltip>
+        </a-space>
+      </template>
+
         <!-- 分页器 -->
         <a-pagination
-          v-model:current="current"
-          v-model:pageSize="pageSizeRef"
-          :page-size-options="pageSizeOptions"
-          :total="total"
-          show-size-changer
-          @change="handlePageChange"
-          @showSizeChange="handleSizeChange"
-          class="pagination"
-        >
-          <template #buildOptionText="props">
-            <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
-            <span v-else>全部</span>
-          </template>
-        </a-pagination>
-        <!-- 服务发现类型列 -->
-        <template #serviceDiscoveryType="{ record }">
-          <a-tag :color="record.service_discovery_type === 'k8s' ? 'blue' : 'green'">
-            {{ record.service_discovery_type === 'k8s' ? 'Kubernetes' : 'HTTP' }}
-          </a-tag>
+        v-model:current="current"
+        v-model:pageSize="pageSizeRef"
+        :page-size-options="pageSizeOptions"
+        :total="total"
+        show-size-changer
+        @change="handlePageChange"
+        @showSizeChange="handleSizeChange"
+        class="pagination"
+      >
+        <template #buildOptionText="props">
+          <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
+          <span v-else>全部</span>
         </template>
-        <!-- 关联采集池列 -->
-        <template #poolName="{ record }">
-          <a-tag color="purple">{{ getPoolName(record.pool_id) }}</a-tag>
-        </template>
-        <!-- 创建者列 -->
-        <template #createUserName="{ record }">
-          <a-tag color="cyan">{{ record.create_user_name }}</a-tag>
-        </template>
-        <!-- 操作列 -->
-        <template #action="{ record }">
-          <a-space>
-            <a-tooltip title="编辑资源信息">
-              <a-button type="link" @click="openEditModal(record)">
-                <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="删除资源">
-              <a-button type="link" danger @click="handleDelete(record)">
-                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
-              </a-button>
-            </a-tooltip>
-          </a-space>
-        </template>
-        <!-- 树节点 ID 列 -->
-        <template #treeNodeIds="{ record }">
-          <a-tooltip :title="formatTreeNodeNames(record.tree_node_names)">
-            <span>{{ formatTreeNodeNames(record.tree_node_names) }}</span>
-          </a-tooltip>
-        </template>
-        <!-- 创建时间列 -->
-        <template #created_at="{ record }">
-          <a-tooltip :title="formatDate(record.created_at)">
-            {{ formatDate(record.created_at) }}
-          </a-tooltip>
-        </template>
-      </a-table>
+      </a-pagination>
+
+      <!-- 树节点 ID 列 -->
+      <template #treeNodeIds="{ record }">
+        <a-tooltip :title="formatTreeNodeNames(record.tree_node_names)">
+          <span>{{ formatTreeNodeNames(record.tree_node_names) }}</span>
+        </a-tooltip>
+      </template>
+      <!-- 创建时间列 -->
+      <template #created_at="{ record }">
+        <a-tooltip :title="formatDate(record.created_at)">
+          {{ formatDate(record.created_at) }}
+        </a-tooltip>
+      </template>
     </a-spin>
 
     <!-- 新增采集任务模态框 -->
@@ -344,7 +346,6 @@ import {
   SearchOutlined,
   ReloadOutlined,
   PlusOutlined,
-  MinusCircleOutlined
 } from '@ant-design/icons-vue';
 import {
   getMonitorScrapeJobListApi,
@@ -352,7 +353,8 @@ import {
   updateScrapeJobApi,
   deleteScrapeJobApi,
   getAllMonitorScrapePoolApi,
-  getAllTreeNodes
+  getAllTreeNodes,
+  getMonitorScrapeJobTotalApi
 } from '#/api';
 import type { MonitorScrapeJobItem, createScrapeJobReq, updateScrapeJobReq } from '#/api/core/prometheus';
 const { SHOW_PARENT } = TreeSelect;
@@ -365,19 +367,17 @@ const total = ref(0);
 
 // 搜索处理
 const handleSearch = () => {
-  // 实现搜索逻辑
   fetchResources();
 };
 
-// 分页处理
+const handleSizeChange = (_current: number, size: number) => {
+  pageSizeRef.value = size;
+  fetchResources();
+};
+
+// 处理分页变化
 const handlePageChange = (page: number) => {
   current.value = page;
-  fetchResources();
-};
-
-const handleSizeChange = (page: number, size: number) => {
-  current.value = page;
-  pageSizeRef.value = size;
   fetchResources();
 };
 
@@ -591,6 +591,7 @@ const fetchPools = async () => {
 // 获取采集任务数据
 const loading = ref(false);
 const fetchResources = async () => {
+  if (current.value < 1) current.value = 1;
   loading.value = true;
   try {
     const response = await getMonitorScrapeJobListApi(current.value, pageSizeRef.value, searchText.value);
@@ -600,6 +601,7 @@ const fetchResources = async () => {
       tree_node_ids: Array.isArray(item.tree_node_ids) ? item.tree_node_ids.map(String) : [],
       tree_node_names: Array.isArray(item.tree_node_names) ? item.tree_node_names : []
     }));
+    total.value = await getMonitorScrapeJobTotalApi();
   } catch (error: any) {
     message.error(error.message || '获取采集任务数据失败');
   } finally {
@@ -806,4 +808,28 @@ const handleDelete = (record: MonitorScrapeJobItem) => {
   gap: 8px;
   align-items: center;
 }
+
+.pagination {
+  margin-top: 16px;
+  text-align: right;
+  margin-right: 12px;
+}
+
+.dynamic-delete-button {
+  cursor: pointer;
+  position: relative;
+  top: 4px;
+  font-size: 24px;
+  color: #999;
+  transition: all 0.3s;
+}
+.dynamic-delete-button:hover {
+  color: #777;
+}
+.dynamic-delete-button[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 </style>
+

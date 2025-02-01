@@ -39,7 +39,7 @@
       </template>
       <!-- IP标签列 -->
       <template #external_labels="{ record }">
-        <template v-if="record.external_labels && record.external_labels.length && record.external_labels[0] !== ''">
+        <template v-if="record.external_labels && record.external_labels.filter((label: string) => label.trim() !== '').length > 0">
           <a-tag v-for="label in record.external_labels" :key="label">
             {{ label.split(',')[0] }}: {{ label.split(',')[1] }}
           </a-tag>
@@ -359,18 +359,19 @@ const data = ref<MonitorScrapePoolItem[]>([]);
 const searchText = ref('');
 
 const handleReset = () => {
-  fetchResources();
-};
-
-const handleSizeChange = (page: number, size: number) => {
-  current.value = page;
-  pageSizeRef.value = size;
+  searchText.value = '';
   fetchResources();
 };
 
 // 处理搜索
 const handleSearch = () => {
   current.value = 1;
+  fetchResources();
+};
+
+const handleSizeChange = (page: number, size: number) => {
+  current.value = page;
+  pageSizeRef.value = size;
   fetchResources();
 };
 
@@ -606,17 +607,18 @@ const handleEdit = (record: MonitorScrapePoolItem) => {
   editForm.alert_manager_url = record.alert_manager_url;
   editForm.rule_file_path = record.rule_file_path;
   editForm.record_file_path = record.record_file_path;
-  
-  // 转换动态表单项数据
-  editForm.external_labels = record.external_labels ? 
-    record.external_labels.map((value: string) => {
-      const [labelKey, labelValue] = value.split(',');
-      return {
-        labelKey: labelKey || '', 
-        labelValue: labelValue || '',
-        key: Date.now()
-      };
-    }) : [];
+  editForm.external_labels = record.external_labels 
+    ? record.external_labels
+        .filter((value: string) => value.trim() !== '') // 过滤空字符串
+        .map((value: string) => {
+          const parts = value.split(',');
+          return {
+            labelKey: parts[0] || '',
+            labelValue: parts[1] || '',
+            key: Date.now()
+          };
+        })
+    : [];
   editForm.prometheus_instances = record.prometheus_instances ? 
     record.prometheus_instances.map(value => ({ value, key: Date.now() })) : [];
   editForm.alert_manager_instances = record.alert_manager_instances ?
@@ -646,7 +648,9 @@ const handleAdd = async () => {
       ...addForm,
       prometheus_instances: addForm.prometheus_instances.map(item => item.value),
       alert_manager_instances: addForm.alert_manager_instances.map(item => item.value),
-      external_labels: addForm.external_labels.map(item => `${item.labelKey},${item.labelValue}`),
+      external_labels: addForm.external_labels
+        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '') // 过滤空键值
+        .map(item => `${item.labelKey},${item.labelValue}`),
     };
     
     await createMonitorScrapePoolApi(formData);
@@ -687,7 +691,9 @@ const handleUpdate = async () => {
       ...editForm,
       prometheus_instances: editForm.prometheus_instances.map(item => item.value),
       alert_manager_instances: editForm.alert_manager_instances.map(item => item.value),
-      external_labels: editForm.external_labels.map(item => `${item.labelKey},${item.labelValue}`),
+      external_labels: editForm.external_labels
+        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '') // 过滤空键值
+        .map(item => `${item.labelKey},${item.labelValue}`),
     };
     
     await updateMonitorScrapePoolApi(formData);

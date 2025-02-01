@@ -268,8 +268,8 @@ export interface AlertRecordItem {
 
 export interface createAlertManagerRecordReq {
   name: string;
-  pool_id: number;
-  tree_node_id: number;
+  pool_id?: number | null;
+  tree_node_id?: number | null;
   enable: boolean;
   for_time: string;
   expr: string;
@@ -280,8 +280,8 @@ export interface createAlertManagerRecordReq {
 export interface updateAlertManagerRecordReq {
   id: number;
   name: string;
-  pool_id: number;
-  tree_node_id: number;
+  pool_id?: number | null;
+  tree_node_id?: number | null;
   enable: boolean;
   for_time: string;
   expr: string;
@@ -358,6 +358,21 @@ export interface OnDutyGroupItem {
   created_at: number;
   updated_at: number;
   deleted_at: number;
+  name: string;
+  user_id: number;
+  members: any[];
+  shift_days: number;
+  yesterday_normal_duty_user_id: number;
+  today_duty_user: any;
+  user_names: string[];
+  create_user_name: string;
+}
+
+export interface OnDutyGroupChangeItem {
+  id: number;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
   on_duty_group_id: number;
   user_id: number;
   date: string;
@@ -367,6 +382,27 @@ export interface OnDutyGroupItem {
   origin_user_name: string;
   pool_name: string;
   create_user_name: string;
+}
+
+export interface OnDutyGroupHistoryItem {
+  id: number;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
+  on_duty_group_id: number;
+  date_string: string;
+  on_duty_user_id: number;
+  origin_user_id: number;
+  on_duty_user_name: string;
+  origin_user_name: string;
+  pool_name: string;
+  create_user_name: string;
+}
+
+export interface createOnDutyReq {
+  name: string;
+  shift_days: number;
+  user_names: string[];
 }
 
 export interface createOnDutychangeReq {
@@ -427,6 +463,10 @@ export const getMonitorScrapeJobListApi = (page: number, size: number, search: s
   return requestClient.get<MonitorScrapeJobItem[]>(`/monitor/scrape_jobs/list?page=${page}&size=${size}&search=${search}`);
 };
 
+export const getMonitorScrapeJobTotalApi = () => {
+  return requestClient.get('/monitor/scrape_jobs/total');
+};
+
 export const createScrapeJobApi = (data: createScrapeJobReq) => {
   return requestClient.post('/monitor/scrape_jobs/create', data);
 };
@@ -467,6 +507,10 @@ export const getAlertRulesListApi = (page: number, size: number, search: string)
   return requestClient.get<AlertRuleItem[]>(`/monitor/alert_rules/list?page=${page}&size=${size}&search=${search}`);
 };
 
+export const getMonitorAlertRuleTotalApi = () => {
+  return requestClient.get('/monitor/alert_rules/total');
+};
+
 export const createAlertRuleApi = (data: createAlertRuleReq) => {
   return requestClient.post('/monitor/alert_rules/create', data);
 };
@@ -499,6 +543,10 @@ export const getRecordRulesListApi = (page: number, size: number, search: string
   return requestClient.get<AlertRecordItem[]>(`/monitor/record_rules/list?page=${page}&size=${size}&search=${search}`);
 };
 
+export const getRecordRulesTotalApi = () => {
+  return requestClient.get('/monitor/record_rules/total');
+};
+
 export const createRecordRuleApi = (data: createAlertManagerRecordReq) => {
   return requestClient.post('/monitor/record_rules/create', data);
 };
@@ -521,6 +569,10 @@ export const getMonitorSendGroupListApi = (page: number, size: number, search: s
 
 export const getAllMonitorSendGroupApi = () => {
   return requestClient.get('/monitor/send_groups/all');
+};
+
+export const getMonitorSendGroupTotalApi = () => {
+  return requestClient.get('/monitor/send_groups/total');
 };
 
 export const createMonitorSendGroupApi = (data: createSendGroupReq) => {
@@ -559,11 +611,19 @@ export const getOnDutyListApi = (page: number, size: number, search: string) => 
   return requestClient.get<OnDutyGroupItem[]>(`/monitor/onDuty_groups/list?page=${page}&size=${size}&search=${search}`);
 };
 
+export const getAllOnDutyGroupApi = () => {
+  return requestClient.get('/monitor/onDuty_groups/all');
+};
+
+export const getOnDutyTotalApi = () => {
+  return requestClient.get('/monitor/onDuty_groups/total');
+};
+
 export const getOnDutyApi = (id: number) => {
   return requestClient.get(`/monitor/onDuty_groups/${id}`);
 };
 
-export const createOnDutyApi = (data: createOnDutychangeReq) => {
+export const createOnDutyApi = (data: createOnDutyReq) => {
   return requestClient.post('/monitor/onDuty_groups/create', data);
 };
 
@@ -576,14 +636,10 @@ export const deleteOnDutyApi = (id: number) => {
 };
 
 export const getOnDutyFuturePlanApi = (data: getOnDutyFuturePlan) => {
-  return requestClient.post('/monitor/onDuty_groups/future_plan', data);
+  return requestClient.get(`/monitor/onDuty_groups/future_plan?id=${data.id}&start_time=${data.start_time}&end_time=${data.end_time}`);
 };
 
 export const createOnDutyChangeApi = (data: createOnDutychangeReq) => {
   return requestClient.post('/monitor/onDuty_groups/changes', data);
-};
-
-export const getOnDutyTotalApi = () => {
-  return requestClient.get('/monitor/onDuty_groups/total');
 };
 
