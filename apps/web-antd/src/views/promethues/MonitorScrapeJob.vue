@@ -602,6 +602,7 @@ const fetchResources = async () => {
       tree_node_names: Array.isArray(item.tree_node_names) ? item.tree_node_names : []
     }));
     total.value = await getMonitorScrapeJobTotalApi();
+
   } catch (error: any) {
     message.error(error.message || '获取采集任务数据失败');
   } finally {

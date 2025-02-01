@@ -749,6 +749,7 @@ const handleDelete = (record: AlertRuleItem) => {
         message.success('AlertRule已删除');
         fetchAlertRules();
       } catch (error: any) {
+
         message.error(error.message || '删除AlertRule失败');
         console.error(error);
       } finally {
@@ -765,6 +766,7 @@ const fetchAlertRules = async () => {
     const response = await getAlertRulesListApi(current.value, pageSizeRef.value, searchText.value); 
     data.value = response;
     total.value = await getMonitorAlertRuleTotalApi();
+
   } catch (error: any) {
     message.error(error.message || '获取AlertRules数据失败');
     console.error(error);

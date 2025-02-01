@@ -673,6 +673,7 @@ const handleDelete = (record: MonitorScrapePoolItem) => {
         await deleteMonitorScrapePoolApi(record.id);
         message.success('删除采集池成功');
         fetchResources();
+
       } catch (error: any) {
         message.error(error.message || '删除采集池失败');
         console.error(error);
@@ -712,6 +713,7 @@ const fetchResources = async () => {
     data.value = response;
     total.value = await getMonitorScrapePoolTotalApi();
   } catch (error: any) {
+
     message.error(error.message || '获取采集池数据失败');
     console.error(error);
   }

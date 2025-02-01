@@ -241,6 +241,7 @@ const fetchResources = async () => {
     );
     data.value = response as unknown as MonitorAlertEventItem[];
     total.value = await getAlertEventsTotalApi();
+
   } catch (error: any) {
     message.error(error.message || '获取告警事件数据失败，请稍后重试');
     console.error(error);
@@ -268,6 +269,7 @@ const handleBatchSilence = () => {
         await silenceBatchApi(alertIds);
         message.success('批量屏蔽告警成功');
         fetchResources();
+
       } catch (error: any) {
         message.error(error.message || '批量屏蔽告警失败');
         console.error(error);
@@ -293,6 +295,7 @@ const handleSilence = async (record: MonitorAlertEventItem) => {
         fetchResources();
       } catch (error: any) {
         message.error(error.message || `屏蔽告警 "${record.alert_name}" 失败`);
+
         console.error(error);
       } finally {
         loading.value = false;
@@ -316,6 +319,7 @@ const handleClaim = async (record: MonitorAlertEventItem) => {
         fetchResources();
       } catch (error: any) {
         message.error(error.message || `认领告警 "${record.alert_name}" 失败`);
+
         console.error(error);
       } finally {
         loading.value = false;
@@ -339,6 +343,7 @@ const handleCancelSilence = async (record: MonitorAlertEventItem) => {
         fetchResources();
       } catch (error: any) {
         message.error(error.message || `取消屏蔽告警 "${record.alert_name}" 失败`);
+
         console.error(error);
       } finally {
         loading.value = false;

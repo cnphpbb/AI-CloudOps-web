@@ -432,6 +432,7 @@ const handleDelete = (record: OnDutyGroupItem) => {
         await deleteOnDutyApi(record.id);
         message.success('删除值班组成功');
         await fetchOnDutyGroups();
+
       } catch (error: any) {
         console.error('删除值班组失败:', error);
         message.error(error.message || '删除值班组失败');
@@ -468,6 +469,7 @@ const fetchOnDutyGroups = async () => {
     const response = await getOnDutyListApi(current.value, pageSizeRef.value, searchText.value.trim());
     data.value = response;
     total.value = await getOnDutyTotalApi();
+
   } catch (error: any) {
     console.error('获取值班组列表失败:', error);
     message.error(error.message || '获取值班组列表失败');

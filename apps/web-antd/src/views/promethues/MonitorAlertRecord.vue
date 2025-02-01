@@ -474,6 +474,7 @@ const handleAdd = async () => {
   } catch (error: any) {
     loading.value = false;
     message.error(error.message || '新增记录失败，请稍后重试');
+
     console.error(error);
   }
 };
@@ -536,6 +537,7 @@ const fetchRecordRules = async () => {
     data.value = response;
     total.value = await getRecordRulesTotalApi();
   } catch (error: any) {
+
     message.error(error.message || '获取记录规则数据失败，请稍后重试');
     console.error(error);
   }

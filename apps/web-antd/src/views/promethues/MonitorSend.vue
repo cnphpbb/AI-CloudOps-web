@@ -293,6 +293,7 @@ const fetchUsers = async () => {
       value: user.id,
     }));
   } catch (error: any) {
+
     message.error(error.message || '获取用户列表失败');
     console.error(error);
   }
@@ -365,6 +366,7 @@ const handleSubmit = async () => {
 
     resetForm();
     fetchSendGroups();
+
   } catch (error: any) {
     message.error(error.message || '提交失败，请重试');
     console.error(error);
@@ -380,6 +382,7 @@ const handleDelete = (record: SendGroupItem) => {
         await deleteMonitorSendGroupApi(record.id);
         message.success('发送组已删除');
         fetchSendGroups();
+
       } catch (error: any) {
         message.error(error.message || '删除失败，请重试');
         console.error(error);
@@ -415,6 +418,7 @@ const fetchScrapePools = async () => {
     scrapePools.value = response;
   } catch (error: any) {
     message.error(error.message || '获取采集池列表失败');
+
     console.error(error);
   }
 };
