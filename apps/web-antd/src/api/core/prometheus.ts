@@ -177,9 +177,9 @@ export interface AlertRuleItem {
   deleted_at: number;
   name: string;
   user_id: number;
-  pool_id: number;
-  send_group_id: number;
-  tree_node_id: number;
+  pool_id?: number | null;
+  send_group_id?: number | null;
+  tree_node_id?: number | null;
   enable: boolean;
   expr: string;
   severity: string;
@@ -485,6 +485,10 @@ export const getScrapeJobTotalApi = () => {
 
 export const getAlertManagerPoolListApi = (page: number, size: number, search: string) => {
   return requestClient.get<MonitorAlertPoolItem[]>(`/monitor/alertManager_pools/list?page=${page}&size=${size}&search=${search}`);
+};
+
+export const getAllAlertManagerPoolApi = () => {
+  return requestClient.get('/monitor/alertManager_pools/all');
 };
 
 export const createAlertManagerPoolApi = (data: createAlertManagerPoolReq) => {
