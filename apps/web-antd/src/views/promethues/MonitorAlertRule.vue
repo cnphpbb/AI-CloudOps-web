@@ -592,8 +592,17 @@ const addForm = reactive({
   severity: '',
   grafana_link: '',
   for_time: '',
-  labels: [{labelKey: '', labelValue: '', key: Date.now()}],
-  annotations: [{labelKey: '', labelValue: '', key: Date.now()}],
+  labels: [
+    {labelKey: 'severity', labelValue: '', key: Date.now()},
+    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
+    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2},
+    {labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3}
+  ],
+  annotations: [
+    {labelKey: 'severity', labelValue: '', key: Date.now()},
+    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
+    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2}
+  ],
 });
 
 // 编辑表单
@@ -618,7 +627,6 @@ const showAddModal = () => {
   isAddModalVisible.value = true;
 };
 
-// 重置新增表单
 const resetAddForm = () => {
   addForm.name = '';
   addForm.pool_id = null;
@@ -629,8 +637,17 @@ const resetAddForm = () => {
   addForm.severity = '';
   addForm.grafana_link = '';
   addForm.for_time = '';
-  addForm.labels = [{labelKey: '', labelValue: '', key: Date.now()}];
-  addForm.annotations = [{labelKey: '', labelValue: '', key: Date.now()}];
+  addForm.labels = [
+    {labelKey: 'severity', labelValue: '', key: Date.now()},
+    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
+    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2},
+    {labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3}
+  ];
+  addForm.annotations = [
+    {labelKey: 'severity', labelValue: '', key: Date.now()},
+    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
+    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2}
+  ];
 };
 
 // 关闭新增模态框
