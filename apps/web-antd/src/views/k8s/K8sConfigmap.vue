@@ -147,7 +147,7 @@ const filteredConfigMaps = computed(() => {
 
 // 表格选择配置
 const rowSelection = {
-  onChange: (selectedRowKeys: string[], selectedRowsData: ConfigMap[]) => {
+  onChange: (_: string[], selectedRowsData: ConfigMap[]) => {
     selectedRows.value = selectedRowsData;
   },
 };
