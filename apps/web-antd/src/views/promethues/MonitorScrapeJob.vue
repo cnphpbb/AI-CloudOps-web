@@ -38,39 +38,51 @@
         :columns="columns"
         :pagination="false"
       >
+        <!-- 服务发现类型列 -->
+        <template #serviceDiscoveryType="{ record }">
+          <a-tag :color="record.service_discovery_type === 'k8s' ? 'blue' : 'green'">
+            {{ record.service_discovery_type === 'k8s' ? 'Kubernetes' : 'HTTP' }}
+          </a-tag>
+        </template>
+        <!-- 关联采集池列 -->
+        <template #poolName="{ record }">
+          <a-tag color="purple">{{ getPoolName(record.pool_id) }}</a-tag>
+        </template>
+        <!-- 创建者列 -->
+        <template #createUserName="{ record }">
+          <a-tag color="cyan">{{ record.create_user_name }}</a-tag>
+        </template>
+        <!-- 操作列 -->
+        <template #action="{ record }">
+          <a-space>
+            <a-tooltip title="编辑资源信息">
+              <a-button type="link" @click="openEditModal(record)">
+                <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+              </a-button>
+            </a-tooltip>
+            <a-tooltip title="删除资源">
+              <a-button type="link" danger @click="handleDelete(record)">
+                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+              </a-button>
+            </a-tooltip>
+          </a-space>
+        </template>
+        <!-- 树节点列 -->
+        <template #treeNodeNames="{ record }">
+          <a-tooltip :title="formatTreeNodeNames(record.tree_node_names)">
+            <span>{{ formatTreeNodeNames(record.tree_node_names) }}</span>
+          </a-tooltip>
+        </template>
+        <!-- 创建时间列 -->
+        <template #created_at="{ record }">
+          <a-tooltip :title="formatDate(record.created_at)">
+            {{ formatDate(record.created_at) }}
+          </a-tooltip>
+        </template>
       </a-table>
-      <!-- 服务发现类型列 -->
-      <template #serviceDiscoveryType="{ record }">
-        <a-tag :color="record.service_discovery_type === 'k8s' ? 'blue' : 'green'">
-          {{ record.service_discovery_type === 'k8s' ? 'Kubernetes' : 'HTTP' }}
-        </a-tag>
-      </template>
-      <!-- 关联采集池列 -->
-      <template #poolName="{ record }">
-        <a-tag color="purple">{{ getPoolName(record.pool_id) }}</a-tag>
-      </template>
-      <!-- 创建者列 -->
-      <template #createUserName="{ record }">
-        <a-tag color="cyan">{{ record.create_user_name }}</a-tag>
-      </template>
-      <!-- 操作列 -->
-      <template #action="{ record }">
-        <a-space>
-          <a-tooltip title="编辑资源信息">
-            <a-button type="link" @click="openEditModal(record)">
-              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
-            </a-button>
-          </a-tooltip>
-          <a-tooltip title="删除资源">
-            <a-button type="link" danger @click="handleDelete(record)">
-              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
-            </a-button>
-          </a-tooltip>
-        </a-space>
-      </template>
 
-        <!-- 分页器 -->
-        <a-pagination
+      <!-- 分页器 -->
+      <a-pagination
         v-model:current="current"
         v-model:pageSize="pageSizeRef"
         :page-size-options="pageSizeOptions"
@@ -85,19 +97,6 @@
           <span v-else>全部</span>
         </template>
       </a-pagination>
-
-      <!-- 树节点 ID 列 -->
-      <template #treeNodeIds="{ record }">
-        <a-tooltip :title="formatTreeNodeNames(record.tree_node_names)">
-          <span>{{ formatTreeNodeNames(record.tree_node_names) }}</span>
-        </a-tooltip>
-      </template>
-      <!-- 创建时间列 -->
-      <template #created_at="{ record }">
-        <a-tooltip :title="formatDate(record.created_at)">
-          {{ formatDate(record.created_at) }}
-        </a-tooltip>
-      </template>
     </a-spin>
 
     <!-- 新增采集任务模态框 -->
@@ -380,7 +379,6 @@ const handlePageChange = (page: number) => {
   current.value = page;
   fetchResources();
 };
-
 
 const handleReset = () => {
   searchText.value = '';

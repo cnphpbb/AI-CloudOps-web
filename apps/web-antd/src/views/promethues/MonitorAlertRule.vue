@@ -313,7 +313,7 @@ import {
   deleteAlertRuleApi,
   getAllTreeNodes,
   validateExprApi,
-  getAllMonitorScrapePoolApi,
+  getAllAlertManagerPoolApi,
   getAllMonitorSendGroupApi,
   getMonitorAlertRuleTotalApi
 } from '#/api';
@@ -381,19 +381,19 @@ const columns = [
     title: '所属实例池ID',
     dataIndex: 'pool_id',
     key: 'pool_id',
-    sorter: (a: AlertRuleItem, b: AlertRuleItem) => a.pool_id - b.pool_id,
+    sorter: (a: AlertRuleItem, b: AlertRuleItem) => (a.pool_id || 0) - (b.pool_id || 0),
   },
   {
     title: '绑定发送组ID',
     dataIndex: 'send_group_id',
     key: 'send_group_id',
-    sorter: (a: AlertRuleItem, b: AlertRuleItem) => a.send_group_id - b.send_group_id,
+    sorter: (a: AlertRuleItem, b: AlertRuleItem) => (a.send_group_id || 0) - (b.send_group_id || 0),
   },
   {
     title: '绑定树节点ID',
     dataIndex: 'tree_node_id',
     key: 'tree_node_id',
-    sorter: (a: AlertRuleItem, b: AlertRuleItem) => a.tree_node_id - b.tree_node_id,
+    sorter: (a: AlertRuleItem, b: AlertRuleItem) => (a.tree_node_id || 0) - (b.tree_node_id || 0),
   },
   {
     title: '严重性',
@@ -550,7 +550,7 @@ const fetchTreeNodes = async () => {
 // 获取实例池数据
 const fetchScrapePools = async () => {
   try {
-    const response = await getAllMonitorScrapePoolApi();
+    const response = await getAllAlertManagerPoolApi();
     scrapePools.value = response;
   } catch (error: any) {
     message.error(error.message || '获取实例池数据失败');
@@ -592,8 +592,17 @@ const addForm = reactive({
   severity: '',
   grafana_link: '',
   for_time: '',
-  labels: [{labelKey: '', labelValue: '', key: Date.now()}],
-  annotations: [{labelKey: '', labelValue: '', key: Date.now()}],
+  labels: [
+    {labelKey: 'severity', labelValue: '', key: Date.now()},
+    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
+    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2},
+    {labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3}
+  ],
+  annotations: [
+    {labelKey: 'severity', labelValue: '', key: Date.now()},
+    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
+    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2}
+  ],
 });
 
 // 编辑表单
@@ -618,7 +627,6 @@ const showAddModal = () => {
   isAddModalVisible.value = true;
 };
 
-// 重置新增表单
 const resetAddForm = () => {
   addForm.name = '';
   addForm.pool_id = null;
@@ -629,8 +637,17 @@ const resetAddForm = () => {
   addForm.severity = '';
   addForm.grafana_link = '';
   addForm.for_time = '';
-  addForm.labels = [{labelKey: '', labelValue: '', key: Date.now()}];
-  addForm.annotations = [{labelKey: '', labelValue: '', key: Date.now()}];
+  addForm.labels = [
+    {labelKey: 'severity', labelValue: '', key: Date.now()},
+    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
+    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2},
+    {labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3}
+  ];
+  addForm.annotations = [
+    {labelKey: 'severity', labelValue: '', key: Date.now()},
+    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
+    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2}
+  ];
 };
 
 // 关闭新增模态框
@@ -643,9 +660,9 @@ const showEditModal = (record: AlertRuleItem) => {
   Object.assign(editForm, {
     id: record.id,
     name: record.name,
-    pool_id: record.pool_id,
-    send_group_id: record.send_group_id,
-    tree_node_id: record.tree_node_id,
+    pool_id: record.pool_id || null,
+    send_group_id: record.send_group_id || null,
+    tree_node_id: record.tree_node_id || null,
     enable: record.enable,
     expr: record.expr,
     severity: record.severity,
