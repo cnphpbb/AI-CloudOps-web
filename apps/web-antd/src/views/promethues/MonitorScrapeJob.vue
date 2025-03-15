@@ -380,7 +380,6 @@ const handlePageChange = (page: number) => {
   fetchResources();
 };
 
-
 const handleReset = () => {
   searchText.value = '';
   fetchResources();
