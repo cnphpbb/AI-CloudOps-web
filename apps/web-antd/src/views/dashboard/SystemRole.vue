@@ -9,6 +9,7 @@
           v-model:value="searchText" 
           placeholder="请输入角色名称"
           style="width: 200px; margin-right: 16px;"
+          @pressEnter="handleSearch"
         />
         <!-- 搜索按钮 -->
         <a-button type="primary" @click="handleSearch">搜索</a-button>
@@ -20,37 +21,40 @@
     </div>
 
     <!-- 角色列表表格 -->
-    <a-table :columns="columns" :data-source="filteredRoleList" row-key="id" :loading="loading">
-      <!-- 操作列 -->
-      <template #action="{ record }">
-        <a-space>
-          <a-tooltip title="编辑角色">
-            <a-button type="link" @click="handleEdit(record)">
-              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
-            </a-button>
-          </a-tooltip>
-          <a-tooltip title="删除角色">
-            <a-popconfirm
-              title="确定要删除这个角色吗?"
-              ok-text="确定"
-              cancel-text="取消"
-              placement="left"
-              @confirm="handleDelete(record)"
-            >
-              <a-button type="link" danger>
-                <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+    <a-table 
+      :columns="columns" 
+      :data-source="filteredRoleList" 
+      row-key="id" 
+      :loading="loading"
+      :pagination="{ showSizeChanger: true, showQuickJumper: true }"
+    >
+      <!-- 方法列自定义渲染 -->
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.dataIndex === 'method'">
+          {{ record.method }}
+        </template>
+        <template v-if="column.key === 'action'">
+          <a-space>
+            <a-tooltip title="编辑角色">
+              <a-button type="link" @click="handleEdit(record)">
+                <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
               </a-button>
-            </a-popconfirm>
-          </a-tooltip>
-        </a-space>
-      </template>
-
-      <!-- 默认角色列 -->
-      <template #isDefault="{ record }">
-        <a-switch
-          :checked="record.is_default === 1"
-          @change="(checked: boolean) => handleDefaultChange(record, checked)"
-        />
+            </a-tooltip>
+            <a-tooltip title="删除角色">
+              <a-popconfirm
+                title="确定要删除这个角色吗?"
+                ok-text="确定"
+                cancel-text="取消"
+                placement="left"
+                @confirm="handleDelete(record)"
+              >
+                <a-button type="link" danger>
+                  <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+                </a-button>
+              </a-popconfirm>
+            </a-tooltip>
+          </a-space>
+        </template>
       </template>
     </a-table>
 
@@ -64,33 +68,24 @@
       :cancelText="'取消'"
       width="800px"
     >
-      <a-form :model="formData" layout="vertical">
-        <a-form-item label="角色名称" required>
+      <a-form :model="formData" layout="vertical" :rules="formRules">
+        <a-form-item label="角色名称" name="name">
           <a-input v-model:value="formData.name" placeholder="请输入角色名称" />
         </a-form-item>
-        <a-form-item label="角色描述">
-          <a-textarea v-model:value="formData.description" placeholder="请输入角色描述" />
+        <a-form-item label="域ID" name="domain">
+          <a-input v-model:value="formData.domain" placeholder="请输入域ID" />
         </a-form-item>
-        <a-form-item label="角色类型" required>
-          <a-select v-model:value="formData.role_type">
-            <a-select-option :value="1">管理员</a-select-option>
-            <a-select-option :value="2">普通用户</a-select-option>
+        <a-form-item label="路径" name="path">
+          <a-input v-model:value="formData.path" placeholder="请输入路径" />
+        </a-form-item>
+        <a-form-item label="方法" name="method">
+          <a-select v-model:value="formData.method" placeholder="请选择方法">
+            <a-select-option :value="1">GET</a-select-option>
+            <a-select-option :value="2">POST</a-select-option>
+            <a-select-option :value="3">PUT</a-select-option>
+            <a-select-option :value="4">DELETE</a-select-option>
+            <a-select-option :value="5">ALL</a-select-option>
           </a-select>
-        </a-form-item>
-        <a-form-item label="是否默认角色">
-          <a-switch 
-            :checked="formData.is_default === 1"
-            @change="(checked: boolean) => formData.is_default = checked ? 1 : 0" 
-          />
-        </a-form-item>
-        <a-form-item label="API权限">
-          <a-select
-            v-model:value="selectedApiIds" 
-            mode="multiple"
-            style="width: 100%"
-            placeholder="请选择API权限"
-            :options="apiOptions"
-          />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -105,7 +100,6 @@ import {
   createRoleApi, 
   updateRoleApi, 
   deleteRoleApi,
-  getRolesApi,
   listApisApi,
 } from '#/api/core/system';
 import type { SystemApi } from '#/api/core/system';
@@ -134,29 +128,41 @@ const roleList = ref<any[]>([]);
 // API选项
 const apiOptions = ref<{label: string, value: number}[]>([]);
 
+// 表单验证规则
+const formRules = {
+  name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
+  domain: [{ required: true, message: '请输入域ID', trigger: 'blur' }],
+  path: [{ required: true, message: '请输入路径', trigger: 'blur' }],
+  method: [{ required: true, message: '请选择方法', trigger: 'change' }]
+};
+
 // 过滤后的角色列表
 const filteredRoleList = computed(() => {
   const searchValue = searchText.value.trim().toLowerCase();
   if (!searchValue) return roleList.value;
   
   return roleList.value.filter(role => 
-    role.name.toLowerCase().includes(searchValue) ||
-    role.description?.toLowerCase().includes(searchValue)
+    role.name.toLowerCase().includes(searchValue)
   );
 });
 
 // 模态框相关
 const isModalVisible = ref(false);
 const modalTitle = ref('创建角色');
-const formData = reactive<Partial<SystemApi.CreateRoleReq>>({
+const formData = reactive<Partial<SystemApi.Role>>({
   name: '',
-  description: '',
-  role_type: 2,
-  is_default: 0
+  domain: '',
+  path: '',
+  method: ''
 });
 
-// 权限相关
-const selectedApiIds = ref<number[]>([]);
+// 当前编辑的角色信息（用于更新）
+const currentRole = reactive<Partial<SystemApi.Role>>({
+  name: '',
+  domain: '',
+  path: '',
+  method: ''
+});
 
 // 获取HTTP方法文本
 const getMethodText = (method: number) => {
@@ -165,6 +171,7 @@ const getMethodText = (method: number) => {
     case 2: return 'POST';
     case 3: return 'PUT';
     case 4: return 'DELETE';
+    case 5: return 'ALL';
     default: return '未知';
   }
 };
@@ -177,10 +184,12 @@ const fetchApis = async () => {
       page_number: 1,
       page_size: 1000
     });
-    apiOptions.value = apiRes.list.map((api: ApiItem) => ({
-      label: `${api.name} (${api.path}) [${getMethodText(api.method)}]`,
-      value: api.id
-    }));
+    if (apiRes && apiRes.list) {
+      apiOptions.value = apiRes.list.map((api: ApiItem) => ({
+        label: `${api.name} (${api.path}) [${getMethodText(api.method)}]`,
+        value: api.id
+      }));
+    }
   } catch (error: any) {
     message.error(error.message || '获取权限数据失败');
   }
@@ -189,36 +198,31 @@ const fetchApis = async () => {
 // 表格列配置
 const columns = [
   {
-    title: 'ID',
-    dataIndex: 'id',
-    key: 'id',
-  },
-  {
     title: '角色名称',
     dataIndex: 'name',
     key: 'name',
   },
   {
-    title: '描述',
-    dataIndex: 'description',
-    key: 'description',
+    title: '域ID',
+    dataIndex: 'domain',
+    key: 'domain',
   },
   {
-    title: '角色类型',
-    dataIndex: 'role_type',
-    key: 'role_type',
-    customRender: ({ text }: { text: number }) => text === 1 ? '管理员' : '普通用户'
+    title: '路径',
+    dataIndex: 'path',
+    key: 'path',
+    ellipsis: true,
   },
   {
-    title: '默认角色',
-    dataIndex: 'is_default',
-    key: 'is_default',
-    slots: { customRender: 'isDefault' }
+    title: '方法',
+    dataIndex: 'method',
+    key: 'method',
   },
   {
     title: '操作',
     key: 'action',
-    slots: { customRender: 'action' },
+    width: '150px',
+    fixed: 'right'
   },
 ];
 
@@ -230,11 +234,17 @@ const fetchRoleList = async () => {
       page_number: 1,
       page_size: 100
     });
-    roleList.value = res.list;
+    if (res && res.items) {
+      roleList.value = res.items;
+    } else {
+      roleList.value = [];
+    }
   } catch (error: any) {
     message.error(error.message || '获取角色列表失败');
+    roleList.value = [];
+  } finally {
+    loading.value = false;
   }
-  loading.value = false;
 };
 
 // 处理搜索
@@ -247,48 +257,45 @@ const handleAdd = () => {
   modalTitle.value = '创建角色';
   Object.assign(formData, {
     name: '',
-    description: '',
-    role_type: 2,
-    is_default: 0
+    domain: '',
+    path: '',
+    method: ''
   });
-  selectedApiIds.value = [];
   isModalVisible.value = true;
 };
 
 // 处理编辑
-const handleEdit = async (record: any) => {
+const handleEdit = async (record: SystemApi.Role) => {
   modalTitle.value = '编辑角色';
-  try {
-    // 获取角色详情包括权限信息
-    const roleData = await getRolesApi(record.id);
-    const data = roleData;
-    
-    // 设置基本信息
-    Object.assign(formData, {
-      id: data.id,
-      name: data.name, 
-      description: data.description,
-      role_type: data.role_type,
-      is_default: data.is_default
-    });
+  
+  // 保存当前角色信息用于更新
+  Object.assign(currentRole, {
+    name: record.name,
+    domain: record.domain,
+    path: record.path,
+    method: record.method
+  });
+  
+  // 设置表单数据
+  Object.assign(formData, {
+    name: record.name,
+    domain: record.domain,
+    path: record.path,
+    method: record.method
+  });
 
-    // 设置已选API
-    selectedApiIds.value = data.apis?.map((api: ApiItem) => api.id) || [];
-
-    isModalVisible.value = true;
-  } catch (error: any) {
-    message.error(error.message || '获取角色详情失败');
-  }
+  isModalVisible.value = true;
 };
 
 // 处理删除
-const handleDelete = async (record: any) => {
-  if (record.is_default === 1) {
-    message.error('默认角色不允许删除');
-    return;
-  }
+const handleDelete = async (record: SystemApi.Role) => {
   try {
-    await deleteRoleApi(record.id);
+    await deleteRoleApi({
+      name: record.name,
+      domain: record.domain,
+      path: record.path,
+      method: record.method === 5 ? '*' : record.method
+    });
     message.success('删除成功');
     fetchRoleList();
   } catch (error: any) {
@@ -296,36 +303,34 @@ const handleDelete = async (record: any) => {
   }
 };
 
-// 处理默认角色切换
-const handleDefaultChange = async (record: any, checked: boolean) => {
-  try {
-    await updateRoleApi({
-      id: record.id,
-      name: record.name,
-      description: record.description,
-      role_type: record.role_type,
-      is_default: checked ? 1 : 0,
-      api_ids: record.apis?.map((api: ApiItem) => api.id) || []
-    });
-    message.success('更新成功');
-    fetchRoleList();
-  } catch (error: any) {
-    message.error(error.message || '更新失败');
-  }
-};
-
 // 处理模态框提交
 const handleModalSubmit = async () => {
+  // 表单验证
+  if (!formData.name || !formData.domain || !formData.path || !formData.method) {
+    message.warning('请填写完整的角色信息');
+    return;
+  }
+  
   try {
-    const roleData = {
-      ...formData,
-      api_ids: selectedApiIds.value
-    };
-
+    // 处理ALL方法，转换为*发送给后端
+    const methodValue = formData.method === 5 ? '*' : formData.method;
+    
     if (modalTitle.value === '创建角色') {
-      await createRoleApi(roleData as SystemApi.CreateRoleReq);
+      await createRoleApi({
+        ...formData as SystemApi.CreateRoleReq,
+        method: methodValue
+      });
     } else {
-      await updateRoleApi(roleData as SystemApi.UpdateRoleReq);
+      await updateRoleApi({
+        old_role: {
+          ...currentRole as SystemApi.Role,
+          method: currentRole.method && currentRole.method === 5 ? '*' : currentRole.method || ''
+        },
+        new_role: {
+          ...formData as SystemApi.Role,
+          method: methodValue
+        }
+      });
     }
     message.success(`${modalTitle.value}成功`);
     isModalVisible.value = false;
@@ -352,10 +357,15 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
 }
 
 .search-filters {
   display: flex;
   align-items: center;
+}
+
+.action-buttons {
+  margin-left: 16px;
 }
 </style>

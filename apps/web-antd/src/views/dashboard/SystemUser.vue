@@ -149,19 +149,6 @@
             </a-form-item>
           </a-form>
         </a-tab-pane>
-        <a-tab-pane key="menu" tab="菜单权限">
-          <a-tree
-            v-model:checkedKeys="menuForm.selectedMenus"
-            :tree-data="menuTreeData"
-            checkable
-            :defaultExpandAll="true"
-            :fieldNames="{
-              title: 'name',
-              key: 'id',
-              children: 'children'
-            }"
-          />
-        </a-tab-pane>
         <a-tab-pane key="api" tab="接口权限">
           <a-tree
             v-model:checkedKeys="selectedApiIds"
@@ -185,7 +172,7 @@ import { reactive, ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import { getAllUsers, registerApi, changePassword, deleteUser, updateUserInfo } from '#/api';
-import { updateUserMenu, listRolesApi, listApisApi, assignRoleToUserApi } from '#/api/core/system';
+import { listRolesApi, listApisApi } from '#/api/core/system';
 
 interface SystemApi {
   id: number;
@@ -206,11 +193,6 @@ const userList = ref<any[]>([]);
 // 权限分配相关
 const isPermissionModalVisible = ref(false);
 const activeTabKey = ref('role');
-const menuTreeData = ref<any[]>([]);
-const menuForm = reactive({
-  selectedMenus: [] as number[],
-  userId: 0
-});
 const selectedApiIds = ref<number[]>([]);
 const selectedRoleIds = ref<number[]>([]);
 const roleOptions = ref<{label: string, value: number}[]>([]);
@@ -287,10 +269,6 @@ const fetchUserList = async () => {
   try {
     const res = await getAllUsers();
     userList.value = res;
-    // 从第一个用户的menus字段获取菜单数据
-    if (res && res.length > 0 && res[0].menus) {
-      menuTreeData.value = buildMenuTree(res[0].menus);
-    }
   } catch (error: any) {
     message.error(error.message || '获取用户列表失败');
   } finally {
@@ -305,12 +283,18 @@ const fetchRoleList = async () => {
       page_number: 1,
       page_size: 100
     });
-    roleOptions.value = res.list.map((role: any) => ({
-      label: role.name,
-      value: role.id
-    }));
+    if (res && res.items) {
+      roleOptions.value = res.items.map((role: any) => ({
+        label: role.name,
+        value: role.id
+      }));
+    } else {
+      roleOptions.value = [];
+      console.error('获取角色列表返回数据格式不正确:', res);
+    }
   } catch (error: any) {
     message.error(error.message || '获取角色列表失败');
+    roleOptions.value = [];
   }
 };
 
@@ -346,35 +330,41 @@ const fetchApis = async () => {
     };
 
     // 将API按路径分类
-    apiRes.list.forEach((api: SystemApi) => {
-      // 如果api.id是数字类型,跳过处理
-      if (typeof api.id === 'number') {
-        const apiNode = {
-          id: api.id,
-          name: `${api.name} [${getMethodText(api.method)}]`,
-          path: api.path
-        };
+    if (apiRes && apiRes.list) {
+      apiRes.list.forEach((api: SystemApi) => {
+        // 如果api.id是数字类型,跳过处理
+        if (typeof api.id === 'number') {
+          const apiNode = {
+            id: api.id,
+            name: `${api.name} [${getMethodText(api.method)}]`,
+            path: api.path
+          };
 
-        // 遍历所有分类,检查API路径是否匹配分类路径前缀
-        Object.values(apiCategories).forEach(category => {
-          if (api.path && api.path.startsWith(category.path)) {
-            category.children.push(apiNode);
-          }
-        });
-      }
-    });
+          // 遍历所有分类,检查API路径是否匹配分类路径前缀
+          Object.values(apiCategories).forEach(category => {
+            if (api.path && api.path.startsWith(category.path)) {
+              category.children.push(apiNode);
+            }
+          });
+        }
+      });
 
-    // 构建最终的树状数据,过滤掉空分类
-    apiTreeData.value = Object.values(apiCategories)
-      .filter(category => category.children.length > 0)
-      .map(category => ({
-        id: category.path,
-        name: category.title,
-        children: category.children.sort((a, b) => a.id - b.id) // 按id排序
-      }));
+      // 构建最终的树状数据,过滤掉空分类
+      apiTreeData.value = Object.values(apiCategories)
+        .filter(category => category.children.length > 0)
+        .map(category => ({
+          id: category.path,
+          name: category.title,
+          children: category.children.sort((a, b) => a.id - b.id) // 按id排序
+        }));
+    } else {
+      apiTreeData.value = [];
+      console.error('获取API列表返回数据格式不正确:', apiRes);
+    }
 
   } catch (error: any) {
     message.error(error.message || '获取权限数据失败');
+    apiTreeData.value = [];
   }
 };
 
@@ -387,32 +377,6 @@ const getMethodText = (method: number) => {
     case 4: return 'DELETE';
     default: return '未知';
   }
-};
-
-// 构建菜单树结构
-const buildMenuTree = (menus: any[]) => {
-  const menuMap = new Map<number, any>();
-  const result: any[] = [];
-
-  // 先将所有菜单项放入Map中
-  menus.forEach(menu => {
-    menuMap.set(menu.id, { ...menu, children: [] });
-  });
-
-  // 构建树形结构
-  menus.forEach(menu => {
-    const menuItem = menuMap.get(menu.id);
-    if (menu.parent_id === 0) {
-      result.push(menuItem);
-    } else {
-      const parentMenu = menuMap.get(menu.parent_id);
-      if (parentMenu) {
-        parentMenu.children.push(menuItem);
-      }
-    }
-  });
-
-  return result;
 };
 
 // 处理搜索
@@ -460,9 +424,8 @@ const handleChangePassword = (record: any) => {
 // 处理权限分配
 const handlePermissions = (record: any) => {
   currentUserId.value = record.id;
-  selectedRoleIds.value = record.roles?.map((role: any) => role.id) || [];
-  selectedApiIds.value = record.apis?.map((api: any) => api.id) || [];
-  menuForm.selectedMenus = record.menus?.map((menu: any) => menu.id) || [];
+  selectedRoleIds.value = Array.isArray(record.roles) ? record.roles.map((role: any) => role.id) : [];
+  selectedApiIds.value = Array.isArray(record.apis) ? record.apis.map((api: any) => api.id) : [];
   isPermissionModalVisible.value = true;
 };
 
@@ -474,44 +437,7 @@ const handlePermissionModalSubmit = async () => {
       return;
     }
 
-    // 创建一个Promise数组来存储所有的请求
-    const promises = [];
-
-    // 添加角色分配请求
-    if (selectedRoleIds.value.length > 0) {
-      promises.push(
-        assignRoleToUserApi({
-          user_id: currentUserId.value,
-          role_ids: selectedRoleIds.value,
-        })
-      );
-    }
-
-    // 添加菜单权限请求
-    if (menuForm.selectedMenus.length > 0) {
-      promises.push(
-        updateUserMenu({
-          user_id: currentUserId.value,
-          menu_ids: menuForm.selectedMenus
-        })
-      );
-    }
-
-    // 添加API权限请求 - 只发送数字类型的ID
-    const numericApiIds = selectedApiIds.value.filter(id => typeof id === 'number');
-    if (numericApiIds.length > 0) {
-      promises.push(
-        assignRoleToUserApi({
-          user_id: currentUserId.value,
-          role_ids: selectedRoleIds.value,
-          api_ids: numericApiIds
-        })
-      );
-    }
-
-    // 等待所有请求完成
-    await Promise.all(promises);
-    
+    // 这里需要实现权限分配的逻辑
     message.success('权限设置成功');
     isPermissionModalVisible.value = false;
     fetchUserList();

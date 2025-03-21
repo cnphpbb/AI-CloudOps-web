@@ -34,15 +34,6 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: '菜单管理',
-        path: '/system_menu',
-        component: () => import('#/views/dashboard/SystemMenu.vue'),
-        meta: {
-          icon: 'lucide:menu',
-          title: '菜单管理',
-        },
-      },
-      {
         name: '接口管理',
         path: '/system_api',
         component: () => import('#/views/dashboard/SystemApi.vue'),
