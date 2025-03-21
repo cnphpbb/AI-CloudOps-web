@@ -1,40 +1,6 @@
 import { requestClient } from '#/api/request';
 
 export namespace SystemApi {
-  // 菜单管理相关接口
-  export interface ListMenusReq {
-    page_number: number; // 页码
-    page_size: number; // 每页数量
-    is_tree?: boolean; // 是否树形结构
-  }
-
-  export interface CreateMenuReq {
-    name: string; // 菜单名称
-    path: string; // 菜单路径
-    parent_id: number; // 父菜单ID
-    component?: string; // 组件
-    icon?: string; // 图标
-    sort_order: number; // 排序
-    route_name?: string; // 路由名称
-    hidden: 0 | 1; // 是否隐藏
-  }
-
-  export interface UpdateMenuReq {
-    id: number; // 菜单ID
-    name: string; // 菜单名称
-    path: string; // 菜单路径
-    parent_id: number; // 父菜单ID
-    component?: string; // 组件
-    icon?: string; // 图标
-    sort_order: number; // 排序
-    route_name?: string; // 路由名称
-    hidden: 0 | 1; // 是否隐藏
-  }
-
-  export interface DeleteMenuReq {
-    id: number; // 菜单ID
-  }
-
   // API管理相关接口
   export interface ListApisReq {
     page_number: number; // 页码
@@ -73,74 +39,42 @@ export namespace SystemApi {
     page_size: number; // 每页数量
   }
 
-
-  export interface AssignMenuPermissionsToUserReq {
-    user_id: number; // 用户ID
-    menu_ids: number[]; // 菜单ID列表
+  export interface Role {
+    name: string; // 角色名称
+    domain: string; // 域ID
+    path: string; // 路径
+    method: string; // 方法
   }
 
   export interface CreateRoleReq {
     name: string; // 角色名称
-    description?: string; // 角色描述
-    role_type: number; // 角色类型
-    is_default: 0 | 1; // 是否默认角色
+    domain: string; // 域ID
+    path: string; // 路径
+    method: string; // 方法
   }
 
   export interface UpdateRoleReq {
-    id: number; // 角色ID
-    name: string; // 角色名称
-    description?: string; // 角色描述
-    role_type: number; // 角色类型
-    is_default: 0 | 1; // 是否默认角色
-    menu_ids?: number[]; // 菜单ID列表
-    api_ids?: number[]; // API ID列表
+    new_role: Role; // 新角色信息
+    old_role: Role; // 旧角色信息
   }
 
   export interface DeleteRoleReq {
-    id: number; // 角色ID
+    name: string; // 角色名称
+    domain: string; // 域ID
+    path: string; // 路径
+    method: string; // 方法
   }
 
-  // 权限分配相关接口
-  export interface AssignPermissionsReq {
-    role_id: number; // 角色ID
-    api_ids?: number[]; // API ID列表
+  export interface ListUserRolesReq {
+    page_number: number; // 页码
+    page_size: number; // 每页数量
   }
 
-  export interface AssignApiPermissionsToUserReq {
+  export interface UpdateUserRoleReq {
     user_id: number; // 用户ID
-    api_ids: number[]; // API ID列表
-  }
-
-
-
-  export interface AssignRoleToUserReq {
-    user_id: number; // 用户ID
-    role_ids: number[]; // 角色ID列表
     api_ids?: number[]; // API ID列表
-  }
-
-  export interface AssignRoleToUsersReq {
-    user_ids: number[]; // 用户ID列表
     role_ids: number[]; // 角色ID列表
-    api_ids?: number[]; // API ID列表
   }
-}
-
-// 菜单管理
-export function listMenusApi(data: SystemApi.ListMenusReq) {
-  return requestClient.post('/menus/list', data);
-}
-
-export function createMenuApi(data: SystemApi.CreateMenuReq) {
-  return requestClient.post('/menus/create', data);
-}
-
-export function updateMenuApi(data: SystemApi.UpdateMenuReq) {
-  return requestClient.post('/menus/update', data);
-}
-
-export function deleteMenuApi(id: string) {
-  return requestClient.delete(`/menus/${id}`);
 }
 
 // API管理
@@ -173,29 +107,16 @@ export function updateRoleApi(data: SystemApi.UpdateRoleReq) {
   return requestClient.post('/roles/update', data);
 }
 
-export function deleteRoleApi(id: string) {
-  return requestClient.delete(`/roles/${id}`);
+export function deleteRoleApi(data: SystemApi.DeleteRoleReq) {
+  return requestClient.post('/roles/delete', data);
 }
 
-// 根据角色ID获取对应菜单和API权限
-export function getRolesApi(id: string) {
-  return requestClient.get(`/roles/${id}`);
+// 获取用户角色
+export function getUserRolesApi(data: SystemApi.ListUserRolesReq) {
+  return requestClient.post('/roles/user/roles', data);
 }
 
-// 根据用户ID获取对应菜单和API权限
-export function getUserRolesApi(id: string) {
-  return requestClient.get(`/roles/user/${id}`);
-}
-
-export function assignRoleToUserApi(data: SystemApi.AssignRoleToUserReq) {
+// 更新用户角色
+export function updateUserRoleApi(data: SystemApi.UpdateUserRoleReq) {
   return requestClient.post('/permissions/user/assign', data);
 }
-
-export function assignRoleToUsersApi(data: SystemApi.AssignRoleToUsersReq) {
-  return requestClient.post('/permissions/users/assign', data);
-}
-
-
-export const updateUserMenu = (data: SystemApi.AssignMenuPermissionsToUserReq) => {
-  return requestClient.post('/menus/update_related', data);
-};
