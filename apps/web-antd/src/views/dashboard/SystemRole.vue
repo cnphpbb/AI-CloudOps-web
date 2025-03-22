@@ -26,7 +26,8 @@
       :data-source="filteredRoleList" 
       row-key="id" 
       :loading="loading"
-      :pagination="{ showSizeChanger: true, showQuickJumper: true }"
+      :pagination="pagination"
+      @change="handleTableChange"
     >
       <!-- 方法列自定义渲染 -->
       <template #bodyCell="{ column, record }">
@@ -80,11 +81,11 @@
         </a-form-item>
         <a-form-item label="方法" name="method">
           <a-select v-model:value="formData.method" placeholder="请选择方法">
-            <a-select-option :value="1">GET</a-select-option>
-            <a-select-option :value="2">POST</a-select-option>
-            <a-select-option :value="3">PUT</a-select-option>
-            <a-select-option :value="4">DELETE</a-select-option>
-            <a-select-option :value="5">ALL</a-select-option>
+            <a-select-option value="GET">GET</a-select-option>
+            <a-select-option value="POST">POST</a-select-option>
+            <a-select-option value="PUT">PUT</a-select-option>
+            <a-select-option value="DELETE">DELETE</a-select-option>
+            <a-select-option value="*">ALL</a-select-option>
           </a-select>
         </a-form-item>
       </a-form>
@@ -109,7 +110,7 @@ interface ApiItem {
   id: number;
   name: string;
   path: string;
-  method: number;
+  method: string;
   description?: string;
   version?: string;
   category?: number;
@@ -127,6 +128,16 @@ const roleList = ref<any[]>([]);
 
 // API选项
 const apiOptions = ref<{label: string, value: number}[]>([]);
+
+// 分页配置
+const pagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`
+});
 
 // 表单验证规则
 const formRules = {
@@ -164,18 +175,6 @@ const currentRole = reactive<Partial<SystemApi.Role>>({
   method: ''
 });
 
-// 获取HTTP方法文本
-const getMethodText = (method: number) => {
-  switch (method) {
-    case 1: return 'GET';
-    case 2: return 'POST';
-    case 3: return 'PUT';
-    case 4: return 'DELETE';
-    case 5: return 'ALL';
-    default: return '未知';
-  }
-};
-
 // 获取所有API
 const fetchApis = async () => {
   try {
@@ -186,7 +185,7 @@ const fetchApis = async () => {
     });
     if (apiRes && apiRes.list) {
       apiOptions.value = apiRes.list.map((api: ApiItem) => ({
-        label: `${api.name} (${api.path}) [${getMethodText(api.method)}]`,
+        label: `${api.name} (${api.path}) [${api.method}]`,
         value: api.id
       }));
     }
@@ -226,22 +225,32 @@ const columns = [
   },
 ];
 
+// 处理表格变化（分页、排序、筛选）
+const handleTableChange = (pag: any) => {
+  pagination.current = pag.current;
+  pagination.pageSize = pag.pageSize;
+  fetchRoleList();
+};
+
 // 获取角色列表
 const fetchRoleList = async () => {
   loading.value = true;
   try {
     const res = await listRolesApi({
-      page_number: 1,
-      page_size: 100
+      page_number: pagination.current,
+      page_size: pagination.pageSize
     });
     if (res && res.items) {
       roleList.value = res.items;
+      pagination.total = res.total || res.items.length;
     } else {
       roleList.value = [];
+      pagination.total = 0;
     }
   } catch (error: any) {
     message.error(error.message || '获取角色列表失败');
     roleList.value = [];
+    pagination.total = 0;
   } finally {
     loading.value = false;
   }
@@ -249,6 +258,7 @@ const fetchRoleList = async () => {
 
 // 处理搜索
 const handleSearch = () => {
+  pagination.current = 1; // 搜索时重置到第一页
   // 搜索功能已通过 computed 属性 filteredRoleList 实现
 };
 
@@ -294,7 +304,7 @@ const handleDelete = async (record: SystemApi.Role) => {
       name: record.name,
       domain: record.domain,
       path: record.path,
-      method: record.method === 5 ? '*' : record.method
+      method: record.method
     });
     message.success('删除成功');
     fetchRoleList();
@@ -312,23 +322,17 @@ const handleModalSubmit = async () => {
   }
   
   try {
-    // 处理ALL方法，转换为*发送给后端
-    const methodValue = formData.method === 5 ? '*' : formData.method;
-    
     if (modalTitle.value === '创建角色') {
       await createRoleApi({
-        ...formData as SystemApi.CreateRoleReq,
-        method: methodValue
+        ...formData as SystemApi.CreateRoleReq
       });
     } else {
       await updateRoleApi({
         old_role: {
-          ...currentRole as SystemApi.Role,
-          method: currentRole.method && currentRole.method === 5 ? '*' : currentRole.method || ''
+          ...currentRole as SystemApi.Role
         },
         new_role: {
-          ...formData as SystemApi.Role,
-          method: methodValue
+          ...formData as SystemApi.Role
         }
       });
     }
