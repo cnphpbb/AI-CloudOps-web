@@ -51,6 +51,24 @@ const routes: RouteRecordRaw[] = [
           title: '角色权限',
         },
       },
+      {
+        name: 'test',
+        path: '/test',
+        component: () => import('#/views/dashboard/test.vue'),
+        meta: {
+          icon: 'lucide:users',
+          title: 'test',
+        },
+      },
+      {
+        name: 'assistant',
+        path: '/assistant',
+        component: () => import('#/views/assistant/AssistantWidget.vue'),
+        meta: {
+          icon: 'lucide:users',
+          title: 'assistant',
+        },
+      },
     ],
   },
 ];

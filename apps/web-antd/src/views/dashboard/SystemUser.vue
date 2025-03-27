@@ -172,8 +172,7 @@ import { reactive, ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import { getAllUsers, registerApi, changePassword, deleteUser, updateUserInfo } from '#/api';
-import { listRolesApi, listApisApi } from '#/api/core/system';
-
+import { listRolesApi, listApisApi } from '#/api';
 interface SystemApi {
   id: number;
   name: string;
