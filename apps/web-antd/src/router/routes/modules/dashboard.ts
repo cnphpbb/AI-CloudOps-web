@@ -60,15 +60,6 @@ const routes: RouteRecordRaw[] = [
           title: 'test',
         },
       },
-      {
-        name: 'assistant',
-        path: '/assistant',
-        component: () => import('#/views/assistant/AssistantWidget.vue'),
-        meta: {
-          icon: 'lucide:users',
-          title: 'assistant',
-        },
-      },
     ],
   },
 ];

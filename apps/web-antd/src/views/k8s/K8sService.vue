@@ -207,7 +207,7 @@ const getNamespaces = async () => {
     const res = await getNamespacesByClusterIdApi(selectedCluster.value);
     namespaces.value = res.map((ns: { name: string }) => ns.name);
     if (namespaces.value.length > 0) {
-      selectedNamespace.value = namespaces.value[0];
+      selectedNamespace.value = namespaces.value[0] || 'default';
     }
   } catch (error: any) {
     message.error(error.message || '获取命名空间列表失败');

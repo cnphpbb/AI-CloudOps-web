@@ -19,8 +19,6 @@ import { openWindow } from '@vben/utils';
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 
-import AiAssistant from '#/views/assistant/AssistantWidget.vue';
-
 const notifications = ref<NotificationItem[]>([
   {
     avatar: 'https://avatar.vercel.sh/vercel.svg?text=VB',
@@ -141,6 +139,5 @@ function handleMakeAll() {
     <template #lock-screen>
       <LockScreen :avatar @to-login="handleLogout" />
     </template>
-    <AiAssistant />
   </BasicLayout>
 </template>
