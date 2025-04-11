@@ -3,17 +3,17 @@
     <!-- 查询和操作工具栏 -->
     <div class="custom-toolbar">
       <div class="search-filters">
-        <a-input
-          v-model:value="searchText"
-          placeholder="请输入采集池名称"
-          style="width: 200px"
-        />
+        <a-input v-model:value="searchText" placeholder="请输入采集池名称" style="width: 200px" />
         <a-button type="primary" size="middle" @click="handleSearch">
-          <template #icon><SearchOutlined /></template>
+          <template #icon>
+            <SearchOutlined />
+          </template>
           搜索
         </a-button>
         <a-button @click="handleReset">
-          <template #icon><ReloadOutlined /></template>
+          <template #icon>
+            <ReloadOutlined />
+          </template>
           重置
         </a-button>
       </div>
@@ -23,12 +23,7 @@
     </div>
 
     <!-- 采集池列表表格 -->
-    <a-table 
-      :columns="columns" 
-      :data-source="data" 
-      row-key="id"
-      :pagination="false"
-    >
+    <a-table :columns="columns" :data-source="data" row-key="id" :pagination="false">
       <!-- Prometheus实例列 -->
       <template #prometheus_instances="{ record }">
         <a-tag v-for="instance in record.prometheus_instances" :key="instance">{{ instance }}</a-tag>
@@ -39,11 +34,8 @@
       </template>
       <!-- IP标签列 -->
       <template #external_labels="{ record }">
-<<<<<<< HEAD
-        <template v-if="record.external_labels && record.external_labels.filter((label: string) => label.trim() !== '').length > 0">
-=======
-        <template v-if="record.external_labels && record.external_labels.length && record.external_labels[0] !== ''">
->>>>>>> eaaa7dd (完成监控模块部分改造)
+        <template
+          v-if="record.external_labels && record.external_labels.filter((label: string) => label.trim() !== '').length > 0">
           <a-tag v-for="label in record.external_labels" :key="label">
             {{ label.split(',')[0] }}: {{ label.split(',')[1] }}
           </a-tag>
@@ -55,12 +47,16 @@
         <a-space>
           <a-tooltip title="编辑资源信息">
             <a-button type="link" @click="handleEdit(record)">
-              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+              <template #icon>
+                <Icon icon="clarity:note-edit-line" style="font-size: 22px" />
+              </template>
             </a-button>
           </a-tooltip>
           <a-tooltip title="删除资源">
             <a-button type="link" danger @click="handleDelete(record)">
-              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+              <template #icon>
+                <Icon icon="ant-design:delete-outlined" style="font-size: 22px" />
+              </template>
             </a-button>
           </a-tooltip>
         </a-space>
@@ -68,16 +64,8 @@
     </a-table>
 
     <!-- 分页器 -->
-    <a-pagination
-      v-model:current="current"
-      v-model:pageSize="pageSizeRef"
-      :page-size-options="pageSizeOptions"
-      :total="total"
-      show-size-changer
-      @change="handlePageChange"
-      @showSizeChange="handleSizeChange"
-      class="pagination"
-    >
+    <a-pagination v-model:current="current" v-model:pageSize="pageSizeRef" :page-size-options="pageSizeOptions"
+      :total="total" show-size-changer @change="handlePageChange" @showSizeChange="handleSizeChange" class="pagination">
       <template #buildOptionText="props">
         <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
         <span v-else>全部</span>
@@ -90,25 +78,15 @@
         <a-form-item label="采集池名称" name="name" :rules="[{ required: true, message: '请输入采集池名称' }]">
           <a-input v-model:value="addForm.name" placeholder="请输入采集池名称" />
         </a-form-item>
-        
+
         <!-- 动态Prometheus实例表单项 -->
-        <a-form-item
-          v-for="(instance, index) in addForm.prometheus_instances"
-          :key="instance.key"
-          :label="index === 0 ? 'Prometheus实例' : ''"
-          :name="['prometheus_instances', index, 'value']"
-          :rules="{ required: true, message: '请输入Prometheus实例IP' }"
-        >
-          <a-input
-            v-model:value="instance.value"
-            placeholder="请输入Prometheus实例IP"
-            style="width: 60%; margin-right: 8px"
-          />
-          <MinusCircleOutlined
-            v-if="addForm.prometheus_instances.length > 1"
-            class="dynamic-delete-button"
-            @click="removePrometheusInstance(instance)"
-          />
+        <a-form-item v-for="(instance, index) in addForm.prometheus_instances" :key="instance.key"
+          :label="index === 0 ? 'Prometheus实例' : ''" :name="['prometheus_instances', index, 'value']"
+          :rules="{ required: true, message: '请输入Prometheus实例IP' }">
+          <a-input v-model:value="instance.value" placeholder="请输入Prometheus实例IP"
+            style="width: 60%; margin-right: 8px" />
+          <MinusCircleOutlined v-if="addForm.prometheus_instances.length > 1" class="dynamic-delete-button"
+            @click="removePrometheusInstance(instance)" />
         </a-form-item>
         <a-form-item>
           <a-button type="dashed" style="width: 60%" @click="addPrometheusInstance">
@@ -118,23 +96,13 @@
         </a-form-item>
 
         <!-- 动态AlertManager实例表单项 -->
-        <a-form-item
-          v-for="(instance, index) in addForm.alert_manager_instances"
-          :key="instance.key"
-          :label="index === 0 ? 'AlertManager实例' : ''"
-          :name="['alert_manager_instances', index, 'value']"
-          :rules="{ required: true, message: '请输入AlertManager实例IP' }"
-        >
-          <a-input
-            v-model:value="instance.value"
-            placeholder="请输入AlertManager实例IP"
-            style="width: 60%; margin-right: 8px"
-          />
-          <MinusCircleOutlined
-            v-if="addForm.alert_manager_instances.length > 1"
-            class="dynamic-delete-button"
-            @click="removeAlertManagerInstance(instance)"
-          />
+        <a-form-item v-for="(instance, index) in addForm.alert_manager_instances" :key="instance.key"
+          :label="index === 0 ? 'AlertManager实例' : ''" :name="['alert_manager_instances', index, 'value']"
+          :rules="{ required: true, message: '请输入AlertManager实例IP' }">
+          <a-input v-model:value="instance.value" placeholder="请输入AlertManager实例IP"
+            style="width: 60%; margin-right: 8px" />
+          <MinusCircleOutlined v-if="addForm.alert_manager_instances.length > 1" class="dynamic-delete-button"
+            @click="removeAlertManagerInstance(instance)" />
         </a-form-item>
         <a-form-item>
           <a-button type="dashed" style="width: 60%" @click="addAlertManagerInstance">
@@ -175,27 +143,13 @@
         </a-form-item>
 
         <!-- 动态IP标签表单项 -->
-        <a-form-item
-          v-for="(label, index) in addForm.external_labels"
-          :key="label.key"
-          :label="index === 0 ? '采集池IP标签' : ''"
-        >
+        <a-form-item v-for="(label, index) in addForm.external_labels" :key="label.key"
+          :label="index === 0 ? '采集池IP标签' : ''">
           <a-space>
-            <a-input
-              v-model:value="label.labelKey"
-              placeholder="请输入标签Key"
-              style="width: 120px"
-            />
-            <a-input
-              v-model:value="label.labelValue" 
-              placeholder="请输入标签Value"
-              style="width: 120px"
-            />
-            <MinusCircleOutlined
-              v-if="addForm.external_labels.length > 1"
-              class="dynamic-delete-button"
-              @click="removeExternalLabel(label)"
-            />
+            <a-input v-model:value="label.labelKey" placeholder="请输入标签Key" style="width: 120px" />
+            <a-input v-model:value="label.labelValue" placeholder="请输入标签Value" style="width: 120px" />
+            <MinusCircleOutlined v-if="addForm.external_labels.length > 1" class="dynamic-delete-button"
+              @click="removeExternalLabel(label)" />
           </a-space>
         </a-form-item>
         <a-form-item>
@@ -213,25 +167,15 @@
         <a-form-item label="采集池名称" name="name" :rules="[{ required: true, message: '请输入采集池名称' }]">
           <a-input v-model:value="editForm.name" placeholder="请输入采集池名称" />
         </a-form-item>
-        
+
         <!-- 动态Prometheus实例表单项 -->
-        <a-form-item
-          v-for="(instance, index) in editForm.prometheus_instances"
-          :key="instance.key"
-          :label="index === 0 ? 'Prometheus实例' : ''"
-          :name="['prometheus_instances', index, 'value']"
-          :rules="{ required: true, message: '请输入Prometheus实例IP' }"
-        >
-          <a-input
-            v-model:value="instance.value"
-            placeholder="请输入Prometheus实例IP"
-            style="width: 60%; margin-right: 8px"
-          />
-          <MinusCircleOutlined
-            v-if="editForm.prometheus_instances.length > 1"
-            class="dynamic-delete-button"
-            @click="removePrometheusInstanceEdit(instance)"
-          />
+        <a-form-item v-for="(instance, index) in editForm.prometheus_instances" :key="instance.key"
+          :label="index === 0 ? 'Prometheus实例' : ''" :name="['prometheus_instances', index, 'value']"
+          :rules="{ required: true, message: '请输入Prometheus实例IP' }">
+          <a-input v-model:value="instance.value" placeholder="请输入Prometheus实例IP"
+            style="width: 60%; margin-right: 8px" />
+          <MinusCircleOutlined v-if="editForm.prometheus_instances.length > 1" class="dynamic-delete-button"
+            @click="removePrometheusInstanceEdit(instance)" />
         </a-form-item>
         <a-form-item>
           <a-button type="dashed" style="width: 60%" @click="addPrometheusInstanceEdit">
@@ -241,23 +185,13 @@
         </a-form-item>
 
         <!-- 动态AlertManager实例表单项 -->
-        <a-form-item
-          v-for="(instance, index) in editForm.alert_manager_instances"
-          :key="instance.key"
-          :label="index === 0 ? 'AlertManager实例' : ''"
-          :name="['alert_manager_instances', index, 'value']"
-          :rules="{ required: true, message: '请输入AlertManager实例IP' }"
-        >
-          <a-input
-            v-model:value="instance.value"
-            placeholder="请输入AlertManager实例IP"
-            style="width: 60%; margin-right: 8px"
-          />
-          <MinusCircleOutlined
-            v-if="editForm.alert_manager_instances.length > 1"
-            class="dynamic-delete-button"
-            @click="removeAlertManagerInstanceEdit(instance)"
-          />
+        <a-form-item v-for="(instance, index) in editForm.alert_manager_instances" :key="instance.key"
+          :label="index === 0 ? 'AlertManager实例' : ''" :name="['alert_manager_instances', index, 'value']"
+          :rules="{ required: true, message: '请输入AlertManager实例IP' }">
+          <a-input v-model:value="instance.value" placeholder="请输入AlertManager实例IP"
+            style="width: 60%; margin-right: 8px" />
+          <MinusCircleOutlined v-if="editForm.alert_manager_instances.length > 1" class="dynamic-delete-button"
+            @click="removeAlertManagerInstanceEdit(instance)" />
         </a-form-item>
         <a-form-item>
           <a-button type="dashed" style="width: 60%" @click="addAlertManagerInstanceEdit">
@@ -298,27 +232,13 @@
         </a-form-item>
 
         <!-- 动态IP标签表单项 -->
-        <a-form-item
-          v-for="(label, index) in editForm.external_labels"
-          :key="label.key"
-          :label="index === 0 ? '采集池IP标签' : ''"
-        >
+        <a-form-item v-for="(label, index) in editForm.external_labels" :key="label.key"
+          :label="index === 0 ? '采集池IP标签' : ''">
           <a-space>
-            <a-input
-              v-model:value="label.labelKey"
-              placeholder="请输入标签Key"
-              style="width: 120px"
-            />
-            <a-input
-              v-model:value="label.labelValue"
-              placeholder="请输入标签Value"
-              style="width: 120px"
-            />
-            <MinusCircleOutlined
-              v-if="editForm.external_labels.length > 1"
-              class="dynamic-delete-button"
-              @click="removeExternalLabelEdit(label)"
-            />
+            <a-input v-model:value="label.labelKey" placeholder="请输入标签Key" style="width: 120px" />
+            <a-input v-model:value="label.labelValue" placeholder="请输入标签Value" style="width: 120px" />
+            <MinusCircleOutlined v-if="editForm.external_labels.length > 1" class="dynamic-delete-button"
+              @click="removeExternalLabelEdit(label)" />
           </a-space>
         </a-form-item>
         <a-form-item>
@@ -363,7 +283,6 @@ const data = ref<MonitorScrapePoolItem[]>([]);
 const searchText = ref('');
 
 const handleReset = () => {
-<<<<<<< HEAD
   searchText.value = '';
   fetchResources();
 };
@@ -371,8 +290,6 @@ const handleReset = () => {
 // 处理搜索
 const handleSearch = () => {
   current.value = 1;
-=======
->>>>>>> eaaa7dd (完成监控模块部分改造)
   fetchResources();
 };
 
@@ -382,15 +299,6 @@ const handleSizeChange = (page: number, size: number) => {
   fetchResources();
 };
 
-<<<<<<< HEAD
-=======
-// 处理搜索
-const handleSearch = () => {
-  current.value = 1;
-  fetchResources();
-};
-
->>>>>>> eaaa7dd (完成监控模块部分改造)
 // 处理分页变化
 const handlePageChange = (page: number) => {
   current.value = page;
@@ -623,33 +531,19 @@ const handleEdit = (record: MonitorScrapePoolItem) => {
   editForm.alert_manager_url = record.alert_manager_url;
   editForm.rule_file_path = record.rule_file_path;
   editForm.record_file_path = record.record_file_path;
-<<<<<<< HEAD
-  editForm.external_labels = record.external_labels 
+  editForm.external_labels = record.external_labels
     ? record.external_labels
-        .filter((value: string) => value.trim() !== '') // 过滤空字符串
-        .map((value: string) => {
-          const parts = value.split(',');
-          return {
-            labelKey: parts[0] || '',
-            labelValue: parts[1] || '',
-            key: Date.now()
-          };
-        })
+      .filter((value: string) => value.trim() !== '') // 过滤空字符串
+      .map((value: string) => {
+        const parts = value.split(',');
+        return {
+          labelKey: parts[0] || '',
+          labelValue: parts[1] || '',
+          key: Date.now()
+        };
+      })
     : [];
-=======
-  
-  // 转换动态表单项数据
-  editForm.external_labels = record.external_labels ? 
-    record.external_labels.map((value: string) => {
-      const [labelKey, labelValue] = value.split(',');
-      return {
-        labelKey: labelKey || '', 
-        labelValue: labelValue || '',
-        key: Date.now()
-      };
-    }) : [];
->>>>>>> eaaa7dd (完成监控模块部分改造)
-  editForm.prometheus_instances = record.prometheus_instances ? 
+  editForm.prometheus_instances = record.prometheus_instances ?
     record.prometheus_instances.map(value => ({ value, key: Date.now() })) : [];
   editForm.alert_manager_instances = record.alert_manager_instances ?
     record.alert_manager_instances.map(value => ({ value, key: Date.now() })) : [];
@@ -672,21 +566,17 @@ const closeEditModal = () => {
 const handleAdd = async () => {
   try {
     await addFormRef.value?.validate();
-    
+
     // 转换动态表单项数据为API所需格式
     const formData: createMonitorScrapePoolReq = {
       ...addForm,
       prometheus_instances: addForm.prometheus_instances.map(item => item.value),
       alert_manager_instances: addForm.alert_manager_instances.map(item => item.value),
-<<<<<<< HEAD
       external_labels: addForm.external_labels
         .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '') // 过滤空键值
         .map(item => `${item.labelKey},${item.labelValue}`),
-=======
-      external_labels: addForm.external_labels.map(item => `${item.labelKey},${item.labelValue}`),
->>>>>>> eaaa7dd (完成监控模块部分改造)
     };
-    
+
     await createMonitorScrapePoolApi(formData);
     message.success('新增采集池成功');
     fetchResources();
@@ -707,10 +597,7 @@ const handleDelete = (record: MonitorScrapePoolItem) => {
         await deleteMonitorScrapePoolApi(record.id);
         message.success('删除采集池成功');
         fetchResources();
-<<<<<<< HEAD
 
-=======
->>>>>>> eaaa7dd (完成监控模块部分改造)
       } catch (error: any) {
         message.error(error.message || '删除采集池失败');
         console.error(error);
@@ -723,21 +610,17 @@ const handleDelete = (record: MonitorScrapePoolItem) => {
 const handleUpdate = async () => {
   try {
     await editFormRef.value?.validate();
-    
+
     // 转换动态表单项数据为API所需格式
     const formData: updateMonitorScrapePoolReq = {
       ...editForm,
       prometheus_instances: editForm.prometheus_instances.map(item => item.value),
       alert_manager_instances: editForm.alert_manager_instances.map(item => item.value),
-<<<<<<< HEAD
       external_labels: editForm.external_labels
         .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '') // 过滤空键值
         .map(item => `${item.labelKey},${item.labelValue}`),
-=======
-      external_labels: editForm.external_labels.map(item => `${item.labelKey},${item.labelValue}`),
->>>>>>> eaaa7dd (完成监控模块部分改造)
     };
-    
+
     await updateMonitorScrapePoolApi(formData);
     message.success('更新采集池成功');
     fetchResources();
@@ -754,10 +637,7 @@ const fetchResources = async () => {
     data.value = response;
     total.value = await getMonitorScrapePoolTotalApi();
   } catch (error: any) {
-<<<<<<< HEAD
 
-=======
->>>>>>> eaaa7dd (完成监控模块部分改造)
     message.error(error.message || '获取采集池数据失败');
     console.error(error);
   }
@@ -804,12 +684,13 @@ onMounted(() => {
   color: #999;
   transition: all 0.3s;
 }
+
 .dynamic-delete-button:hover {
   color: #777;
 }
+
 .dynamic-delete-button[disabled] {
   cursor: not-allowed;
   opacity: 0.5;
 }
-
 </style>
