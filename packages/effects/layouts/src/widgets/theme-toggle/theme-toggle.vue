@@ -53,27 +53,19 @@ const PRESETS = [
 <template>
   <div>
     <VbenTooltip :disabled="!shouldOnHover" side="bottom">
-      <template #trigger>
+      <!-- 不显示切换主题按钮 -->
+      <!-- <template #trigger>
         <ThemeButton
           :model-value="isDark"
           type="icon"
           @update:model-value="handleChange"
         />
-      </template>
-      <ToggleGroup
-        :model-value="preferences.theme.mode"
-        class="gap-2"
-        type="single"
-        variant="outline"
+      </template> -->
+      <ToggleGroup :model-value="preferences.theme.mode" class="gap-2" type="single" variant="outline"
         @update:model-value="
           (val) => updatePreferences({ theme: { mode: val as ThemeModeType } })
-        "
-      >
-        <ToggleGroupItem
-          v-for="item in PRESETS"
-          :key="item.name"
-          :value="item.name"
-        >
+        ">
+        <ToggleGroupItem v-for="item in PRESETS" :key="item.name" :value="item.name">
           <component :is="item.icon" class="size-5" />
         </ToggleGroupItem>
       </ToggleGroup>
