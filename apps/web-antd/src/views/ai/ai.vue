@@ -7,7 +7,7 @@
     </a-float-button>
 
     <a-drawer title="AI-CloudOps小助手" placement="right" :width="380" :visible="drawerVisible" @close="toggleChatDrawer"
-      class="ai-chat-drawer">
+      class="ai-chat-drawer" :headerStyle="headerStyle" :bodyStyle="bodyStyle">
       <div class="chat-container">
         <div class="chat-messages" ref="messagesContainer">
           <div v-for="(msg, index) in chatMessages" :key="index" :class="['message', msg.type]">
@@ -16,7 +16,7 @@
             </div>
             <div class="content">
               <div class="name">{{ msg.type === 'user' ? '您' : 'AI助手' }}</div>
-              <div class="text" v-html="renderMarkdown(msg.content)"></div>
+              <div class="text" v-html="renderMarkdown(msg.content || '')"></div>
               <div class="time">{{ msg.time }}</div>
             </div>
           </div>
@@ -52,6 +52,19 @@ const userAvatar = 'https://avatar.vercel.sh/user.svg?text=U';
 const aiAvatar = 'https://avatar.vercel.sh/ai.svg?text=AI';
 let socket: WebSocket | null = null;
 let currentResponse = '';
+
+// 抽屉样式
+const headerStyle = {
+  background: '#1f1f1f',
+  color: '#ffffff',
+  borderBottom: '1px solid #333',
+  padding: '16px 24px'
+};
+
+const bodyStyle = {
+  background: '#121212',
+  padding: 0
+};
 
 // 聊天消息
 interface ChatMessage {
@@ -93,8 +106,6 @@ const handleSearch = () => {
 // 渲染Markdown内容
 const renderMarkdown = (content: string): string => {
   if (!content) return '';
-  // 移除可能的undefined字符串
-  content = content.replace(/undefined$/, '').trim();
   try {
     return md.render(content);
   } catch (e) {
@@ -120,7 +131,7 @@ const initWebSocket = () => {
     if (data.type === 'message') {
       if (!data.done) {
         // 累积响应内容
-        currentResponse += data.content;
+        currentResponse += data.content || '';
 
         // 更新最后一条AI消息
         if (chatMessages[chatMessages.length - 1]?.type === 'ai') {
@@ -137,7 +148,7 @@ const initWebSocket = () => {
 
         // 将完整回复添加到聊天历史
         chatHistory.push({
-          role: 'CloudOps小助手',
+          role: 'assistant',
           content: currentResponse
         });
 
@@ -167,6 +178,30 @@ const toggleChatDrawer = () => {
     nextTick(() => {
       scrollToBottom();
     });
+  } else {
+    // 关闭抽屉时关闭WebSocket连接
+    if (socket) {
+      socket.close();
+      socket = null;
+    }
+    // 清空聊天内容
+    chatMessages.length = 0;
+    chatHistory.length = 0;
+    // 重新添加初始欢迎消息
+    chatMessages.push({
+      content: '您好！我是AI-CloudOps小助手，有什么可以帮助您的吗？',
+      type: 'ai',
+      time: formatTime(new Date())
+    });
+    chatHistory.push({
+      role: 'CloudOps小助手',
+      content: '您好！我是AI-CloudOps小助手，有什么可以帮助您的吗？'
+    });
+    // 清空输入框
+    globalInputMessage.value = '';
+    // 重置发送状态
+    sending.value = false;
+    currentResponse = '';
   }
 };
 
@@ -192,7 +227,7 @@ const sendMessage = async (value: string) => {
 
   // 添加到聊天历史
   chatHistory.push({
-    role: '用户',
+    role: 'user',
     content: value
   });
 
@@ -214,7 +249,7 @@ const sendMessage = async (value: string) => {
 
   // 准备发送的消息
   const messageToSend = {
-    role: "CloudOps小助手",
+    role: "assistant",
     style: "专业",
     question: value,
     chatHistory: chatHistory.slice(0, -1) // 不包括当前问题
@@ -260,6 +295,14 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
+.ai-chat-drawer :deep(.ant-drawer-header-title) {
+  color: #ffffff;
+}
+
+.ai-chat-drawer :deep(.ant-drawer-close) {
+  color: #939393;
+}
+
 .ai-chat-drawer :deep(.ant-drawer-body) {
   padding: 0;
   display: flex;
@@ -270,6 +313,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background-color: #121212;
 }
 
 .chat-messages {
@@ -280,7 +324,7 @@ onBeforeUnmount(() => {
 
 .message {
   display: flex;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .message .avatar {
@@ -288,47 +332,61 @@ onBeforeUnmount(() => {
 }
 
 .message .content {
-  background-color: #2dbc40;
-  padding: 10px;
-  border-radius: 8px;
+  background-color: #2d2d2d;
+  padding: 12px 16px;
+  border-radius: 12px;
   max-width: 80%;
-  color: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.message.user .content {
+  background-color: #143b73;
 }
 
 .message.ai .content {
-  background-color: #3f8ddb;
+  background-color: #2d2d2d;
 }
 
 .message .name {
-  font-weight: bold;
-  margin-bottom: 4px;
+  font-weight: 600;
+  margin-bottom: 6px;
   font-size: 14px;
-  color: #fff;
+  color: #e8e8e8;
 }
 
 .message .text {
   word-break: break-word;
-  color: #fff;
+  color: #e0e0e0;
+  line-height: 1.5;
+  font-size: 14px;
 }
 
 .message .text :deep(pre) {
-  background-color: rgba(0, 0, 0, 0.1);
-  padding: 8px;
-  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 6px;
   overflow-x: auto;
+  margin: 8px 0;
+  border-left: 3px solid #3a7bd5;
 }
 
 .message .text :deep(code) {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: rgba(0, 0, 0, 0.2);
   padding: 2px 4px;
-  border-radius: 3px;
-  font-family: monospace;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
 }
 
 .message .text :deep(a) {
-  color: #e6f7ff;
-  text-decoration: underline;
+  color: #579ef8;
+  text-decoration: none;
+  border-bottom: 1px dotted #579ef8;
+}
+
+.message .text :deep(a:hover) {
+  border-bottom: 1px solid #579ef8;
 }
 
 .message .text :deep(ul),
@@ -337,15 +395,54 @@ onBeforeUnmount(() => {
   margin: 8px 0;
 }
 
+.message .text :deep(li) {
+  margin-bottom: 4px;
+}
+
+.message .text :deep(p) {
+  margin: 6px 0;
+}
+
 .message .time {
   font-size: 12px;
-  color: #eee;
-  margin-top: 4px;
+  color: #868686;
+  margin-top: 6px;
   text-align: right;
 }
 
 .chat-input {
-  padding: 8px;
-  height: 45px;
+  padding: 12px;
+  background-color: #1a1a1a;
+  border-top: 1px solid #333;
+}
+
+.chat-input :deep(.ant-input) {
+  background-color: #2d2d2d;
+  color: #e0e0e0;
+  border: 1px solid #444;
+}
+
+.chat-input :deep(.ant-input::placeholder) {
+  color: #777;
+}
+
+.chat-input :deep(.ant-btn) {
+  background-color: #1668dc;
+  border-color: #1668dc;
+}
+
+.chat-input :deep(.ant-input-group-addon) {
+  background-color: #1a1a1a;
+}
+
+.chat-input :deep(.ant-input-search-button) {
+  height: 40px;
+  background-color: #1668dc;
+  border-color: #1668dc;
+}
+
+.chat-input :deep(.ant-input-search-button:hover) {
+  background-color: #1554b2;
+  border-color: #1554b2;
 }
 </style>
