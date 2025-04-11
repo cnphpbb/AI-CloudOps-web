@@ -5,40 +5,30 @@
       <!-- 查询功能 -->
       <div class="search-filters">
         <!-- 搜索输入框 -->
-        <a-input
-          v-model:value="searchText"
-          placeholder="请输入告警事件名称"
-          style="width: 200px"
-        />
+        <a-input v-model:value="searchText" placeholder="请输入告警事件名称" style="width: 200px" />
         <a-button type="primary" size="middle" @click="handleSearch">
-          <template #icon><SearchOutlined /></template>
+          <template #icon>
+            <SearchOutlined />
+          </template>
           搜索
         </a-button>
         <a-button @click="handleReset">
-          <template #icon><ReloadOutlined /></template>
+          <template #icon>
+            <ReloadOutlined />
+          </template>
           重置
         </a-button>
       </div>
       <!-- 操作按钮 -->
       <div class="action-buttons">
-        <a-button
-          type="primary"
-          @click="handleBatchSilence"
-          :disabled="data.length === 0"
-        >
+        <a-button type="primary" @click="handleBatchSilence" :disabled="data.length === 0">
           批量屏蔽告警
         </a-button>
       </div>
     </div>
 
     <!-- 告警事件列表表格 -->
-    <a-table
-      :columns="columns"
-      :data-source="data"
-      row-key="id"
-      :loading="loading"
-      :pagination="false"
-    >
+    <a-table :columns="columns" :data-source="data" row-key="id" :loading="loading" :pagination="false">
       <!-- 标签组列 -->
       <template #labels="{ record }">
         <a-tag v-for="label in record.labels" :key="label" color="purple">
@@ -50,17 +40,23 @@
         <a-space>
           <a-tooltip title="屏蔽告警">
             <a-button type="link" @click="handleSilence(record)">
-              <template #icon><Icon icon="mdi:bell-off-outline" style="font-size: 22px" /></template>
+              <template #icon>
+                <Icon icon="mdi:bell-off-outline" style="font-size: 22px" />
+              </template>
             </a-button>
           </a-tooltip>
           <a-tooltip title="认领告警">
             <a-button type="link" @click="handleClaim(record)">
-              <template #icon><Icon icon="mdi:hand-back-right-outline" style="font-size: 22px" /></template>
+              <template #icon>
+                <Icon icon="mdi:hand-back-right-outline" style="font-size: 22px" />
+              </template>
             </a-button>
           </a-tooltip>
           <a-tooltip title="取消屏蔽">
             <a-button type="link" @click="handleCancelSilence(record)">
-              <template #icon><Icon icon="mdi:bell-ring-outline" style="font-size: 22px" /></template>
+              <template #icon>
+                <Icon icon="mdi:bell-ring-outline" style="font-size: 22px" />
+              </template>
             </a-button>
           </a-tooltip>
         </a-space>
@@ -68,16 +64,8 @@
     </a-table>
 
     <!-- 分页器 -->
-    <a-pagination
-      v-model:current="current"
-      v-model:pageSize="pageSizeRef"
-      :page-size-options="pageSizeOptions"
-      :total="total"
-      show-size-changer
-      @change="handlePageChange"
-      @showSizeChange="handleSizeChange"
-      class="pagination"
-    >
+    <a-pagination v-model:current="current" v-model:pageSize="pageSizeRef" :page-size-options="pageSizeOptions"
+      :total="total" show-size-changer @change="handlePageChange" @showSizeChange="handleSizeChange" class="pagination">
       <template #buildOptionText="props">
         <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
         <span v-else>全部</span>
@@ -195,7 +183,7 @@ const columns: TableColumnsType = [
     dataIndex: 'created_at',
     key: 'created_at',
     width: 180,
-    sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) => 
+    sorter: (a: MonitorAlertEventItem, b: MonitorAlertEventItem) =>
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   },
   {

@@ -426,13 +426,18 @@ export interface getOnDutyFuturePlan {
   end_time: string;
 }
 
-
 export interface validateExprApiReq {
   promql_expr: string;
 }
 
-export const getMonitorScrapePoolListApi = (page: number, size: number, search: string) => {
-  return requestClient.get<MonitorScrapePoolItem[]>(`/monitor/scrape_pools/list?page=${page}&size=${size}&search=${search}`);
+export const getMonitorScrapePoolListApi = (
+  page: number,
+  size: number,
+  search: string,
+) => {
+  return requestClient.get<MonitorScrapePoolItem[]>(
+    `/monitor/scrape_pools/list?page=${page}&size=${size}&search=${search}`,
+  );
 };
 
 export const getAllMonitorScrapePoolApi = () => {
@@ -459,8 +464,14 @@ export const getMonitorScrapePoolTotalApi = () => {
   return requestClient.get('/monitor/scrape_pools/total');
 };
 
-export const getMonitorScrapeJobListApi = (page: number, size: number, search: string) => {
-  return requestClient.get<MonitorScrapeJobItem[]>(`/monitor/scrape_jobs/list?page=${page}&size=${size}&search=${search}`);
+export const getMonitorScrapeJobListApi = (
+  page: number,
+  size: number,
+  search: string,
+) => {
+  return requestClient.get<MonitorScrapeJobItem[]>(
+    `/monitor/scrape_jobs/list?page=${page}&size=${size}&search=${search}`,
+  );
 };
 
 export const getMonitorScrapeJobTotalApi = () => {
@@ -483,8 +494,14 @@ export const getScrapeJobTotalApi = () => {
   return requestClient.get('/monitor/scrape_jobs/total');
 };
 
-export const getAlertManagerPoolListApi = (page: number, size: number, search: string) => {
-  return requestClient.get<MonitorAlertPoolItem[]>(`/monitor/alertManager_pools/list?page=${page}&size=${size}&search=${search}`);
+export const getAlertManagerPoolListApi = (
+  page: number,
+  size: number,
+  search: string,
+) => {
+  return requestClient.get<MonitorAlertPoolItem[]>(
+    `/monitor/alertManager_pools/list?page=${page}&size=${size}&search=${search}`,
+  );
 };
 
 export const getAllAlertManagerPoolApi = () => {
@@ -507,8 +524,14 @@ export const getAlertManagerPoolTotalApi = () => {
   return requestClient.get('/monitor/alertManager_pools/total');
 };
 
-export const getAlertRulesListApi = (page: number, size: number, search: string) => {
-  return requestClient.get<AlertRuleItem[]>(`/monitor/alert_rules/list?page=${page}&size=${size}&search=${search}`);
+export const getAlertRulesListApi = (
+  page: number,
+  size: number,
+  search: string,
+) => {
+  return requestClient.get<AlertRuleItem[]>(
+    `/monitor/alert_rules/list?page=${page}&size=${size}&search=${search}`,
+  );
 };
 
 export const getMonitorAlertRuleTotalApi = () => {
@@ -535,16 +558,28 @@ export const validateExprApi = (data: validateExprApiReq) => {
   return requestClient.post('/monitor/alert_rules/promql_check', data);
 };
 
-export const getAlertEventsListApi = (page: number, size: number, search: string) => {
-  return requestClient.get<MonitorAlertEventItem[]>(`/monitor/alert_events/list?page=${page}&size=${size}&search=${search}`);
+export const getAlertEventsListApi = (
+  page: number,
+  size: number,
+  search: string,
+) => {
+  return requestClient.get<MonitorAlertEventItem[]>(
+    `/monitor/alert_events/list?page=${page}&size=${size}&search=${search}`,
+  );
 };
 
 export const getAlertEventsTotalApi = () => {
   return requestClient.get('/monitor/alert_events/total');
 };
 
-export const getRecordRulesListApi = (page: number, size: number, search: string) => {
-  return requestClient.get<AlertRecordItem[]>(`/monitor/record_rules/list?page=${page}&size=${size}&search=${search}`);
+export const getRecordRulesListApi = (
+  page: number,
+  size: number,
+  search: string,
+) => {
+  return requestClient.get<AlertRecordItem[]>(
+    `/monitor/record_rules/list?page=${page}&size=${size}&search=${search}`,
+  );
 };
 
 export const getRecordRulesTotalApi = () => {
@@ -567,8 +602,14 @@ export const getRecordRuleTotalApi = () => {
   return requestClient.get('/monitor/record_rules/total');
 };
 
-export const getMonitorSendGroupListApi = (page: number, size: number, search: string) => {
-  return requestClient.get<SendGroupItem[]>(`/monitor/send_groups/list?page=${page}&size=${size}&search=${search}`);
+export const getMonitorSendGroupListApi = (
+  page: number,
+  size: number,
+  search: string,
+) => {
+  return requestClient.get<SendGroupItem[]>(
+    `/monitor/send_groups/list?page=${page}&size=${size}&search=${search}`,
+  );
 };
 
 export const getAllMonitorSendGroupApi = () => {
@@ -611,8 +652,14 @@ export const silenceBatchApi = (ids: number[]) => {
   return requestClient.post('/monitor/alert_events/silence_batch', ids);
 };
 
-export const getOnDutyListApi = (page: number, size: number, search: string) => {
-  return requestClient.get<OnDutyGroupItem[]>(`/monitor/onDuty_groups/list?page=${page}&size=${size}&search=${search}`);
+export const getOnDutyListApi = (
+  page: number,
+  size: number,
+  search: string,
+) => {
+  return requestClient.get<OnDutyGroupItem[]>(
+    `/monitor/onDuty_groups/list?page=${page}&size=${size}&search=${search}`,
+  );
 };
 
 export const getAllOnDutyGroupApi = () => {
@@ -640,10 +687,11 @@ export const deleteOnDutyApi = (id: number) => {
 };
 
 export const getOnDutyFuturePlanApi = (data: getOnDutyFuturePlan) => {
-  return requestClient.get(`/monitor/onDuty_groups/future_plan?id=${data.id}&start_time=${data.start_time}&end_time=${data.end_time}`);
+  return requestClient.get(
+    `/monitor/onDuty_groups/future_plan?id=${data.id}&start_time=${data.start_time}&end_time=${data.end_time}`,
+  );
 };
 
 export const createOnDutyChangeApi = (data: createOnDutychangeReq) => {
   return requestClient.post('/monitor/onDuty_groups/changes', data);
 };
-

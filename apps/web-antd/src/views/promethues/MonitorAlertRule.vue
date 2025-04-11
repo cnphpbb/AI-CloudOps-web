@@ -2,17 +2,17 @@
   <div>
     <div class="custom-toolbar">
       <div class="search-filters">
-        <a-input
-          v-model:value="searchText"
-          placeholder="请输入AlertRule名称"
-          style="width: 200px"
-        />
+        <a-input v-model:value="searchText" placeholder="请输入AlertRule名称" style="width: 200px" />
         <a-button type="primary" size="middle" @click="handleSearch">
-          <template #icon><SearchOutlined /></template>
+          <template #icon>
+            <SearchOutlined />
+          </template>
           搜索
         </a-button>
         <a-button @click="handleReset">
-          <template #icon><ReloadOutlined /></template>
+          <template #icon>
+            <ReloadOutlined />
+          </template>
           重置
         </a-button>
       </div>
@@ -22,12 +22,7 @@
     </div>
 
     <!-- AlertRule 列表表格 -->
-    <a-table 
-      :columns="columns" 
-      :data-source="data" 
-      row-key="id" 
-      :pagination="false"
-    >
+    <a-table :columns="columns" :data-source="data" row-key="id" :pagination="false">
       <template #expr="{ record }">
         <div style="max-width: 300px; word-break: break-all">
           {{ record.expr }}
@@ -63,29 +58,25 @@
         <a-space>
           <a-tooltip title="编辑资源信息">
             <a-button type="link" @click="showEditModal(record)">
-              <template #icon><Icon icon="clarity:note-edit-line" style="font-size: 22px" /></template>
+              <template #icon>
+                <Icon icon="clarity:note-edit-line" style="font-size: 22px" />
+              </template>
             </a-button>
           </a-tooltip>
           <a-tooltip title="删除资源">
             <a-button type="link" danger @click="handleDelete(record)">
-              <template #icon><Icon icon="ant-design:delete-outlined" style="font-size: 22px" /></template>
+              <template #icon>
+                <Icon icon="ant-design:delete-outlined" style="font-size: 22px" />
+              </template>
             </a-button>
           </a-tooltip>
         </a-space>
       </template>
     </a-table>
 
-        <!-- 分页器 -->
-      <a-pagination
-      v-model:current="current"
-      v-model:pageSize="pageSizeRef"
-      :page-size-options="pageSizeOptions"
-      :total="total"
-      show-size-changer
-      @change="handlePageChange"
-      @showSizeChange="handleSizeChange"
-      class="pagination"
-    >
+    <!-- 分页器 -->
+    <a-pagination v-model:current="current" v-model:pageSize="pageSizeRef" :page-size-options="pageSizeOptions"
+      :total="total" show-size-changer @change="handlePageChange" @showSizeChange="handleSizeChange" class="pagination">
       <template #buildOptionText="props">
         <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
         <span v-else>全部</span>
@@ -112,16 +103,11 @@
           </a-select>
         </a-form-item>
         <a-form-item label="树节点" name="treeNodeId">
-          <a-tree-select
-            v-model:value="addForm.tree_node_id"
-            :tree-data="leafNodes"
-            :tree-default-expand-all="true"
-            placeholder="请选择树节点"
-            style="width: 100%"
-          />
+          <a-tree-select v-model:value="addForm.tree_node_id" :tree-data="leafNodes" :tree-default-expand-all="true"
+            placeholder="请选择树节点" style="width: 100%" />
         </a-form-item>
         <a-form-item label="表达式" name="expr">
-          <a-input v-model:value="addForm.expr" placeholder="请输入表达式"/>
+          <a-input v-model:value="addForm.expr" placeholder="请输入表达式" />
         </a-form-item>
         <a-form-item>
           <a-button type="primary" @click="validateAddExpression(addForm.expr)">验证表达式</a-button>
@@ -137,25 +123,10 @@
           <a-input v-model:value="addForm.for_time" placeholder="例如: 10s" />
         </a-form-item>
         <!-- 动态标签表单项 -->
-        <a-form-item
-          v-for="(label, index) in addForm.labels"
-          :key="label.key"
-          :label="index === 0 ? '分组标签' : ''"
-        >
-          <a-input
-            v-model:value="label.labelKey"
-            placeholder="标签名"
-            style="width: 40%; margin-right: 8px"
-          />
-          <a-input
-            v-model:value="label.labelValue"
-            placeholder="标签值"
-            style="width: 40%; margin-right: 8px"
-          />
-          <MinusCircleOutlined
-            class="dynamic-delete-button"
-            @click="removeLabel(label)"
-          />
+        <a-form-item v-for="(label, index) in addForm.labels" :key="label.key" :label="index === 0 ? '分组标签' : ''">
+          <a-input v-model:value="label.labelKey" placeholder="标签名" style="width: 40%; margin-right: 8px" />
+          <a-input v-model:value="label.labelValue" placeholder="标签值" style="width: 40%; margin-right: 8px" />
+          <MinusCircleOutlined class="dynamic-delete-button" @click="removeLabel(label)" />
         </a-form-item>
         <a-form-item>
           <a-button type="dashed" style="width: 60%" @click="addLabel">
@@ -163,25 +134,11 @@
             添加标签
           </a-button>
         </a-form-item>
-        <a-form-item
-          v-for="(annotation, index) in addForm.annotations"
-          :key="annotation.key"
-          :label="index === 0 ? '注解' : ''"
-        >
-          <a-input
-            v-model:value="annotation.labelKey"
-            placeholder="注解名"
-            style="width: 40%; margin-right: 8px"
-          />
-          <a-input
-            v-model:value="annotation.labelValue"
-            placeholder="标签值"
-            style="width: 40%; margin-right: 8px"
-          />
-          <MinusCircleOutlined
-            class="dynamic-delete-button"
-            @click="removeAnnotation(annotation)"
-          />
+        <a-form-item v-for="(annotation, index) in addForm.annotations" :key="annotation.key"
+          :label="index === 0 ? '注解' : ''">
+          <a-input v-model:value="annotation.labelKey" placeholder="注解名" style="width: 40%; margin-right: 8px" />
+          <a-input v-model:value="annotation.labelValue" placeholder="标签值" style="width: 40%; margin-right: 8px" />
+          <MinusCircleOutlined class="dynamic-delete-button" @click="removeAnnotation(annotation)" />
         </a-form-item>
         <a-form-item>
           <a-button type="dashed" style="width: 60%" @click="addAnnotation">
@@ -212,16 +169,11 @@
           </a-select>
         </a-form-item>
         <a-form-item label="树节点" name="treeNodeId">
-          <a-tree-select
-            v-model:value="editForm.tree_node_id"
-            :tree-data="leafNodes"
-            :tree-default-expand-all="true"
-            placeholder="请选择树节点"
-            style="width: 100%"
-          />
+          <a-tree-select v-model:value="editForm.tree_node_id" :tree-data="leafNodes" :tree-default-expand-all="true"
+            placeholder="请选择树节点" style="width: 100%" />
         </a-form-item>
         <a-form-item label="启用" name="enable">
-          <a-switch v-model:checked="editForm.enable"/>
+          <a-switch v-model:checked="editForm.enable" />
         </a-form-item>
         <a-form-item label="表达式" name="expr">
           <a-input v-model:value="editForm.expr" placeholder="请输入表达式" />
@@ -240,25 +192,10 @@
           <a-input v-model:value="editForm.for_time" placeholder="例如: 10s" />
         </a-form-item>
         <!-- 动态标签表单项 -->
-        <a-form-item
-          v-for="(label, index) in editForm.labels"
-          :key="label.key"
-          :label="index === 0 ? '分组标签' : ''"
-        >
-          <a-input
-            v-model:value="label.labelKey"
-            placeholder="标签名"
-            style="width: 40%; margin-right: 8px"
-          />
-          <a-input
-            v-model:value="label.labelValue"
-            placeholder="标签值"
-            style="width: 40%; margin-right: 8px"
-          />
-          <MinusCircleOutlined
-            class="dynamic-delete-button"
-            @click="removeEditLabel(label)"
-          />
+        <a-form-item v-for="(label, index) in editForm.labels" :key="label.key" :label="index === 0 ? '分组标签' : ''">
+          <a-input v-model:value="label.labelKey" placeholder="标签名" style="width: 40%; margin-right: 8px" />
+          <a-input v-model:value="label.labelValue" placeholder="标签值" style="width: 40%; margin-right: 8px" />
+          <MinusCircleOutlined class="dynamic-delete-button" @click="removeEditLabel(label)" />
         </a-form-item>
         <a-form-item>
           <a-button type="dashed" style="width: 60%" @click="addEditLabel">
@@ -266,25 +203,11 @@
             添加标签
           </a-button>
         </a-form-item>
-        <a-form-item
-          v-for="(annotation, index) in editForm.annotations"
-          :key="annotation.key"
-          :label="index === 0 ? '注解' : ''"
-        >
-          <a-input
-            v-model:value="annotation.labelKey"
-            placeholder="注解名"
-            style="width: 40%; margin-right: 8px"
-          />
-          <a-input
-            v-model:value="annotation.labelValue"
-            placeholder="标签值"
-            style="width: 40%; margin-right: 8px"
-          />
-          <MinusCircleOutlined
-            class="dynamic-delete-button"
-            @click="removeEditAnnotation(annotation)"
-          />
+        <a-form-item v-for="(annotation, index) in editForm.annotations" :key="annotation.key"
+          :label="index === 0 ? '注解' : ''">
+          <a-input v-model:value="annotation.labelKey" placeholder="注解名" style="width: 40%; margin-right: 8px" />
+          <a-input v-model:value="annotation.labelValue" placeholder="标签值" style="width: 40%; margin-right: 8px" />
+          <MinusCircleOutlined class="dynamic-delete-button" @click="removeEditAnnotation(annotation)" />
         </a-form-item>
         <a-form-item>
           <a-button type="dashed" style="width: 60%" @click="addEditAnnotation">
@@ -318,7 +241,7 @@ import {
   getMonitorAlertRuleTotalApi
 } from '#/api';
 import { Icon } from '@iconify/vue';
-import type { AlertRuleItem} from '#/api/core/prometheus';
+import type { AlertRuleItem } from '#/api/core/prometheus';
 
 // 定义树节点数据类型
 interface TreeNode {
@@ -469,19 +392,19 @@ const removeLabel = (label: any) => {
 };
 
 const addLabel = () => {
-  addForm.labels.push({labelKey: '', labelValue: '', key: Date.now()});
+  addForm.labels.push({ labelKey: '', labelValue: '', key: Date.now() });
 };
 
 const addEditLabel = () => {
-  editForm.labels.push({labelKey: '', labelValue: '', key: Date.now()});
+  editForm.labels.push({ labelKey: '', labelValue: '', key: Date.now() });
 };
 
 const addAnnotation = () => {
-  addForm.annotations.push({labelKey: '', labelValue: '', key: Date.now()});
+  addForm.annotations.push({ labelKey: '', labelValue: '', key: Date.now() });
 };
 
 const addEditAnnotation = () => {
-  editForm.annotations.push({labelKey: '', labelValue: '', key: Date.now()});
+  editForm.annotations.push({ labelKey: '', labelValue: '', key: Date.now() });
 };
 
 const removeAnnotation = (annotation: any) => {
@@ -593,15 +516,15 @@ const addForm = reactive({
   grafana_link: '',
   for_time: '',
   labels: [
-    {labelKey: 'severity', labelValue: '', key: Date.now()},
-    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
-    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2},
-    {labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3}
+    { labelKey: 'severity', labelValue: '', key: Date.now() },
+    { labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1 },
+    { labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2 },
+    { labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3 }
   ],
   annotations: [
-    {labelKey: 'severity', labelValue: '', key: Date.now()},
-    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
-    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2}
+    { labelKey: 'severity', labelValue: '', key: Date.now() },
+    { labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1 },
+    { labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2 }
   ],
 });
 
@@ -617,8 +540,8 @@ const editForm = reactive({
   severity: '',
   grafana_link: '',
   for_time: '',
-  labels: [{labelKey: '', labelValue: '', key: Date.now()}],
-  annotations: [{labelKey: '', labelValue: '', key: Date.now()}],
+  labels: [{ labelKey: '', labelValue: '', key: Date.now() }],
+  annotations: [{ labelKey: '', labelValue: '', key: Date.now() }],
 });
 
 // 显示新增模态框
@@ -638,15 +561,15 @@ const resetAddForm = () => {
   addForm.grafana_link = '';
   addForm.for_time = '';
   addForm.labels = [
-    {labelKey: 'severity', labelValue: '', key: Date.now()},
-    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
-    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2},
-    {labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3}
+    { labelKey: 'severity', labelValue: '', key: Date.now() },
+    { labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1 },
+    { labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2 },
+    { labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3 }
   ];
   addForm.annotations = [
-    {labelKey: 'severity', labelValue: '', key: Date.now()},
-    {labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1},
-    {labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2}
+    { labelKey: 'severity', labelValue: '', key: Date.now() },
+    { labelKey: 'bind_tree_node', labelValue: '', key: Date.now() + 1 },
+    { labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2 }
   ];
 };
 
@@ -668,7 +591,7 @@ const showEditModal = (record: AlertRuleItem) => {
     severity: record.severity,
     grafana_link: record.grafana_link,
     for_time: record.for_time,
-    labels: record.labels ? 
+    labels: record.labels ?
       record.labels.map((value: string) => {
         const [labelKey, labelValue] = value.split(',');
         return {
@@ -682,7 +605,7 @@ const showEditModal = (record: AlertRuleItem) => {
         const [labelKey, labelValue] = value.split(',');
         return {
           labelKey: labelKey || '',
-          labelValue: labelValue || '', 
+          labelValue: labelValue || '',
           key: Date.now()
         };
       }) : [],
@@ -749,7 +672,7 @@ const handleEdit = async () => {
   } catch (error: any) {
     message.error(error.message || '更新AlertRule失败');
     console.error(error);
-  } 
+  }
 };
 
 // 处理删除AlertRule
@@ -780,7 +703,7 @@ const handleDelete = (record: AlertRuleItem) => {
 const fetchAlertRules = async () => {
   try {
     loading.value = true;
-    const response = await getAlertRulesListApi(current.value, pageSizeRef.value, searchText.value); 
+    const response = await getAlertRulesListApi(current.value, pageSizeRef.value, searchText.value);
     data.value = response;
     total.value = await getMonitorAlertRuleTotalApi();
 

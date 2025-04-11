@@ -19,7 +19,7 @@ import { openWindow } from '@vben/utils';
 import { $t } from '#/locales';
 import { useAuthStore } from '#/store';
 
-import AiAssistant from '#/views/assistant/AssistantWidget.vue';
+import AI from '#/views/ai/ai.vue';
 
 const notifications = ref<NotificationItem[]>([
   {
@@ -111,36 +111,20 @@ function handleMakeAll() {
 <template>
   <BasicLayout @clear-preferences-and-logout="handleLogout">
     <template #user-dropdown>
-      <UserDropdown
-        :avatar
-        :menus
-        :text="userStore.userInfo?.realName"
-        description="ann.vben@gmail.com"
-        tag-text="Pro"
-        @logout="handleLogout"
-      />
+      <UserDropdown :avatar :menus :text="userStore.userInfo?.realName" description="ann.vben@gmail.com" tag-text="Pro"
+        @logout="handleLogout" />
     </template>
     <template #notification>
-      <Notification
-        :dot="showDot"
-        :notifications="notifications"
-        @clear="handleNoticeClear"
-        @make-all="handleMakeAll"
-      />
+      <Notification :dot="showDot" :notifications="notifications" @clear="handleNoticeClear"
+        @make-all="handleMakeAll" />
     </template>
     <template #extra>
-      <AuthenticationLoginExpiredModal
-        v-model:open="accessStore.loginExpired"
-        :avatar
-        :loading="loginLoading"
-        password-placeholder="123456"
-        username-placeholder="vben"
-        @submit="authStore.authLogin"
-      />
+      <AuthenticationLoginExpiredModal v-model:open="accessStore.loginExpired" :avatar :loading="loginLoading"
+        password-placeholder="123456" username-placeholder="vben" @submit="authStore.authLogin" />
     </template>
     <template #lock-screen>
       <LockScreen :avatar @to-login="handleLogout" />
     </template>
-    <AiAssistant />
   </BasicLayout>
+  <AI />
 </template>
