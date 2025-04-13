@@ -1,7 +1,6 @@
 <template>
   <div class="statistics-container">
     <div class="page-header">
-      <h1 class="page-title">统计分析中心</h1>
       <div class="header-actions">
         <a-range-picker v-model:value="dateRange" @change="handleDateRangeChange" :ranges="dateRanges"
           style="width: 300px" />
@@ -151,8 +150,8 @@
                   </div>
                 </template>
                 <template v-if="column.key === 'count'">
-                  <a-progress :percent="getPercentage(record.count, handlerRankingByCount[0].count)" :show-info="false"
-                    status="active" :stroke-color="getProgressColor(index)" />
+                  <a-progress :percent="getPercentage(record.count, handlerRankingByCount[0]?.count || 0)"
+                    :show-info="false" status="active" :stroke-color="getProgressColor(index)" />
                   <span class="count-value">{{ record.count }}</span>
                 </template>
               </template>
@@ -178,7 +177,7 @@
                 </template>
                 <template v-if="column.key === 'time'">
                   <a-progress
-                    :percent="getPercentage(handlerRankingByTime[handlerRankingByTime.length - 1].time, record.time)"
+                    :percent="getPercentage(handlerRankingByTime[handlerRankingByTime.length - 1]?.time || 0, record.time)"
                     :show-info="false" status="active" :stroke-color="getProgressColor(index, true)" />
                   <span class="time-value">{{ record.time }}小时</span>
                 </template>

@@ -1,7 +1,6 @@
 <template>
   <div class="form-instance-container">
     <div class="page-header">
-      <h1 class="page-title">表单实例管理</h1>
       <div class="header-actions">
         <a-button type="primary" @click="handleCreateInstance" class="btn-create">
           <template #icon>
@@ -110,7 +109,7 @@
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
-                    <a-menu @click="(e: { key: string }) => handleCommand(e.key, record)">
+                    <a-menu @click="handleCommand(column.key, record)">
                       <a-menu-item key="submit" v-if="record.status === 0">提交</a-menu-item>
                       <a-menu-item key="process" v-if="record.status === 1">处理</a-menu-item>
                       <a-menu-item key="reject" v-if="record.status === 1">拒绝</a-menu-item>
@@ -152,7 +151,7 @@
           <a-descriptions-item label="表单ID">{{ detailDialog.instance.formId }}</a-descriptions-item>
           <a-descriptions-item label="提交人">{{ detailDialog.instance.creatorName }}</a-descriptions-item>
           <a-descriptions-item label="提交时间">{{ formatFullDateTime(detailDialog.instance.createdAt)
-          }}</a-descriptions-item>
+            }}</a-descriptions-item>
           <a-descriptions-item v-if="detailDialog.instance.processedAt" label="处理时间">
             {{ formatFullDateTime(detailDialog.instance.processedAt) }}
           </a-descriptions-item>
@@ -212,7 +211,7 @@
       </div>
 
       <div v-if="selectedForm || instanceDialog.isEdit" class="instance-form">
-        <h3>{{ instanceDialog.isEdit ? instanceDialog.instance.formName : selectedForm?.name }}</h3>
+        <h3>{{ instanceDialog.isEdit ? (instanceDialog.instance?.formName || '') : selectedForm?.name }}</h3>
         <a-form layout="vertical">
           <a-form-item v-for="field in formFields" :key="field.field" :label="field.label" :name="field.field"
             :rules="[{ required: field.required, message: `请输入${field.label}!` }]">
@@ -744,9 +743,12 @@ const saveInstance = () => {
     // 更新实例
     const index = formInstances.value.findIndex(i => i.id === instanceDialog.instance?.id);
     if (index !== -1) {
-      formInstances.value[index].data = { ...instanceData };
-      formInstances.value[index].updatedAt = new Date();
-      message.success('表单实例已更新');
+      const instance = formInstances.value[index];
+      if (instance) {
+        instance.data = { ...instanceData };
+        instance.updatedAt = new Date();
+        message.success('表单实例已更新');
+      }
     }
   } else {
     // 创建新实例
@@ -778,25 +780,31 @@ const saveInstance = () => {
 const submitInstance = (instance: FormInstance) => {
   const index = formInstances.value.findIndex(i => i.id === instance.id);
   if (index !== -1) {
-    formInstances.value[index].status = 1; // 已提交
-    formInstances.value[index].updatedAt = new Date();
-    message.success(`表单实例 #${instance.id} 已提交`);
+    const instance = formInstances.value[index];
+    if (instance) {
+      instance.status = 1; // 已提交
+      instance.updatedAt = new Date();
+      message.success(`表单实例 #${instance.id} 已提交`);
+    }
   }
 };
 
 const processInstance = (instance: FormInstance, newStatus: number) => {
   const index = formInstances.value.findIndex(i => i.id === instance.id);
   if (index !== -1) {
-    formInstances.value[index].status = newStatus;
-    formInstances.value[index].updatedAt = new Date();
-    formInstances.value[index].processedAt = new Date();
-    formInstances.value[index].handlerID = 101; // 模拟处理人ID
-    formInstances.value[index].handlerName = '当前用户'; // 模拟处理人姓名
-    formInstances.value[index].comment = processingComment.value;
+    const formInstance = formInstances.value[index];
+    if (formInstance) {
+      formInstance.status = newStatus;
+      formInstance.updatedAt = new Date();
+      formInstance.processedAt = new Date();
+      formInstance.handlerID = 101; // 模拟处理人ID
+      formInstance.handlerName = '当前用户'; // 模拟处理人姓名
+      formInstance.comment = processingComment.value;
 
-    message.success(`表单实例 #${instance.id} 已${newStatus === 2 ? '批准' : '拒绝'}`);
-    detailDialog.visible = false;
-    processingComment.value = '';
+      message.success(`表单实例 #${instance.id} 已${newStatus === 2 ? '批准' : '拒绝'}`);
+      detailDialog.visible = false;
+      processingComment.value = '';
+    }
   }
 };
 
@@ -965,7 +973,7 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%, #13c2c2 100%);
+  background: linear-gradient(135deg, #1890ff 0%);
   border: none;
 }
 

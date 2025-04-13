@@ -1,7 +1,6 @@
 <template>
   <div class="template-manager-container">
     <div class="page-header">
-      <h1 class="page-title">模板管理</h1>
       <div class="header-actions">
         <a-button type="primary" @click="handleCreateTemplate" class="btn-create">
           <template #icon>
@@ -117,7 +116,7 @@
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
-                    <a-menu @click="(e) => handleCommand(e.key, record)">
+                    <a-menu @click="handleCommand(column.key, record)">
                       <a-menu-item key="enable" v-if="record.status === 0">启用</a-menu-item>
                       <a-menu-item key="disable" v-if="record.status === 1">禁用</a-menu-item>
                       <a-menu-item key="clone">克隆</a-menu-item>
@@ -138,7 +137,7 @@
         <div class="pagination-container">
           <a-pagination v-model:current="currentPage" :total="totalItems" :page-size="pageSize"
             :page-size-options="['10', '20', '50', '100']" :show-size-changer="true" @change="handlePageChange"
-            @show-size-change="handleSizeChange" :show-total="(total) => `共 ${total} 条`" />
+            @show-size-change="handleSizeChange" :show-total="(total: number) => `共 ${total} 条`" />
         </div>
       </a-card>
     </div>
@@ -749,18 +748,24 @@ const handleCommand = (command: string, row: Template) => {
 const enableTemplate = (template: Template) => {
   const index = templates.value.findIndex(t => t.id === template.id);
   if (index !== -1) {
-    templates.value[index].status = 1;
-    templates.value[index].updatedAt = new Date();
-    message.success(`模板 "${template.name}" 已启用`);
+    const t = templates.value[index];
+    if (t) {
+      t.status = 1;
+      t.updatedAt = new Date();
+      message.success(`模板 "${template.name}" 已启用`);
+    }
   }
 };
 
 const disableTemplate = (template: Template) => {
   const index = templates.value.findIndex(t => t.id === template.id);
   if (index !== -1) {
-    templates.value[index].status = 0;
-    templates.value[index].updatedAt = new Date();
-    message.success(`模板 "${template.name}" 已禁用`);
+    const t = templates.value[index];
+    if (t) {
+      t.status = 0;
+      t.updatedAt = new Date();
+      message.success(`模板 "${template.name}" 已禁用`);
+    }
   }
 };
 
@@ -845,14 +850,14 @@ const saveTemplate = () => {
     const index = templates.value.findIndex(t => t.id === templateDialog.form.id);
     if (index !== -1) {
       templateDialog.form.updatedAt = new Date();
-      templates.value[index] = { ...templateDialog.form };
+      templates.value[index] = { ...templateDialog.form } as Template;
       message.success(`模板 "${templateDialog.form.name}" 已更新`);
     }
   } else {
     // 创建新模板
     const newId = Math.max(...templates.value.map(t => t.id)) + 1;
     templateDialog.form.id = newId;
-    templates.value.push({ ...templateDialog.form });
+    templates.value.push({ ...templateDialog.form } as Template);
     message.success(`模板 "${templateDialog.form.name}" 已创建`);
   }
   templateDialog.visible = false;
@@ -980,7 +985,7 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%, #52c41a 100%);
+  background: linear-gradient(135deg, #1890ff 0%);
   border: none;
 }
 
