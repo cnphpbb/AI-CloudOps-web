@@ -1,284 +1,169 @@
 import { requestClient } from '#/api/request';
 
-export interface ChartItem {
-  name: string;
-  value: number;
-}
-
-export interface User {
-  id: number;
-  name: string;
-  realName: string;
-  roles: string[];
-  userId: number;
-  username: string;
-}
-
-export interface TreeNode {
-  id: number;
-  title: string;
-  pId: number;
-  level: number;
-  isLeaf: number;
-  desc: string;
-  ops_admins: User[];
-  rd_admins: User[];
-  rd_members: User[];
-  bind_ecs: ResourceEcs[];
-  bind_elb: ResourceElb[];
-  bind_rds: ResourceRds[];
-  children?: TreeNode[];
-  key: string;
-  label: string;
-  value: number;
-  ops_admin_users: User[];
-  rd_admin_users: User[];
-  rd_member_users: User[];
-  ecsNum: number;
-  elbNum: number;
-  rdsNum: number;
-  nodeNum: number;
-  leafNodeNum: number;
-  ecsCpuTotal: number;
-  elbBandWithTotal: number;
-  ecsMemoryTotal: number;
-  ecsDiskTotal: number;
-}
-
 export interface ResourceEcs {
   id: number;
-  osType: string;
-  instanceName: string;
-  vmType: number;
-  vendor: string;
-  CreatedAt: string;
-  ipAddr: string;
-  instanceType: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  instance_name: string;
+  instance_id: string;
+  cloud_provider: string;
+  region_id: string;
+  zone_id: string;
+  vpc_id: string;
+  status: string;
+  creation_time: string;
+  environment: string;
+  instance_charge_type: string;
+  description: string;
+  tags: string[];
+  security_group_ids: string[];
+  private_ip_address: string[];
+  public_ip_address: string[];
+
+  // 资源创建和管理标志
+  create_by_order: boolean;
+  last_sync_time: string;
+  tree_node_id: number;
   cpu: number;
   memory: number;
-  disk: number;
-  osName: string;
-  mode: string;
-  password: string;
+  instanceType: string;
   imageId: string;
+  ipAddr: string;
+  port: number;
   hostname: string;
+  password: string;
+  key: string;
+  authMode: string; // password或key
+  osType: string;
+  vmType: number;
+  osName: string;
+  disk: number;
   networkInterfaces: string[];
   diskIds: string[];
   startTime: string;
   autoReleaseTime: string;
-  lastInvokedTime: string;
-  isBound?: boolean;
-  boundNodeId?: number;
-  description?: string;
-  tags: string[];
+  ecsTreeNodes: any[];
+}
 
-  // aliyun
-  name: string;
+export interface CreateEcsResourceReq {
+  periodUnit: string; // Month 月 Year 年
+  period: number;
+  autoRenew: boolean; // 是否自动续费
+  instanceChargeType: string; // 付费类型
+  spotStrategy: string; // NoSpot 默认值 表示正常按量付费 SpotAsPriceGo 表示自动竞价
+  spotDuration: number; // 竞价时长
+  systemDiskSize: number; // 系统盘大小
+  dataDiskSize: number; // 数据盘大小
+  dataDiskCategory: string; // 数据盘类型
+  dryRun: boolean; // 是否仅预览而不创建
+  tags: Record<string, string>;
+}
+
+export interface ListEcsResourceReq {
+  pageNumber: number;
+  pageSize: number;
+  provider: string;
   region: string;
-  instance_name: string;
-  instance_availability_zone: string;
-  instance_type: string;
-  system_disk_category: string;
-  system_disk_name: string;
-  system_disk_description: string;
-  image_id: string;
-  internet_max_bandwidth_out: number;
-  vpc_name: string;
-  cidr_block: string;
-  vswitch_cidr: string;
-  zone_id: string;
-  security_group_name: string;
-  security_group_description: string;
 }
 
-export interface ResourceElb {
-  id: number;
-  loadBalancerType: string;
-  bandwidthCapacity: number;
-  addressType: string;
-  dnsName: string;
-  bandwidthPackageId: string;
-  crossZoneEnabled: boolean;
+// ResourceECSListResp ECS资源列表响应
+export interface ResourceECSListResp {
+  total: number;
+  data: ResourceEcs[];
 }
 
-export interface ResourceRds {
-  id: number;
-  engine: string;
-  dbInstanceNetType: string;
-  dbInstanceClass: string;
-  dbInstanceType: string;
-  engineVersion: string;
-  masterInstanceId: string;
-  dbInstanceStatus: string;
-  replicateId: string;
+// ResourceECSDetailResp ECS资源详情响应
+export interface ResourceECSDetailResp {
+  data: ResourceEcs;
 }
 
-export interface BindResourceReq {
-  nodeId: number;
-  resource_ids: number[];
-}
-
-export interface GeneralRes {
-  code: number;
-  data: any;
-  message: string;
-  type: string;
-}
-
-export interface CreateTreeNodeReq {
-  title: string;
-  desc: string;
-  pId: number;
-  isLeaf: number;
-  level: number;
-}
-
-export interface updateTreeNodeReq {
-  id: number;
-  title: string;
-  desc: string;
-  ops_admins: User[];
-  rd_admins: User[];
-  rd_members: User[];
-}
-
-export interface CreateECSResourceReq {
-  instanceName: string;
-  vendor: string;
-  description: string;
-  tags: string[];
-  ipAddr: string;
-  osName: string;
-  mode: string;
-  password: string;
-  hostname: string;
-}
-
-export interface EditECSResourceReq {
-  id: number;
-  instanceName: string;
-  mode: string;
-  password: string;
-  vendor: string;
-  description: string;
-  tags: string[];
-  ipAddr: string;
-  osName: string;
-  hostname: string;
-}
-
-export interface createAliECSResourcesReq {
-  name: string;
+// StartEcsReq ECS启动请求
+export interface StartEcsReq {
+  provider: string;
   region: string;
-  instance: {
-    instance_availability_zone: string;
-    instance_type: string;
-    system_disk_category: string;
-    system_disk_name: string;
-    system_disk_description: string;
-    image_id: string;
-    instance_name: string;
-    internet_max_bandwidth_out: number;
-  };
-  vpc: {
-    vpc_name: string;
-    cidr_block: string;
-    vswitch_cidr: string;
-    zone_id: string;
-  };
-  security: {
-    security_group_name: string;
-    security_group_description: string;
-  };
-  // 其他通用字段
-  instanceName: string;
-  description: string;
-  tags: string[];
-  vendor: string;
-  hostname: string;
-  ipAddr: string;
-  osName: string;
+  instanceId: string;
 }
 
-export interface OtherEcsResourceReq {
-  id: number;
-  name: string;
-  description: string;
+// StopEcsReq ECS停止请求
+export interface StopEcsReq {
+  provider: string;
   region: string;
-  instance_name: string;
-  instance_availability_zone: string;
-  instance_type: string;
-  system_disk_category: string;
-  system_disk_name: string;
-  system_disk_description: string;
-  image_id: string;
-  internet_max_bandwidth_out: number;
-  vpc_name: string;
-  cidr_block: string;
-  vswitch_cidr: string;
-  zone_id: string;
-  security_group_name: string;
-  security_group_description: string;
+  instanceId: string;
 }
 
-export async function getAllTreeNodes() {
-  return requestClient.get<TreeNode[]>('/tree/node/listTreeNode');
+// RestartEcsReq ECS重启请求
+export interface RestartEcsReq {
+  provider: string;
+  region: string;
+  instanceId: string;
 }
 
-export async function createTreeNode(data: CreateTreeNodeReq) {
-  return requestClient.post<GeneralRes>('/tree/node/createTreeNode', data);
+// DeleteEcsReq ECS删除请求
+export interface DeleteEcsReq {
+  provider: string;
+  region: string;
+  instanceId: string;
 }
 
-export async function updateTreeNode(data: updateTreeNodeReq) {
-  return requestClient.post<GeneralRes>('/tree/node/updateTreeNode', data);
+// GetEcsDetailReq 获取ECS详情请求
+export interface GetEcsDetailReq {
+  provider: string;
+  region: string;
+  instanceId: string;
 }
 
-export async function deleteTreeNode(id: number) {
-  return requestClient.delete<GeneralRes>(`/tree/node/deleteTreeNode/${id}`);
+// ListInstanceOptionsReq 实例选项列表请求
+export interface ListInstanceOptionsReq {
+  provider: string;
+  payType?: string;
+  region?: string;
+  zone?: string;
+  instanceType?: string;
+  systemDiskCategory?: string;
+  dataDiskCategory?: string;
 }
 
-export async function getAllECSResources() {
-  return requestClient.get<ResourceEcs[]>('/tree/ecs/getEcsList');
-}
-export async function getAllELBResources() {
-  return requestClient.get<ResourceElb[]>('/tree/elb/getElbList');
-}
-export async function getAllRDSResources() {
-  return requestClient.get<ResourceRds[]>('/tree/rds/getRdsList');
-}
-
-export async function createECSResources(data: CreateECSResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/ecs/resource/createEcsResource', data);
+export interface ListInstanceOptionsResp {
+  dataDiskCategory: string;
+  systemDiskCategory: string;
+  instanceType: string;
+  region: string;
+  zone: string;
+  payType: string;
+  valid: boolean;
+  cpu: number;
+  memory: number;
 }
 
-export async function deleteECSResources(id: number) {
-  return requestClient.delete<GeneralRes>(`/tree/ecs/resource/deleteEcsResource/${id}`);
+export function getEcsResourceList(req: ListEcsResourceReq) {
+  return requestClient.post('/resource/ecs/list', req);
 }
 
-export async function editECSResources(data: EditECSResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/ecs/resource/updateEcsResource', data);
+export function getEcsResourceDetail(req: GetEcsDetailReq) {
+  return requestClient.post('/resource/ecs/detail', req);
 }
 
-export async function bindECSResources(data: BindResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/ecs/bindEcs', data);
+export function createEcsResource(req: CreateEcsResourceReq) {
+  return requestClient.post('/resource/ecs/create', req);
 }
 
-export async function unbindECSResources(data: BindResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/ecs/unBindEcs', data);
+export function startEcsResource(req: StartEcsReq) {
+  return requestClient.post('/resource/ecs/start', req);
 }
 
-export async function createAliECSResources(data: createAliECSResourcesReq) {
-  return requestClient.post<GeneralRes>('/tree/ecs/ali/resource/createAliResource', data);
+export function stopEcsResource(req: StopEcsReq) {
+  return requestClient.post('/resource/ecs/stop', req);
 }
 
-export async function editOtherECSResources(data: OtherEcsResourceReq) {
-  return requestClient.post<GeneralRes>('/tree/ecs/ali/resource/updateAliResource', data);
+export function restartEcsResource(req: RestartEcsReq) {
+  return requestClient.post('/resource/ecs/restart', req);
 }
 
-export async function deleteOtherECSResources(id: number) {
-  return requestClient.delete<GeneralRes>(`/tree/ecs/ali/resource/deleteAliResource/${id}`);
+export function deleteEcsResource(req: DeleteEcsReq) {
+  return requestClient.delete('/resource/ecs/delete', { data: req });
 }
 
-export async function hostConsole(id: number) {
-  return requestClient.get(`/tree/ecs/console/${id}`);
+export function getInstanceOptions(req: ListInstanceOptionsReq) {
+  return requestClient.post('/resource/ecs/instance_options', req);
 }
