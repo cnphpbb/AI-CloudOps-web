@@ -120,8 +120,11 @@ export interface ListInstanceOptionsReq {
   region?: string;
   zone?: string;
   instanceType?: string;
+  imageId?: string;
   systemDiskCategory?: string;
   dataDiskCategory?: string;
+  pageNumber?: number;
+  pageSize?: number;
 }
 
 export interface ListInstanceOptionsResp {
@@ -134,6 +137,142 @@ export interface ListInstanceOptionsResp {
   valid: boolean;
   cpu: number;
   memory: number;
+  imageId: string;
+  osName: string;
+  osType: string;
+  architecture: string;
+}
+
+// ListVpcResourcesReq VPC资源列表查询参数
+export interface ListVpcResourcesReq {
+  pageNumber: number;
+  pageSize: number;
+  provider: string;
+  region?: string;
+}
+
+// CreateVpcResourceReq VPC创建参数
+export interface CreateVpcResourceReq {
+  provider: string;
+  region: string;
+  zoneId: string;
+  vpcName: string;
+  description?: string;
+  cidrBlock: string;
+  vSwitchName: string;
+  vSwitchCidrBlock: string;
+  dryRun?: boolean;
+  tags?: Record<string, string>;
+}
+
+// GetVpcDetailReq 获取VPC详情请求
+export interface GetVpcDetailReq {
+  provider: string;
+  region: string;
+  vpcId: string;
+}
+
+// DeleteVpcReq VPC删除请求
+export interface DeleteVpcReq {
+  provider: string;
+  region: string;
+  vpcId: string;
+}
+
+// ListVpcsReq VPC列表请求
+export interface ListVpcsReq {
+  provider: string;
+  region: string;
+}
+
+// ListSecurityGroupsReq 安全组列表查询参数
+export interface ListSecurityGroupsReq {
+  pageNumber?: number;
+  pageSize?: number;
+  provider: string;
+  region?: string;
+}
+
+// GetSecurityGroupDetailReq 获取安全组详情请求
+export interface GetSecurityGroupDetailReq {
+  provider: string;
+  region: string;
+  securityGroupId: string;
+}
+
+// DeleteSecurityGroupReq 删除安全组请求
+export interface DeleteSecurityGroupReq {
+  provider: string;
+  region: string;
+  securityGroupId: string;
+}
+
+// SecurityGroupRule 安全组规则
+export interface SecurityGroupRule {
+  id?: number;
+  securityGroupId?: number;
+  ipProtocol: string;
+  portRange: string;
+  direction: string;
+  policy: string;
+  priority: number;
+  sourceCidrIp?: string;
+  destCidrIp?: string;
+  sourceGroupId?: string;
+  destGroupId?: string;
+  description?: string;
+}
+
+// CreateSecurityGroupReq 创建安全组请求
+export interface CreateSecurityGroupReq {
+  provider: string;
+  region: string;
+  securityGroupName: string;
+  description?: string;
+  vpcId: string;
+  securityGroupType?: string;
+  resourceGroupId?: string;
+  treeNodeId?: number;
+  securityGroupRules?: SecurityGroupRule[];
+  tags?: Record<string, string>;
+}
+
+// AddSecurityGroupRuleReq 添加安全组规则请求
+export interface AddSecurityGroupRuleReq {
+  provider: string;
+  region: string;
+  securityGroupId: string;
+  rule: SecurityGroupRule;
+}
+
+// RemoveSecurityGroupRuleReq 删除安全组规则请求
+export interface RemoveSecurityGroupRuleReq {
+  provider: string;
+  region: string;
+  securityGroupId: string;
+  ruleId: number;
+}
+
+// ListSecurityGroupRulesReq 获取安全组规则列表请求
+export interface ListSecurityGroupRulesReq {
+  provider: string;
+  region: string;
+}
+
+export function getVpcResourceList(req: ListVpcResourcesReq) {
+  return requestClient.post('/resource/vpc/list', req);
+}
+
+export function createVpcResource(req: CreateVpcResourceReq) {
+  return requestClient.post('/resource/vpc/create', req);
+}
+
+export function getVpcResourceDetail(req: GetVpcDetailReq) {
+  return requestClient.post('/resource/vpc/detail', req);
+}
+
+export function deleteVpcResource(req: DeleteVpcReq) {
+  return requestClient.delete('/resource/vpc/delete', { data: req });
 }
 
 export function getEcsResourceList(req: ListEcsResourceReq) {
@@ -166,4 +305,20 @@ export function deleteEcsResource(req: DeleteEcsReq) {
 
 export function getInstanceOptions(req: ListInstanceOptionsReq) {
   return requestClient.post('/resource/ecs/instance_options', req);
+}
+
+export function createSecurityGroup(req: CreateSecurityGroupReq) {
+  return requestClient.post('/resource/security_group/create', req);
+}
+
+export function deleteSecurityGroup(req: DeleteSecurityGroupReq) {
+  return requestClient.delete('/resource/security_group/delete', { data: req });
+}
+
+export function listSecurityGroups(req: ListSecurityGroupsReq) {
+  return requestClient.post('/resource/security_group/list', req);
+}
+
+export function getSecurityGroupDetail(req: GetSecurityGroupDetailReq) {
+  return requestClient.post('/resource/security_group/detail', req);
 }

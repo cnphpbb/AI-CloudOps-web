@@ -143,19 +143,19 @@
 
           <a-form-item label="实例规格" name="instanceType" :rules="[{ required: true }]">
             <a-select v-model:value="createForm.instanceType" placeholder="选择实例规格" @change="handleInstanceTypeChange"
-              :disabled="!createForm.zoneId">
-              <a-select-option v-for="type in instanceTypeOptions" :key="type.instanceType" :value="type.instanceType">
-                {{ type.instanceType }} ({{ type.cpu }}核{{ type.memory }}GB)
-              </a-select-option>
+              :disabled="!createForm.zoneId" show-search :filter-option="filterInstanceType" :options="instanceTypeOptions.map(type => ({
+                value: type.instanceType,
+                label: `${type.instanceType} (${type.cpu}核${type.memory}GB)`
+              }))">
             </a-select>
           </a-form-item>
 
           <a-form-item label="镜像" name="imageId" :rules="[{ required: true }]">
-            <a-select v-model:value="createForm.imageId" placeholder="选择镜像" :disabled="!createForm.instanceType">
-              <a-select-option value="aliyun_3_x64_20G_alibase_20221102.vhd">CentOS 3.x 64位</a-select-option>
-              <a-select-option value="ubuntu_18_04_x64_20G_alibase_20221102.vhd">Ubuntu 18.04 64位</a-select-option>
-              <a-select-option value="win_2019_x64_dtc_zh-cn_40G_alibase_20221102.vhd">Windows Server 2019
-                数据中心版</a-select-option>
+            <a-select v-model:value="createForm.imageId" placeholder="选择镜像" @change="handleImageIdChange"
+              :disabled="!createForm.instanceType" show-search :filter-option="filterImage" :options="imageOptions.map(image => ({
+                value: image.imageId,
+                label: `${image.osName} (${image.osType} - ${image.architecture})`
+              }))" :virtual="false" :dropdown-style="{ maxHeight: '400px', overflow: 'auto' }">
             </a-select>
           </a-form-item>
         </div>
@@ -166,17 +166,34 @@
             <a-input-number v-model:value="createForm.amount" :min="1" :max="100" style="width: 100%" />
           </a-form-item>
 
+          <a-form-item label="VPC" name="vpcId" :rules="[{ required: true }]">
+            <a-select v-model:value="createForm.vpcId" placeholder="选择VPC" @change="handleVpcChange"
+              :loading="vpcLoading">
+              <a-select-option v-for="vpc in vpcOptions" :key="vpc.vpcId" :value="vpc.vpcId">
+                {{ vpc.vpcName }} ({{ vpc.cidrBlock }})
+              </a-select-option>
+              <a-empty v-if="vpcOptions.length === 0" :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无VPC资源" />
+            </a-select>
+          </a-form-item>
+
           <a-form-item label="交换机" name="vSwitchId" :rules="[{ required: true }]">
-            <a-select v-model:value="createForm.vSwitchId" placeholder="选择交换机">
-              <a-select-option value="vsw-bp1980idvo9x8oqa7k8g7">交换机1 (172.16.0.0/24)</a-select-option>
-              <a-select-option value="vsw-bp1980idvo9x8oqa7k8g8">交换机2 (172.16.1.0/24)</a-select-option>
+            <a-select v-model:value="createForm.vSwitchId" placeholder="选择交换机" :loading="vSwitchLoading"
+              :disabled="!createForm.vpcId">
+              <a-select-option v-for="vSwitch in vSwitchOptions" :key="vSwitch.vSwitchId" :value="vSwitch.vSwitchId">
+                {{ vSwitch.vSwitchName }} ({{ vSwitch.cidrBlock }})
+              </a-select-option>
+              <a-empty v-if="vSwitchOptions.length === 0" :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无可用交换机" />
             </a-select>
           </a-form-item>
 
           <a-form-item label="安全组" name="securityGroupIds" :rules="[{ required: true }]">
-            <a-select v-model:value="createForm.securityGroupIds" placeholder="选择安全组" mode="multiple">
-              <a-select-option value="sg-bp14awscejjfabbu6x5n">安全组1 (开放80,443端口)</a-select-option>
-              <a-select-option value="sg-bp14awscejjfabbu6x5m">安全组2 (开放22,3389端口)</a-select-option>
+            <a-select v-model:value="createForm.securityGroupIds" placeholder="选择安全组" mode="multiple"
+              :loading="securityGroupLoading" :disabled="!createForm.vpcId">
+              <a-select-option v-for="sg in securityGroupOptions" :key="sg.securityGroupId" :value="sg.securityGroupId">
+                {{ sg.securityGroupName }} ({{ sg.description || '无描述' }})
+              </a-select-option>
+              <a-empty v-if="securityGroupOptions.length === 0" :image="Empty.PRESENTED_IMAGE_SIMPLE"
+                description="暂无可用安全组" />
             </a-select>
           </a-form-item>
         </div>
@@ -250,13 +267,28 @@
             <a-descriptions-item label="云服务商">{{ getProviderName(createForm.provider) }}</a-descriptions-item>
             <a-descriptions-item label="付费类型">{{ getPayTypeName(createForm.payType) }}</a-descriptions-item>
             <a-descriptions-item label="地域">{{ getRegionById(createForm.region)?.region || createForm.region
-              }}</a-descriptions-item>
+            }}</a-descriptions-item>
             <a-descriptions-item label="可用区">{{ getZoneById(createForm.zoneId)?.zone || createForm.zoneId
-              }}</a-descriptions-item>
+            }}</a-descriptions-item>
             <a-descriptions-item label="实例规格">{{ getInstanceTypeById(createForm.instanceType)?.instanceType ||
               createForm.instanceType }}</a-descriptions-item>
-            <a-descriptions-item label="镜像">{{ getImageName(createForm.imageId) }}</a-descriptions-item>
+            <a-descriptions-item label="镜像">{{ createForm.imageId }}</a-descriptions-item>
             <a-descriptions-item label="实例数量">{{ createForm.amount }}</a-descriptions-item>
+            <a-descriptions-item label="VPC">{{ getVpcById(createForm.vpcId)?.vpcName || createForm.vpcId
+            }}</a-descriptions-item>
+            <a-descriptions-item label="交换机">{{ getVSwitchById(createForm.vSwitchId)?.vSwitchName ||
+              createForm.vSwitchId
+            }}</a-descriptions-item>
+            <a-descriptions-item label="安全组">
+              <template v-if="createForm.securityGroupIds && createForm.securityGroupIds.length > 0">
+                <a-tag v-for="(sgId, idx) in createForm.securityGroupIds" :key="idx" color="blue">
+                  {{ getSecurityGroupById(sgId)?.securityGroupName || sgId }}
+                </a-tag>
+              </template>
+              <template v-else>
+                <span>未选择安全组</span>
+              </template>
+            </a-descriptions-item>
             <a-descriptions-item label="实例名称">{{ createForm.instanceName }}</a-descriptions-item>
             <a-descriptions-item label="系统盘">{{ getSystemDiskById(createForm.systemDiskCategory)?.systemDiskCategory ||
               createForm.systemDiskCategory }} {{
@@ -301,7 +333,7 @@
             <a-tag :color="getStatusColor(instanceDetail.status)">{{ getStatusText(instanceDetail.status) }}</a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="区域">{{ getRegionById(instanceDetail.region_id)?.region || instanceDetail.region_id
-            }}</a-descriptions-item>
+          }}</a-descriptions-item>
           <a-descriptions-item label="可用区">{{ instanceDetail.zone_id }}</a-descriptions-item>
           <a-descriptions-item label="实例规格">{{ instanceDetail.instanceType }}</a-descriptions-item>
           <a-descriptions-item label="CPU">{{ instanceDetail.cpu }} 核</a-descriptions-item>
@@ -316,7 +348,7 @@
           </a-descriptions-item>
           <a-descriptions-item label="创建时间">{{ instanceDetail.creation_time }}</a-descriptions-item>
           <a-descriptions-item label="付费方式">{{ getPayTypeName(instanceDetail.instance_charge_type)
-            }}</a-descriptions-item>
+          }}</a-descriptions-item>
         </a-descriptions>
 
         <a-divider orientation="left">磁盘信息</a-divider>
@@ -378,6 +410,8 @@ import {
   restartEcsResource,
   deleteEcsResource,
   getInstanceOptions,
+  getVpcResourceList,
+  listSecurityGroups,
   type ResourceEcs,
   type ListEcsResourceReq,
   type ResourceECSListResp,
@@ -389,6 +423,8 @@ import {
   type DeleteEcsReq,
   type ListInstanceOptionsReq,
   type ListInstanceOptionsResp,
+  type ListVpcResourcesReq,
+  type ListSecurityGroupsReq,
 } from '#/api/core/tree';
 
 // 定义磁盘数据的接口
@@ -398,6 +434,52 @@ interface Disk {
   type: string;
   category: string;
   size: number;
+}
+
+// VPC和安全组接口
+interface VpcOption {
+  vpcId: string;
+  vpcName: string;
+  cidrBlock: string;
+  description?: string;
+}
+
+interface VSwitchOption {
+  vSwitchId: string;
+  vSwitchName: string;
+  cidrBlock: string;
+  zoneId: string;
+  vpcId: string;
+}
+
+interface SecurityGroupOption {
+  securityGroupId: string;
+  securityGroupName: string;
+  description?: string;
+  vpcId: string;
+}
+
+// 定义后端返回的VPC和交换机数据接口
+interface VpcData {
+  vpcId: string;
+  vpcName: string;
+  cidrBlock: string;
+  description?: string;
+  vSwitches?: VSwitch[];
+}
+
+interface VSwitch {
+  vSwitchId: string;
+  vSwitchName: string;
+  cidrBlock: string;
+  zoneId: string;
+}
+
+interface SecurityGroupData {
+  securityGroupId: string;
+  securityGroupName: string;
+  description?: string;
+  vpcId: string;
 }
 
 // 初始化实例详情
@@ -428,8 +510,8 @@ const columns = [
   },
   {
     title: 'IP地址',
-    dataIndex: 'ipAddress',
-    key: 'ipAddress',
+    dataIndex: 'ipAddr',
+    key: 'ipAddr',
     render: (text: string, record: ResourceEcs) => {
       let output = `内网: ${record.private_ip_address?.join(', ') || ''}`;
       if (record.public_ip_address && record.public_ip_address.length > 0) {
@@ -440,8 +522,8 @@ const columns = [
   },
   {
     title: '地域/可用区',
-    dataIndex: 'region',
-    key: 'region',
+    dataIndex: 'region_id',
+    key: 'region_id',
     render: (text: string, record: ResourceEcs) => {
       return `${getRegionById(record.region_id)?.region || record.region_id}\n${getZoneById(record.zone_id)?.zone || record.zone_id}`;
     },
@@ -548,6 +630,7 @@ const createForm = reactive({
   instanceType: '',
   amount: 1,
   zoneId: '',
+  vpcId: '',
   vSwitchId: '',
   securityGroupIds: [] as string[],
   hostnamePrefix: '',
@@ -556,7 +639,7 @@ const createForm = reactive({
   instanceName: '',
   payType: '',
   instanceChargeType: '',
-  spotStrategy: 'NoSpot',
+  spotStrategy: '',
   description: '',
   systemDiskCategory: '',
   systemDiskSize: 40,
@@ -580,13 +663,158 @@ const tagInputValue = ref('');
 const regionOptions = ref<ListInstanceOptionsResp[]>([]);
 const zoneOptions = ref<ListInstanceOptionsResp[]>([]);
 const instanceTypeOptions = ref<ListInstanceOptionsResp[]>([]);
+const imageOptions = ref<ListInstanceOptionsResp[]>([]);
 const systemDiskOptions = ref<ListInstanceOptionsResp[]>([]);
 const dataDiskOptions = ref<ListInstanceOptionsResp[]>([]);
+
+// VPC和安全组选项
+const vpcOptions = ref<VpcOption[]>([]);
+const vSwitchOptions = ref<VSwitchOption[]>([]);
+const securityGroupOptions = ref<SecurityGroupOption[]>([]);
+
+// 加载状态
+const vpcLoading = ref(false);
+const vSwitchLoading = ref(false);
+const securityGroupLoading = ref(false);
 
 // 页面加载时获取数据
 onMounted(() => {
   fetchEcsList();
 });
+
+
+// 获取VPC列表
+const fetchVpcOptions = async () => {
+  if (!createForm.provider || !createForm.region) {
+    return;
+  }
+
+  vpcLoading.value = true;
+  vpcOptions.value = [];
+  createForm.vpcId = '';
+  createForm.vSwitchId = '';
+
+  try {
+    const req: ListVpcResourcesReq = {
+      pageNumber: 1,
+      pageSize: 10,
+      provider: createForm.provider,
+      region: createForm.region,
+    };
+
+    const response = await getVpcResourceList(req);
+
+    // 转换后端数据为前端选项格式
+    vpcOptions.value = response.data.map((vpc: any) => ({
+      vpcId: vpc.instance_id || vpc.vpc_id || vpc.vpcId,
+      vpcName: vpc.vpcName || vpc.instance_name || '',
+      cidrBlock: vpc.cidrBlock || '',
+      description: vpc.description || ''
+    }));
+
+    // 获取所有VPC的交换机ID
+    vSwitchLoading.value = true;
+    const vSwitches: VSwitchOption[] = [];
+
+    // 为每个VPC获取交换机信息
+    for (const vpc of response.data) {
+      if (vpc.vSwitchIds && Array.isArray(vpc.vSwitchIds) && vpc.vSwitchIds.length > 0) {
+        // 这里需要根据vSwitchIds获取交换机详细信息
+        // 这里简单处理，仅使用ID
+        for (const vSwitchId of vpc.vSwitchIds) {
+          vSwitches.push({
+            vSwitchId: vSwitchId,
+            vSwitchName: `交换机-${vSwitchId.substring(vSwitchId.length - 8)}`,
+            cidrBlock: '未知', // 需要额外API获取
+            zoneId: '', // 需要额外API获取
+            vpcId: vpc.instance_id || vpc.vpc_id || vpc.vpcId
+          });
+        }
+      }
+    }
+
+    vSwitchOptions.value = vSwitches;
+    vSwitchLoading.value = false;
+  } catch (error) {
+    message.error('获取VPC列表失败');
+    console.error('获取VPC列表失败:', error);
+  } finally {
+    vpcLoading.value = false;
+  }
+};
+
+// 获取安全组列表
+const fetchSecurityGroupOptions = async () => {
+  if (!createForm.provider || !createForm.region) {
+    return;
+  }
+
+  securityGroupLoading.value = true;
+  securityGroupOptions.value = [];
+  createForm.securityGroupIds = [];
+
+  try {
+    const req: ListSecurityGroupsReq = {
+      provider: createForm.provider,
+      region: createForm.region,
+      pageNumber: 1,
+      pageSize: 100
+    };
+
+    const response = await listSecurityGroups(req);
+
+    // 转换后端数据为前端选项格式
+    securityGroupOptions.value = response.data.map((sg: any) => ({
+      securityGroupId: sg.instance_id || sg.security_group_id,
+      securityGroupName: sg.securityGroupName || sg.instance_name,
+      description: sg.description || '',
+      vpcId: sg.vpcId || sg.vpc_id || ''
+    }));
+  } catch (error) {
+    message.error('获取安全组列表失败');
+    console.error('获取安全组列表失败:', error);
+  } finally {
+    securityGroupLoading.value = false;
+  }
+};
+
+// 当VPC选择变更时，更新交换机和安全组选项
+const handleVpcChange = (vpcId: string) => {
+  createForm.vSwitchId = '';
+  createForm.securityGroupIds = [];
+
+  // 过滤该VPC下的交换机
+  const filteredVSwitches = vSwitchOptions.value.filter(vSwitch => vSwitch.vpcId === vpcId);
+
+  // 如果存在与当前可用区匹配的交换机，优先选择
+  const zoneVSwitch = filteredVSwitches.find(vSwitch => vSwitch.zoneId === createForm.zoneId);
+  if (zoneVSwitch) {
+    createForm.vSwitchId = zoneVSwitch.vSwitchId;
+  } else if (filteredVSwitches.length > 0) {
+    createForm.vSwitchId = filteredVSwitches[0]?.vSwitchId || '';
+  }
+
+  // 过滤该VPC下的安全组
+  const filteredSecurityGroups = securityGroupOptions.value.filter(sg => sg.vpcId === vpcId);
+  if (filteredSecurityGroups.length > 0) {
+    createForm.securityGroupIds = [filteredSecurityGroups[0]?.securityGroupId || ''];
+  }
+};
+
+// 搜索过滤方法
+const filterInstanceType = (input: string, option: any) => {
+  // 移除输入和选项中的所有空格后再进行比较
+  const normalizedInput = input.toLowerCase().replace(/\s+/g, '');
+  const normalizedLabel = option.label.toLowerCase().replace(/\s+/g, '');
+  return normalizedLabel.indexOf(normalizedInput) >= 0;
+};
+
+const filterImage = (input: string, option: any) => {
+  // 移除输入和选项中的所有空格后再进行比较
+  const normalizedInput = input.toLowerCase().replace(/\s+/g, '');
+  const normalizedLabel = option.label.toLowerCase().replace(/\s+/g, '');
+  return normalizedLabel.indexOf(normalizedInput) >= 0;
+};
 
 // 实用函数 - 获取名称
 const getProviderName = (provider: string): string => {
@@ -626,13 +854,16 @@ const getDataDiskById = (diskId: string) => {
   return dataDiskOptions.value.find(disk => disk.dataDiskCategory === diskId);
 };
 
-const getImageName = (imageId: string): string => {
-  const map: Record<string, string> = {
-    'aliyun_3_x64_20G_alibase_20221102.vhd': 'CentOS 3.x 64位',
-    'ubuntu_18_04_x64_20G_alibase_20221102.vhd': 'Ubuntu 18.04 64位',
-    'win_2019_x64_dtc_zh-cn_40G_alibase_20221102.vhd': 'Windows Server 2019 数据中心版',
-  };
-  return map[imageId] || imageId;
+const getVpcById = (vpcId: string) => {
+  return vpcOptions.value.find(vpc => vpc.vpcId === vpcId);
+};
+
+const getVSwitchById = (vSwitchId: string) => {
+  return vSwitchOptions.value.find(vSwitch => vSwitch.vSwitchId === vSwitchId);
+};
+
+const getSecurityGroupById = (securityGroupId: string) => {
+  return securityGroupOptions.value.find(sg => sg.securityGroupId === securityGroupId);
 };
 
 // 表格变更处理
@@ -863,6 +1094,7 @@ const showCreateModal = () => {
     instanceType: '',
     amount: 1,
     zoneId: '',
+    vpcId: '',
     vSwitchId: '',
     securityGroupIds: [],
     hostnamePrefix: '',
@@ -889,8 +1121,13 @@ const showCreateModal = () => {
 };
 
 // 表单步骤控制
-const nextStep = () => {
+const nextStep = async () => {
   if (currentStep.value < 3) {
+    // 当从基础配置步骤进入到网络配置步骤时，需要加载VPC和安全组数据
+    if (currentStep.value === 0) {
+      await fetchVpcOptions();
+      await fetchSecurityGroupOptions();
+    }
     currentStep.value += 1;
   }
 };
@@ -900,6 +1137,8 @@ const prevStep = () => {
     currentStep.value -= 1;
   }
 };
+
+
 
 // 标签处理
 const addTag = () => {
@@ -948,8 +1187,11 @@ const handleCreateSubmit = async () => {
 
   try {
     const createParams = {
+      provider: createForm.provider,
       periodUnit: createForm.periodUnit,
       period: createForm.period,
+      region: createForm.region,
+      zoneId: createForm.zoneId,
       autoRenew: createForm.autoRenew,
       instanceChargeType: createForm.instanceChargeType,
       spotStrategy: createForm.spotStrategy,
@@ -958,15 +1200,28 @@ const handleCreateSubmit = async () => {
       dataDiskSize: createForm.dataDiskSize,
       dataDiskCategory: createForm.dataDiskCategory,
       dryRun: createForm.dryRun,
-      tags: createForm.tags
+      tags: createForm.tags,
+      imageId: createForm.imageId,
+      instanceType: createForm.instanceType,
+      amount: createForm.amount || 1,
+      vpcId: createForm.vpcId,
+      vSwitchId: createForm.vSwitchId,
+      securityGroupIds: createForm.securityGroupIds,
+      hostnamePrefix: createForm.hostnamePrefix,
+      hostname: createForm.hostname,
+      password: createForm.password,
+      instanceName: createForm.instanceName,
+      payType: createForm.payType,
+      description: createForm.description
     };
 
     await createEcsResource(createParams);
     message.success('ECS实例创建成功');
     createModalVisible.value = false;
-
-    // 刷新列表
-    fetchEcsList();
+    // 延迟1秒后刷新列表
+    setTimeout(() => {
+      fetchEcsList();
+    }, 1000);
   } catch (error) {
     message.error('创建ECS实例失败');
     console.error('创建ECS实例失败:', error);
@@ -983,6 +1238,9 @@ const handleProviderChange = async (value: string) => {
   createForm.instanceType = '';
   createForm.systemDiskCategory = '';
   createForm.dataDiskCategory = '';
+  createForm.vpcId = '';
+  createForm.vSwitchId = '';
+  createForm.securityGroupIds = [];
 
   // 重置所有选项
   regionOptions.value = [];
@@ -990,12 +1248,14 @@ const handleProviderChange = async (value: string) => {
   instanceTypeOptions.value = [];
   systemDiskOptions.value = [];
   dataDiskOptions.value = [];
+  vpcOptions.value = [];
+  vSwitchOptions.value = [];
+  securityGroupOptions.value = [];
 
   // 获取支持的地域列表
   try {
     const req: ListInstanceOptionsReq = { provider: value };
     const response = await getInstanceOptions(req);
-    console.log(response);
     regionOptions.value = response.data;
   } catch (error) {
     message.error('获取地域列表失败');
@@ -1008,19 +1268,25 @@ const handlePayTypeChange = async (value: string) => {
   createForm.instanceType = '';
   createForm.systemDiskCategory = '';
   createForm.dataDiskCategory = '';
+  createForm.vpcId = '';
+  createForm.vSwitchId = '';
+  createForm.securityGroupIds = [];
 
   // 重置依赖选项
   zoneOptions.value = [];
   instanceTypeOptions.value = [];
   systemDiskOptions.value = [];
   dataDiskOptions.value = [];
+  vpcOptions.value = [];
+  vSwitchOptions.value = [];
+  securityGroupOptions.value = [];
 
   regionOptions.value = [
-    { region: 'cn-beijing', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0 },
-    { region: 'cn-hangzhou', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0 },
-    { region: 'cn-shanghai', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0 },
-    { region: 'cn-shenzhen', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0 },
-    { region: 'cn-hongkong', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0 }
+    { region: 'cn-beijing', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0, imageId: '', osName: '', osType: '', architecture: '' },
+    { region: 'cn-hangzhou', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0, imageId: '', osName: '', osType: '', architecture: '' },
+    { region: 'cn-shanghai', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0, imageId: '', osName: '', osType: '', architecture: '' },
+    { region: 'cn-shenzhen', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0, imageId: '', osName: '', osType: '', architecture: '' },
+    { region: 'cn-hongkong', valid: true, dataDiskCategory: '', systemDiskCategory: '', instanceType: '', zone: '', payType: '', cpu: 0, memory: 0, imageId: '', osName: '', osType: '', architecture: '' }
   ];
 };
 
@@ -1029,12 +1295,18 @@ const handleRegionChange = async (value: string) => {
   createForm.instanceType = '';
   createForm.systemDiskCategory = '';
   createForm.dataDiskCategory = '';
+  createForm.vpcId = '';
+  createForm.vSwitchId = '';
+  createForm.securityGroupIds = [];
 
   // 重置依赖选项
   zoneOptions.value = [];
   instanceTypeOptions.value = [];
   systemDiskOptions.value = [];
   dataDiskOptions.value = [];
+  vpcOptions.value = [];
+  vSwitchOptions.value = [];
+  securityGroupOptions.value = [];
 
   // 获取可用区列表
   try {
@@ -1078,8 +1350,43 @@ const handleZoneChange = async (value: string) => {
 };
 
 const handleInstanceTypeChange = async (value: string) => {
+  createForm.imageId = '';
   createForm.systemDiskCategory = '';
   createForm.dataDiskCategory = '';
+
+  // 重置依赖选项
+  imageOptions.value = [];
+  systemDiskOptions.value = [];
+  dataDiskOptions.value = [];
+
+  // 获取镜像列表
+  try {
+    const req: ListInstanceOptionsReq = {
+      provider: createForm.provider,
+      payType: createForm.payType,
+      region: createForm.region,
+      zone: createForm.zoneId,
+      instanceType: value,
+      pageNumber: 1,
+      pageSize: 10
+    };
+    const response = await getInstanceOptions(req);
+
+    imageOptions.value = response || [];
+
+    // 如果镜像选项为空，显示提示
+    if (imageOptions.value.length === 0) {
+      message.warning('当前配置下没有可用的镜像选项');
+    }
+  } catch (error) {
+    console.error('获取镜像列表失败:', error);
+    message.error('获取镜像列表失败');
+  }
+};
+
+const handleImageIdChange = async (value: string) => {
+  createForm.systemDiskCategory = '';  // 重置系统盘选择
+  createForm.dataDiskCategory = '';  // 重置数据盘选择
 
   // 重置依赖选项
   systemDiskOptions.value = [];
@@ -1092,12 +1399,11 @@ const handleInstanceTypeChange = async (value: string) => {
       payType: createForm.payType,
       region: createForm.region,
       zone: createForm.zoneId,
-      instanceType: value
+      instanceType: createForm.instanceType,
+      imageId: value
     };
     const response = await getInstanceOptions(req);
-    console.log(response);
-    // 假设接口返回系统盘类型列表
-    systemDiskOptions.value = response;
+    systemDiskOptions.value = response || [];
   } catch (error) {
     console.error('获取系统盘类型列表失败:', error);
     message.error('获取系统盘类型列表失败');
@@ -1118,11 +1424,10 @@ const handleSystemDiskCategoryChange = async (value: string) => {
       region: createForm.region,
       zone: createForm.zoneId,
       instanceType: createForm.instanceType,
+      imageId: createForm.imageId,
       systemDiskCategory: value
     };
     const response = await getInstanceOptions(req);
-    console.log(response);
-    // 假设接口返回数据盘类型列表
     dataDiskOptions.value = response;
   } catch (error) {
     console.error('获取数据盘类型列表失败:', error);
@@ -1131,6 +1436,7 @@ const handleSystemDiskCategoryChange = async (value: string) => {
 };
 
 const handleDataDiskCategoryChange = (value: string) => {
+  // 数据盘类型选择变更时的处理逻辑
 };
 </script>
 
