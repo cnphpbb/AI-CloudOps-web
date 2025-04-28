@@ -1,7 +1,6 @@
 <template>
   <div class="process-container">
     <div class="page-header">
-      <h1 class="page-title">工单流程管理</h1>
       <div class="header-actions">
         <a-button type="primary" @click="handleCreateProcess" class="btn-create">
           <template #icon>
@@ -113,7 +112,7 @@
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
-                    <a-menu @click="(e: { key: string }) => handleCommand(e.key, record)">
+                    <a-menu @click="handleCommand(column.key, record)">
                       <a-menu-item key="publish" v-if="record.status === 0">发布</a-menu-item>
                       <a-menu-item key="unpublish" v-if="record.status === 1">取消发布</a-menu-item>
                       <a-menu-item key="clone">克隆</a-menu-item>
@@ -697,18 +696,24 @@ const handleCommand = (command: string, row: Process) => {
 const publishProcess = (process: Process) => {
   const index = processes.value.findIndex(p => p.id === process.id);
   if (index !== -1) {
-    processes.value[index].status = 1;
-    processes.value[index].updatedAt = new Date();
-    message.success(`流程 "${process.name}" 已发布`);
+    const process = processes.value[index];
+    if (process) {
+      process.status = 1;
+      process.updatedAt = new Date();
+      message.success(`流程 "${process.name}" 已发布`);
+    }
   }
 };
 
 const unpublishProcess = (process: Process) => {
   const index = processes.value.findIndex(p => p.id === process.id);
   if (index !== -1) {
-    processes.value[index].status = 0;
-    processes.value[index].updatedAt = new Date();
-    message.success(`流程 "${process.name}" 已取消发布`);
+    const process = processes.value[index];
+    if (process) {
+      process.status = 0;
+      process.updatedAt = new Date();
+      message.success(`流程 "${process.name}" 已取消发布`);
+    }
   }
 };
 
@@ -804,6 +809,7 @@ const saveProcess = () => {
   // 验证流程节点是否有效
   for (let i = 0; i < processDialog.form.nodes.length; i++) {
     const node = processDialog.form.nodes[i];
+    if (!node) continue;
 
     if (!node.name) {
       message.error(`节点 ${i + 1} 名称不能为空`);
@@ -826,20 +832,26 @@ const saveProcess = () => {
     }
   }
 
+  // 确保 formID 不为 null
+  const formToSave = {
+    ...processDialog.form,
+    formID: processDialog.form.formID as number
+  };
+
   if (processDialog.isEdit) {
     // 更新现有流程
-    const index = processes.value.findIndex(p => p.id === processDialog.form.id);
+    const index = processes.value.findIndex(p => p.id === formToSave.id);
     if (index !== -1) {
-      processDialog.form.updatedAt = new Date();
-      processes.value[index] = { ...processDialog.form };
-      message.success(`流程 "${processDialog.form.name}" 已更新`);
+      formToSave.updatedAt = new Date();
+      processes.value[index] = formToSave;
+      message.success(`流程 "${formToSave.name}" 已更新`);
     }
   } else {
     // 创建新流程
     const newId = Math.max(...processes.value.map(p => p.id)) + 1;
-    processDialog.form.id = newId;
-    processes.value.push({ ...processDialog.form });
-    message.success(`流程 "${processDialog.form.name}" 已创建`);
+    formToSave.id = newId;
+    processes.value.push(formToSave);
+    message.success(`流程 "${formToSave.name}" 已创建`);
   }
   processDialog.visible = false;
 };
@@ -967,7 +979,7 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%, #52c41a 100%);
+  background: linear-gradient(135deg, #1890ff 0%);
   border: none;
 }
 

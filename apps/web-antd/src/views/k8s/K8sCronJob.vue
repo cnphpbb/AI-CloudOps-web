@@ -1,25 +1,17 @@
 <template>
   <div>
-    <div class="search-filters">
-          <!-- 搜索输入框 -->
-          <a-input
-            v-model:value="searchText"
-            placeholder="请输入用户名或昵称"
-            style="width: 200px; margin-right: 16px;"
-          />
-          <!-- 搜索按钮 -->
-          <a-button type="primary" @click="handleSearch">搜索</a-button>
+    <div class="custom-toolbar">
+      <div class="search-filters">
+        <!-- 搜索输入框 -->
+        <a-input v-model:value="searchText" placeholder="请输入定时任务名称" style="width: 200px; margin-right: 16px;" />
+        <!-- 搜索按钮 -->
+        <a-button type="primary" @click="handleSearch">搜索</a-button>
+      </div>
+      <div>
+        <a-button type="primary" @click="handleAdd">新增</a-button>
+      </div>
     </div>
     <a-table :columns="columns" :data-source="filteredData">
-      <template #headerCell="{ column }">
-        <template v-if="column.key === 'name'">
-          <span>
-            <smile-outlined />
-            Name
-          </span>
-        </template>
-      </template>
-
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'name'">
           <a>
@@ -28,11 +20,8 @@
         </template>
         <template v-else-if="column.key === 'tags'">
           <span>
-            <a-tag
-              v-for="tag in record.tags"
-              :key="tag"
-              :color="tag === 'loser' ? 'volcano' : tag.length > 5 ? 'geekblue' : 'green'"
-            >
+            <a-tag v-for="tag in record.tags" :key="tag"
+              :color="tag === 'loser' ? 'volcano' : tag.length > 5 ? 'geekblue' : 'green'">
               {{ tag.toUpperCase() }}
             </a-tag>
           </span>
@@ -47,14 +36,19 @@
     </a-table>
   </div>
 </template>
+
 <script lang="ts" setup>
-import { SmileOutlined } from '@ant-design/icons-vue';
 import { ref, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
+
 interface DataItem {
   name: string;
-  age: number;
-  address: string;
+  cluster: string;
+  app: string;
+  namespace: string;
+  schedule: string;
+  status: string;
+  lastSchedule: string;
   tags: string[];
 }
 
@@ -62,10 +56,85 @@ interface DataItem {
 const searchText = ref('');
 const filteredData = ref<DataItem[]>([]);
 
+const columns = [
+  {
+    title: '名称',
+    dataIndex: 'name',
+    key: 'name',
+  },
+  {
+    title: '所属集群',
+    dataIndex: 'cluster',
+    key: 'cluster',
+  },
+  {
+    title: '所属应用',
+    dataIndex: 'app',
+    key: 'app',
+  },
+  {
+    title: '命名空间',
+    dataIndex: 'namespace',
+    key: 'namespace',
+  },
+  {
+    title: '调度规则',
+    key: 'schedule',
+    dataIndex: 'schedule',
+  },
+  {
+    title: '状态',
+    key: 'status',
+    dataIndex: 'status',
+  },
+  {
+    title: '最近执行时间',
+    key: 'lastSchedule',
+    dataIndex: 'lastSchedule',
+  },
+  {
+    title: '操作',
+    key: 'action',
+  }
+];
+
+const data: DataItem[] = [
+  {
+    name: 'backup-job',
+    cluster: 'k8s-cluster-1',
+    app: 'backup-service',
+    namespace: 'default',
+    schedule: '0 2 * * *',
+    status: 'Active',
+    lastSchedule: '2023-10-01 02:00:00',
+    tags: ['backup', 'daily'],
+  },
+  {
+    name: 'cleanup-job',
+    cluster: 'k8s-cluster-2',
+    app: 'maintenance',
+    namespace: 'system',
+    schedule: '0 0 * * 0',
+    status: 'Active',
+    lastSchedule: '2023-10-01 00:00:00',
+    tags: ['cleanup', 'weekly'],
+  },
+  {
+    name: 'report-job',
+    cluster: 'k8s-cluster-1',
+    app: 'reporting',
+    namespace: 'business',
+    schedule: '0 8 1 * *',
+    status: 'Suspended',
+    lastSchedule: '2023-10-01 08:00:00',
+    tags: ['report', 'monthly'],
+  }
+];
+
 // 搜索按钮
 const handleSearch = () => {
   if (searchText.value.trim() === '') {
-    filteredData.value = data; // 如果搜索框为空，显示所有数据
+    filteredData.value = data;
   } else {
     filteredData.value = data.filter(item => item.name.includes(searchText.value));
   }
@@ -80,53 +149,9 @@ const handleDelete = (_: DataItem) => {
   message.success('删除成功');
 };
 
-const columns = [
-  {
-    title: 'Name',
-    dataIndex: 'name',
-    key: 'name',
-  },
-  {
-    title: 'Age',
-    dataIndex: 'age',
-    key: 'age',
-  },
-  {
-    title: 'Address',
-    dataIndex: 'address',
-    key: 'address',
-  },
-  {
-    title: 'Tags',
-    key: 'tags',
-    dataIndex: 'tags',
-  },
-  {
-    title: 'Action',
-    key: 'action',
-  },
-];
-
-const data: DataItem[] = [
-  {
-    name: 'John Brown',
-    age: 32,
-    address: 'New York No. 1 Lake Park',
-    tags: ['nice', 'developer'],
-  },
-  {
-    name: 'Jim Green',
-    age: 42,
-    address: 'London No. 1 Lake Park',
-    tags: ['loser'],
-  },
-  {
-    name: 'Joe Black',
-    age: 32,
-    address: 'Sidney No. 1 Lake Park',
-    tags: ['cool', 'teacher'],
-  },
-];
+const handleAdd = () => {
+  message.success('新增成功');
+};
 
 onMounted(() => {
   filteredData.value = data;
@@ -134,11 +159,23 @@ onMounted(() => {
 
 </script>
 
+<style scoped>
+.custom-toolbar {
+  padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
-<style scoped>  
 .search-filters {
-  padding: 12px; /* 搜索框和按钮之间的间距 */
   display: flex;
   align-items: center;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
 }
 </style>

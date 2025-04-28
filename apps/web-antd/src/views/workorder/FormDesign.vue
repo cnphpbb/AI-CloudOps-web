@@ -1,7 +1,6 @@
 <template>
   <div class="form-design-container">
     <div class="page-header">
-      <h1 class="page-title">表单设计管理</h1>
       <div class="header-actions">
         <a-button type="primary" @click="handleCreateForm" class="btn-create">
           <template #icon>
@@ -113,7 +112,7 @@
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
-                    <a-menu @click="(e: { key: string }) => handleCommand(e.key, record)">
+                    <a-menu @click="handleCommand">
                       <a-menu-item key="publish" v-if="record.status === 0">发布</a-menu-item>
                       <a-menu-item key="unpublish" v-if="record.status === 1">取消发布</a-menu-item>
                       <a-menu-item key="clone">克隆</a-menu-item>
@@ -776,18 +775,24 @@ const handleCommand = (command: string, row: FormDesign) => {
 const publishForm = (form: FormDesign) => {
   const index = formDesigns.value.findIndex(f => f.id === form.id);
   if (index !== -1) {
-    formDesigns.value[index].status = 1;
-    formDesigns.value[index].updatedAt = new Date();
-    message.success(`表单 "${form.name}" 已发布`);
+    const formDesign = formDesigns.value[index];
+    if (formDesign) {
+      formDesign.status = 1;
+      formDesign.updatedAt = new Date();
+      message.success(`表单 "${form.name}" 已发布`);
+    }
   }
 };
 
 const unpublishForm = (form: FormDesign) => {
   const index = formDesigns.value.findIndex(f => f.id === form.id);
   if (index !== -1) {
-    formDesigns.value[index].status = 0;
-    formDesigns.value[index].updatedAt = new Date();
-    message.success(`表单 "${form.name}" 已取消发布`);
+    const formDesign = formDesigns.value[index];
+    if (formDesign) {
+      formDesign.status = 0;
+      formDesign.updatedAt = new Date();
+      message.success(`表单 "${form.name}" 已取消发布`);
+    }
   }
 };
 
@@ -863,14 +868,14 @@ const saveForm = () => {
     const index = formDesigns.value.findIndex(f => f.id === formDialog.form.id);
     if (index !== -1) {
       formDialog.form.updatedAt = new Date();
-      formDesigns.value[index] = { ...formDialog.form };
+      formDesigns.value[index] = { ...formDialog.form } as FormDesign;
       message.success(`表单 "${formDialog.form.name}" 已更新`);
     }
   } else {
     // 创建新表单
     const newId = Math.max(...formDesigns.value.map(f => f.id)) + 1;
     formDialog.form.id = newId;
-    formDesigns.value.push({ ...formDialog.form });
+    formDesigns.value.push({ ...formDialog.form } as FormDesign);
     message.success(`表单 "${formDialog.form.name}" 已创建`);
   }
   formDialog.visible = false;
@@ -973,7 +978,7 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%, #52c41a 100%);
+  background: linear-gradient(135deg, #1890ff 0%);
   border: none;
 }
 

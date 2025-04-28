@@ -22,8 +22,13 @@
           </div>
         </div>
         <div class="chat-input">
-          <a-input-search v-model:value="globalInputMessage" placeholder="请输入您的问题..." enter-button="发送" size="large"
-            @search="handleSearch" @keyup.enter="handleSearch" :disabled="sending" />
+          <div class="textarea-container">
+            <a-textarea v-model:value="globalInputMessage" placeholder="请输入您的问题..." :rows="2" :disabled="sending"
+              :auto-size="{ minRows: 1, maxRows: 5 }" />
+            <a-button type="primary" :disabled="sending" @click="handleSearch" class="send-button">
+              发送
+            </a-button>
+          </div>
         </div>
       </div>
     </a-drawer>
@@ -416,33 +421,36 @@ onBeforeUnmount(() => {
   border-top: 1px solid #333;
 }
 
-.chat-input :deep(.ant-input) {
+.textarea-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.textarea-container :deep(.ant-input) {
   background-color: #2d2d2d;
   color: #e0e0e0;
   border: 1px solid #444;
+  resize: none;
+  flex: 1;
+}
+
+.send-button {
+  background-color: #1668dc;
+  border-color: #1668dc;
+  height: 40px;
+  min-width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.send-button:hover {
+  background-color: #1554b2;
+  border-color: #1554b2;
 }
 
 .chat-input :deep(.ant-input::placeholder) {
   color: #777;
-}
-
-.chat-input :deep(.ant-btn) {
-  background-color: #1668dc;
-  border-color: #1668dc;
-}
-
-.chat-input :deep(.ant-input-group-addon) {
-  background-color: #1a1a1a;
-}
-
-.chat-input :deep(.ant-input-search-button) {
-  height: 40px;
-  background-color: #1668dc;
-  border-color: #1668dc;
-}
-
-.chat-input :deep(.ant-input-search-button:hover) {
-  background-color: #1554b2;
-  border-color: #1554b2;
 }
 </style>
