@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1>RDS资源操作</h1>
+    <h1>云提供商管理</h1>
   </div>
 </template>
 

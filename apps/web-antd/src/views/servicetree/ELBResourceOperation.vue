@@ -1,12 +1,9 @@
 <template>
-    <div>
-        
-    </div>
+  <div>
+    <h1>ELB资源操作</h1>
+  </div>
 </template>
 
-<script>
-</script>
+<script setup lang="ts"></script>
 
-<style lang="" scoped>
-    
-</style>
+<style scoped lang="scss"></style>
