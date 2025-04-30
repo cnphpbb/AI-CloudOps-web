@@ -31,8 +31,8 @@ const defaultPreferences: Preferences = {
     styleType: 'normal',
   },
   copyright: {
-    companyName: 'Vben',
-    companySiteLink: 'https://www.vben.pro',
+    companyName: 'Bamboo',
+    companySiteLink: 'https://github.com/GoSimplicity',
     date: '2024',
     enable: true,
     icp: '',
