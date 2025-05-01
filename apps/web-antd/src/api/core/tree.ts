@@ -322,3 +322,7 @@ export function listSecurityGroups(req: ListSecurityGroupsReq) {
 export function getSecurityGroupDetail(req: GetSecurityGroupDetailReq) {
   return requestClient.post('/resource/security_group/detail', req);
 }
+
+export function getAllTreeNodes() {
+  return requestClient.get('/resource/tree_node');
+}

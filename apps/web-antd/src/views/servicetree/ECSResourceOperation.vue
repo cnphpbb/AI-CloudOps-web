@@ -198,12 +198,12 @@
 
         <!-- 步骤 3: 系统配置 -->
         <div v-if="currentStep === 2">
-          <a-form-item label="主机名" name="hostname" :rules="[{ required: true }]">
-            <a-input v-model:value="createForm.hostname" placeholder="主机名，如cloudops" />
-          </a-form-item>
-
           <a-form-item label="实例名称" name="instanceName" :rules="[{ required: true }]">
             <a-input v-model:value="createForm.instanceName" placeholder="实例名称，如web-server-01" />
+          </a-form-item>
+
+          <a-form-item label="主机名" name="hostname" :rules="[{ required: true }]">
+            <a-input v-model:value="createForm.hostname" placeholder="主机名，如cloudops" />
           </a-form-item>
 
           <a-form-item label="登录密码" name="password" :rules="[{ required: true }]">
@@ -216,7 +216,7 @@
 
           <a-form-item label="系统盘类型" name="systemDiskCategory" :rules="[{ required: true }]">
             <a-select v-model:value="createForm.systemDiskCategory" placeholder="选择系统盘类型"
-              @change="handleSystemDiskCategoryChange" :disabled="!createForm.instanceType">
+              @change="handleSystemDiskCategoryChange">
               <a-select-option v-for="disk in systemDiskOptions" :key="disk.systemDiskCategory"
                 :value="disk.systemDiskCategory">
                 {{ disk.systemDiskCategory }}
@@ -391,7 +391,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { message, Empty, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -508,6 +508,8 @@ const securityGroupOptions = ref<SecurityGroupOption[]>([]);
 const vpcLoading = ref(false);
 const vSwitchLoading = ref(false);
 const securityGroupLoading = ref(false);
+// 添加一个标志来跟踪步骤之间的切换
+const stepChanged = ref(false);
 
 // 表格配置
 const columns = [
@@ -616,6 +618,74 @@ const createForm = reactive({
   autoRenew: false,
   spotDuration: 1,
 });
+
+// 添加表单步骤状态的监听，当从步骤3返回步骤2时，重新获取系统盘类型
+watch(currentStep, async (newVal, oldVal) => {
+  stepChanged.value = true;
+
+  // 当从第三步返回第二步时，确保系统盘信息不丢失
+  if (newVal === 2 && oldVal === 3) {
+    if (createForm.imageId && createForm.instanceType && !createForm.systemDiskCategory) {
+      await refreshSystemDiskOptions();
+    }
+  }
+
+  // 当从第一步返回第零步时，确保实例类型和镜像兼容
+  if (newVal === 0 && oldVal === 1) {
+    if (createForm.imageId && createForm.instanceType) {
+      await verifyInstanceTypeAndImageCompatibility();
+    }
+  }
+
+  stepChanged.value = false;
+});
+
+// 新增验证实例类型和镜像兼容性的函数
+const verifyInstanceTypeAndImageCompatibility = async () => {
+  try {
+    const req = {
+      provider: createForm.provider,
+      payType: createForm.payType,
+      region: createForm.region,
+      zone: createForm.zoneId,
+      instanceType: createForm.instanceType,
+      imageId: createForm.imageId
+    };
+
+    const response = await getInstanceOptions(req);
+
+    // 如果没有返回数据，说明当前实例类型和镜像不兼容
+    if (!response || response.length === 0) {
+      message.warning('当前选择的实例类型与镜像架构不兼容，请重新选择');
+      createForm.imageId = '';
+
+      // 重新加载镜像列表
+      await handleInstanceTypeChange(createForm.instanceType);
+    }
+  } catch (error) {
+    console.error('验证实例类型和镜像兼容性失败:', error);
+  }
+};
+
+// 新增刷新系统盘选项的函数
+const refreshSystemDiskOptions = async () => {
+  try {
+    const req = {
+      provider: createForm.provider,
+      payType: createForm.payType,
+      region: createForm.region,
+      zone: createForm.zoneId,
+      instanceType: createForm.instanceType,
+      imageId: createForm.imageId
+    };
+
+    const response = await getInstanceOptions(req);
+    systemDiskOptions.value = response || [];
+  } catch (error) {
+    console.error('刷新系统盘选项失败:', error);
+    message.error('获取系统盘类型列表失败');
+  }
+};
 
 // 工具函数
 const getStatusColor = (status: string) => {
@@ -1018,16 +1088,40 @@ const showCreateModal = () => {
 const nextStep = async () => {
   if (currentStep.value < 3) {
     if (currentStep.value === 0) {
+      // 在进入网络配置前，先验证实例类型和镜像是否兼容
+      if (createForm.imageId && createForm.instanceType) {
+        await verifyInstanceTypeAndImageCompatibility();
+      }
+
       await fetchVpcOptions();
       await fetchSecurityGroupOptions();
+    } else if (currentStep.value === 1 && !stepChanged.value) {
+      // 在进入系统配置前，确保系统盘类型已加载
+      if (createForm.imageId && createForm.instanceType && (!systemDiskOptions.value.length || !createForm.systemDiskCategory)) {
+        await refreshSystemDiskOptions();
+      }
     }
     currentStep.value += 1;
   }
 };
 
-const prevStep = () => {
+const prevStep = async () => {
   if (currentStep.value > 0) {
     currentStep.value -= 1;
+
+    // 如果从第三步返回第二步，确保系统盘信息不丢失
+    if (currentStep.value === 2 && !stepChanged.value) {
+      if (createForm.imageId && createForm.instanceType && !createForm.systemDiskCategory) {
+        await refreshSystemDiskOptions();
+      }
+    }
+
+    // 如果从第一步返回第零步，需要确保实例类型和镜像兼容
+    if (currentStep.value === 0 && !stepChanged.value) {
+      if (createForm.imageId && createForm.instanceType) {
+        await verifyInstanceTypeAndImageCompatibility();
+      }
+    }
   }
 };
 
@@ -1073,6 +1167,23 @@ const removeTag = (index: number) => {
 const handleCreateSubmit = async () => {
   createLoading.value = true;
 
+  // 再次验证实例类型与镜像的兼容性
+  if (createForm.imageId && createForm.instanceType) {
+    await verifyInstanceTypeAndImageCompatibility();
+
+    // 确保系统盘类型已设置
+    if (!createForm.systemDiskCategory) {
+      await refreshSystemDiskOptions();
+    }
+
+    // 如果验证后镜像被清空，说明不兼容
+    if (!createForm.imageId) {
+      message.error('实例类型与镜像架构不兼容，请返回修改');
+      createLoading.value = false;
+      return;
+    }
+  }
+
   createForm.instanceChargeType = createForm.payType;
 
   try {
@@ -1087,6 +1198,7 @@ const handleCreateSubmit = async () => {
       spotStrategy: createForm.spotStrategy,
       spotDuration: createForm.spotDuration,
       systemDiskSize: createForm.systemDiskSize,
+      systemDiskCategory: createForm.systemDiskCategory, // 确保包含系统盘类型
       dataDiskSize: createForm.dataDiskSize,
       dataDiskCategory: createForm.dataDiskCategory,
       dryRun: createForm.dryRun,
@@ -1122,6 +1234,7 @@ const handleProviderChange = async (value: string) => {
   createForm.region = '';
   createForm.zoneId = '';
   createForm.instanceType = '';
+  createForm.imageId = '';
   createForm.systemDiskCategory = '';
   createForm.dataDiskCategory = '';
   createForm.vpcId = '';
@@ -1131,6 +1244,7 @@ const handleProviderChange = async (value: string) => {
   regionOptions.value = [];
   zoneOptions.value = [];
   instanceTypeOptions.value = [];
+  imageOptions.value = [];
   systemDiskOptions.value = [];
   dataDiskOptions.value = [];
   vpcOptions.value = [];
@@ -1150,6 +1264,7 @@ const handlePayTypeChange = async (value: string) => {
   createForm.region = '';
   createForm.zoneId = '';
   createForm.instanceType = '';
+  createForm.imageId = '';
   createForm.systemDiskCategory = '';
   createForm.dataDiskCategory = '';
   createForm.vpcId = '';
@@ -1158,6 +1273,7 @@ const handlePayTypeChange = async (value: string) => {
 
   zoneOptions.value = [];
   instanceTypeOptions.value = [];
+  imageOptions.value = [];
   systemDiskOptions.value = [];
   dataDiskOptions.value = [];
   vpcOptions.value = [];
@@ -1176,6 +1292,7 @@ const handlePayTypeChange = async (value: string) => {
 const handleRegionChange = async (value: string) => {
   createForm.zoneId = '';
   createForm.instanceType = '';
+  createForm.imageId = '';
   createForm.systemDiskCategory = '';
   createForm.dataDiskCategory = '';
   createForm.vpcId = '';
@@ -1184,6 +1301,7 @@ const handleRegionChange = async (value: string) => {
 
   zoneOptions.value = [];
   instanceTypeOptions.value = [];
+  imageOptions.value = [];
   systemDiskOptions.value = [];
   dataDiskOptions.value = [];
   vpcOptions.value = [];
@@ -1206,10 +1324,12 @@ const handleRegionChange = async (value: string) => {
 
 const handleZoneChange = async (value: string) => {
   createForm.instanceType = '';
+  createForm.imageId = '';
   createForm.systemDiskCategory = '';
   createForm.dataDiskCategory = '';
 
   instanceTypeOptions.value = [];
+  imageOptions.value = [];
   systemDiskOptions.value = [];
   dataDiskOptions.value = [];
 
@@ -1276,6 +1396,14 @@ const handleImageIdChange = async (value: string) => {
       imageId: value
     };
     const response = await getInstanceOptions(req);
+
+    // 如果响应为空，可能是实例类型和镜像不兼容
+    if (!response || response.length === 0) {
+      message.warning('选择的镜像与实例规格不兼容，请重新选择');
+      createForm.imageId = '';
+      return;
+    }
+
     systemDiskOptions.value = response || [];
   } catch (error) {
     console.error('获取系统盘类型列表失败:', error);
