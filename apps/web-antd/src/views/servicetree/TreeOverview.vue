@@ -1,962 +1,1224 @@
 <template>
-  <div class="service-tree-overview">
-    <a-row class="header" :gutter="16">
-      <a-col :span="18">
-        <a-page-header title="服务树概览" sub-title="管理您的服务架构与资源" class="page-header">
-          <!-- 移除了原来在这里的按钮 -->
-        </a-page-header>
+  <div class="overview-container">
+    <a-page-header title="服务树概览" subtitle="查看和管理企业服务树结构" :backIcon="false">
+      <template #extra>
+        <a-space>
+          <a-button type="primary" @click="refreshData" :loading="loading">
+            <template #icon>
+              <ReloadOutlined />
+            </template>
+            刷新
+          </a-button>
+          <a-button type="primary" @click="navigateToManagePage">
+            <template #icon>
+              <SettingOutlined />
+            </template>
+            节点管理
+          </a-button>
+        </a-space>
+      </template>
+    </a-page-header>
+
+    <a-row :gutter="16" class="dashboard-cards">
+      <a-col :xs="24" :sm="12" :md="8" :lg="6">
+        <a-card hoverable>
+          <template #cover>
+            <div class="stat-card">
+              <AppstoreOutlined class="card-icon" />
+              <div class="stat-number">{{ statistics?.totalNodes || 0 }}</div>
+              <div class="stat-label">总节点数</div>
+            </div>
+          </template>
+        </a-card>
       </a-col>
-      <a-col :span="6">
-        <div class="action-buttons">
-          <a-space size="middle">
-            <a-button type="primary" @click="showCreateNodeModal">
-              <template #icon>
-                <PlusOutlined />
-              </template>
-              创建节点
-            </a-button>
-            <a-button @click="refreshTreeData">
-              <template #icon>
-                <SyncOutlined />
-              </template>
-              同步资源
-            </a-button>
-            <a-dropdown>
-              <a-button>
-                <template #icon>
-                  <SettingOutlined />
-                </template>
-                设置
-              </a-button>
-              <template #overlay>
-                <a-menu>
-                  <a-menu-item key="1">系统设置</a-menu-item>
-                  <a-menu-item key="2">权限管理</a-menu-item>
-                  <a-menu-item key="3">导入/导出</a-menu-item>
-                </a-menu>
-              </template>
-            </a-dropdown>
-          </a-space>
-        </div>
+      <a-col :xs="24" :sm="12" :md="8" :lg="6">
+        <a-card hoverable>
+          <template #cover>
+            <div class="stat-card">
+              <CloudServerOutlined class="card-icon" />
+              <div class="stat-number">{{ statistics?.totalResources || 0 }}</div>
+              <div class="stat-label">资源总数</div>
+            </div>
+          </template>
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :sm="12" :md="8" :lg="6">
+        <a-card hoverable>
+          <template #cover>
+            <div class="stat-card">
+              <TeamOutlined class="card-icon" />
+              <div class="stat-number">{{ statistics?.totalAdmins || 0 }}</div>
+              <div class="stat-label">管理员数</div>
+            </div>
+          </template>
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :sm="12" :md="8" :lg="6">
+        <a-card hoverable>
+          <template #cover>
+            <div class="stat-card">
+              <ClockCircleOutlined class="card-icon" />
+              <div class="stat-number">{{ statistics?.activeNodes || 0 }}</div>
+              <div class="stat-label">活跃节点</div>
+            </div>
+          </template>
+        </a-card>
       </a-col>
     </a-row>
-    <a-row :gutter="16" class="main-content">
-      <a-col :span="6">
-        <a-card title="服务树结构" class="tree-card">
-          <template #extra>
-            <a-space>
-              <a-tooltip title="刷新">
-                <reload-outlined class="action-icon" @click="refreshTreeData" />
-              </a-tooltip>
-              <a-tooltip title="创建节点">
-                <plus-outlined class="action-icon" @click="showCreateNodeModal" />
-              </a-tooltip>
-            </a-space>
-          </template>
-          <a-input-search v-model:value="searchValue" placeholder="搜索节点" style="margin-bottom: 8px" />
-          <a-spin :spinning="treeLoading">
-            <a-tree :tree-data="mockData.treeData" :defaultExpandedKeys="['1']" :defaultSelectedKeys="['1']"
-              @select="onSelectNode" class="service-tree" :showLine="{ showLeafIcon: false }" showIcon
-              :replaceFields="{ key: 'id', title: 'name' }">
-              <template #icon="{ type }">
-                <folder-outlined v-if="type === 'folder'" />
-                <appstore-outlined v-else-if="type === 'application'" />
-                <laptop-outlined v-else-if="type === 'server'" />
-                <database-outlined v-else-if="type === 'database'" />
-                <cluster-outlined v-else />
-              </template>
-              <template #title="{ name, metadata }">
-                <span>{{ name }}</span>
-                <a-tag v-if="metadata && metadata.env" size="small">{{ metadata.env }}</a-tag>
-              </template>
-            </a-tree>
+
+    <div class="tree-visualization">
+      <a-row :gutter="16">
+        <a-col :xs="24" :lg="12">
+          <a-card title="树形视图" :bordered="false" class="tree-card">
+            <div class="tree-content">
+              <a-spin :spinning="loading">
+                <a-tree 
+                  v-if="treeData.length > 0"
+                  :tree-data="treeData" 
+                  :defaultExpandedKeys="defaultExpandedKeys"
+                  :showLine="{ showLeafIcon: false }" 
+                  @select="onTreeNodeSelect" 
+                  class="service-tree"
+                  :selectable="true"
+                  :checkable="false"
+                  :blockNode="true"
+                >
+                  <template #title="{ title, key }">
+                    <div class="tree-node-title">
+                      <span class="node-name">{{ title }}</span>
+                      <div class="node-tags">
+                        <a-tag v-if="getNodeResourceCount(key) > 0" color="blue" size="small">
+                          资源: {{ getNodeResourceCount(key) }}
+                        </a-tag>
+                        <a-tag v-if="getNodeMemberCount(key) > 0" color="green" size="small">
+                          成员: {{ getNodeMemberCount(key) }}
+                        </a-tag>
+                      </div>
+                    </div>
+                  </template>
+                </a-tree>
+                <a-empty v-else description="暂无树形数据" />
+              </a-spin>
+            </div>
+          </a-card>
+        </a-col>
+        <a-col :xs="24" :lg="12">
+          <a-card title="网络视图" :bordered="false" class="graph-card">
+            <div class="graph-content">
+              <a-spin :spinning="loading">
+                <div class="graph-view">
+                  <div ref="chartContainer" class="chart-container"></div>
+                  <a-empty v-if="treeData.length === 0" description="暂无树形数据" />
+                </div>
+              </a-spin>
+            </div>
+          </a-card>
+        </a-col>
+      </a-row>
+    </div>
+
+    <a-row :gutter="16" class="node-details-row">
+      <a-col :xs="24" :lg="12">
+        <a-card title="节点详情" :bordered="false" v-if="selectedNode" class="details-card">
+          <a-spin :spinning="nodeDetailLoading">
+            <a-descriptions :column="1" bordered size="small">
+              <a-descriptions-item label="节点ID">
+                {{ selectedNode.id }}
+              </a-descriptions-item>
+              <a-descriptions-item label="节点名称">
+                {{ selectedNode.name }}
+              </a-descriptions-item>
+              <a-descriptions-item label="父节点">
+                {{ selectedNode.parentName || '无' }}
+              </a-descriptions-item>
+              <a-descriptions-item label="层级">
+                {{ selectedNode.level }}
+              </a-descriptions-item>
+              <a-descriptions-item label="状态">
+                <a-tag :color="selectedNode.status === 'active' ? 'green' : 'red'">
+                  {{ selectedNode.status === 'active' ? '活跃' : '非活跃' }}
+                </a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item label="节点类型">
+                <a-tag :color="selectedNode.isLeaf ? 'blue' : 'orange'">
+                  {{ selectedNode.isLeaf ? '叶子节点' : '目录节点' }}
+                </a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item label="管理员">
+                <div v-if="selectedNode.adminUsers && selectedNode.adminUsers.length > 0">
+                  <div class="member-list">
+                    <a-tag 
+                      v-for="admin in selectedNode.adminUsers.slice(0, 3)" 
+                      :key="admin"
+                      color="blue"
+                      size="small"
+                    >
+                      {{ admin }}
+                    </a-tag>
+                    <a-tag 
+                      v-if="selectedNode.adminUsers.length > 3" 
+                      color="blue"
+                      size="small"
+                    >
+                      +{{ selectedNode.adminUsers.length - 3 }}...
+                    </a-tag>
+                  </div>
+                  <div class="member-count">
+                    共 {{ selectedNode.adminUsers.length }} 名管理员
+                  </div>
+                </div>
+                <span v-else class="empty-text">暂无管理员</span>
+              </a-descriptions-item>
+              <a-descriptions-item label="普通成员">
+                <div v-if="selectedNode.memberUsers && selectedNode.memberUsers.length > 0">
+                  <div class="member-list">
+                    <a-tag 
+                      v-for="member in selectedNode.memberUsers.slice(0, 3)" 
+                      :key="member"
+                      color="green"
+                      size="small"
+                    >
+                      {{ member }}
+                    </a-tag>
+                    <a-tag 
+                      v-if="selectedNode.memberUsers.length > 3" 
+                      color="green"
+                      size="small"
+                    >
+                      +{{ selectedNode.memberUsers.length - 3 }}...
+                    </a-tag>
+                  </div>
+                  <div class="member-count">
+                    共 {{ selectedNode.memberUsers.length }} 名成员
+                  </div>
+                </div>
+                <span v-else class="empty-text">暂无普通成员</span>
+              </a-descriptions-item>
+              <a-descriptions-item label="子节点数">
+                {{ selectedNode.childCount || 0 }}
+              </a-descriptions-item>
+              <a-descriptions-item label="资源数">
+                {{ selectedNode.resourceCount || 0 }}
+              </a-descriptions-item>
+              <a-descriptions-item label="创建时间">
+                {{ formatDateTime(selectedNode.createdAt) }}
+              </a-descriptions-item>
+              <a-descriptions-item label="更新时间">
+                {{ formatDateTime(selectedNode.updatedAt) }}
+              </a-descriptions-item>
+              <a-descriptions-item label="描述">
+                {{ selectedNode.description || '无' }}
+              </a-descriptions-item>
+            </a-descriptions>
           </a-spin>
         </a-card>
+        <a-empty v-else description="请选择节点查看详情" class="empty-detail" />
       </a-col>
 
-      <a-col :span="18">
-        <a-card v-if="selectedNode" class="detail-card">
-          <a-tabs>
-            <a-tab-pane key="overview" tab="节点详情">
-              <a-descriptions :column="3" bordered>
-                <a-descriptions-item label="节点名称">{{ selectedNode?.name }}</a-descriptions-item>
-                <a-descriptions-item label="节点类型">{{ selectedNode?.type }}</a-descriptions-item>
-                <a-descriptions-item label="路径">{{ selectedNodePath }}</a-descriptions-item>
-                <a-descriptions-item label="创建时间">{{ formatDate(selectedNode?.createdAt) }}</a-descriptions-item>
-                <a-descriptions-item label="更新时间">{{ formatDate(selectedNode?.updatedAt) }}</a-descriptions-item>
-                <a-descriptions-item label="环境">
-                  <a-tag>{{ selectedNode?.metadata?.env || 'prod' }}</a-tag>
-                </a-descriptions-item>
-                <a-descriptions-item label="描述" :span="3">
-                  {{ selectedNode?.description || '暂无描述' }}
-                </a-descriptions-item>
-              </a-descriptions>
-
-              <div class="section-header">
-                <h3>管理员</h3>
-                <a-button type="link" @click="showAddAdminModal">
-                  <template #icon><user-add-outlined /></template>
-                  添加管理员
-                </a-button>
-              </div>
-              <a-list :data-source="selectedNode?.admins || []" :grid="{ gutter: 16, column: 4 }">
-                <template #renderItem="{ item }">
-                  <a-list-item>
-                    <a-card class="user-card">
-                      <a-avatar :size="32">{{ item.name.charAt(0) }}</a-avatar>
-                      <span class="user-name">{{ item.name }}</span>
-                      <a-button type="text" danger>
-                        <delete-outlined />
-                      </a-button>
-                    </a-card>
-                  </a-list-item>
+      <a-col :xs="24" :lg="12">
+        <a-card title="绑定资源" :bordered="false" v-if="selectedNode" class="resources-card">
+          <a-spin :spinning="resourceLoading">
+            <a-table 
+              :dataSource="nodeResources" 
+              :columns="resourceColumns" 
+              :pagination="{ pageSize: 8, size: 'small', showQuickJumper: true, showSizeChanger: false }"
+              size="small"
+              :locale="{ emptyText: '暂无绑定资源' }"
+              :scroll="{ x: 400 }"
+              row-key="id"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'resourceStatus'">
+                  <a-tag :color="getResourceStatusColor(record.resourceStatus)" size="small">
+                    {{ record.resourceStatus }}
+                  </a-tag>
                 </template>
-                <template #empty>
-                  <a-empty description="暂无管理员" />
+                <template v-if="column.key === 'resourceCreateTime'">
+                  {{ formatDateTime(record.resourceCreateTime) }}
                 </template>
-              </a-list>
-
-              <div class="section-header">
-                <h3>成员</h3>
-                <a-button type="link" @click="showAddMemberModal">
-                  <template #icon><team-outlined /></template>
-                  添加成员
-                </a-button>
-              </div>
-              <a-list :data-source="selectedNode?.members || []" :grid="{ gutter: 16, column: 4 }">
-                <template #renderItem="{ item }">
-                  <a-list-item>
-                    <a-card class="user-card">
-                      <a-avatar :size="32">{{ item.name.charAt(0) }}</a-avatar>
-                      <span class="user-name">{{ item.name }}</span>
-                      <a-button type="text" danger>
-                        <delete-outlined />
-                      </a-button>
-                    </a-card>
-                  </a-list-item>
-                </template>
-                <template #empty>
-                  <a-empty description="暂无成员" />
-                </template>
-              </a-list>
-            </a-tab-pane>
-
-            <a-tab-pane key="resources" tab="关联资源">
-              <div class="section-header resources-header">
-                <a-radio-group v-model:value="resourceType" button-style="solid">
-                  <a-radio-button value="all">全部</a-radio-button>
-                  <a-radio-button value="ecs">服务器</a-radio-button>
-                  <a-radio-button value="rds">数据库</a-radio-button>
-                  <a-radio-button value="elb">负载均衡</a-radio-button>
-                </a-radio-group>
-                <a-button type="primary" @click="showBindResourceModal">
-                  <template #icon><link-outlined /></template>
-                  绑定资源
-                </a-button>
-              </div>
-
-              <a-table :columns="resourceColumns" :data-source="filteredResources" :pagination="{ pageSize: 5 }"
-                :loading="resourcesLoading" :rowKey="(record: Resource) => record.instanceId">
-                <template #bodyCell="{ column, record }">
-                  <template v-if="column.key === 'status'">
-                    <a-tag :color="getStatusColor(record.status)">
-                      {{ record.status }}
-                    </a-tag>
-                  </template>
-                  <template v-if="column.key === 'provider'">
-                    <span>
-                      <cloud-outlined v-if="record.provider === 'aliyun'" />
-                      <aws-outlined v-else-if="record.provider === 'aws'" />
-                      <google-outlined v-else-if="record.provider === 'gcp'" />
-                      {{ getProviderLabel(record.provider) }}
-                    </span>
-                  </template>
-                  <template v-if="column.key === 'action'">
-                    <a-space>
-                      <a-button type="link" size="small">
-                        <template #icon><eye-outlined /></template>
-                        详情
-                      </a-button>
-                      <a-button type="link" size="small" danger @click="handleUnbindResource(record)">
-                        <template #icon><disconnect-outlined /></template>
-                        解绑
-                      </a-button>
-                    </a-space>
-                  </template>
-                </template>
-              </a-table>
-            </a-tab-pane>
-
-            <a-tab-pane key="children" tab="子节点">
-              <div class="child-nodes-header">
-                <a-button type="primary" @click="showCreateChildNodeModal">
-                  <template #icon><plus-outlined /></template>
-                  添加子节点
-                </a-button>
-              </div>
-              <a-table :columns="childNodeColumns" :data-source="selectedNode?.children || []"
-                :pagination="{ pageSize: 5 }" :rowKey="(record: NodeChild) => record.id">
-                <template #bodyCell="{ column, record }">
-                  <template v-if="column.key === 'action'">
-                    <a-space>
-                      <a-button type="link" size="small" @click="onSelectNode([record.id])">
-                        <template #icon><eye-outlined /></template>
-                        查看
-                      </a-button>
-                      <a-button type="link" size="small">
-                        <template #icon><edit-outlined /></template>
-                        编辑
-                      </a-button>
-                      <a-popconfirm title="确定要删除此节点吗?" @confirm="handleDeleteNode(record)" ok-text="是" cancel-text="否">
-                        <a-button type="link" danger size="small">
-                          <template #icon><delete-outlined /></template>
-                          删除
-                        </a-button>
-                      </a-popconfirm>
-                    </a-space>
-                  </template>
-                </template>
-              </a-table>
-            </a-tab-pane>
-          </a-tabs>
+              </template>
+            </a-table>
+          </a-spin>
         </a-card>
-        <a-empty v-else description="请选择一个节点查看详情" />
+        <a-empty v-else description="请选择节点查看资源" class="empty-resource" />
       </a-col>
     </a-row>
-    <!-- 创建节点弹窗 -->
-    <a-modal v-model:visible="createNodeModalVisible" title="创建节点" @ok="handleCreateNode" width="600px">
-      <a-form :model="createNodeForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-        <a-form-item label="父节点">
-          <a-tree-select v-model:value="createNodeForm.parentId" :tree-data="mockData.treeData" placeholder="请选择父节点"
-            :replaceFields="{ key: 'id', title: 'name', value: 'id' }" style="width: 100%" />
-        </a-form-item>
-        <a-form-item label="节点名称" required>
-          <a-input v-model:value="createNodeForm.name" placeholder="请输入节点名称" />
-        </a-form-item>
-        <a-form-item label="节点类型">
-          <a-select v-model:value="createNodeForm.type" placeholder="请选择节点类型">
-            <a-select-option value="folder">文件夹</a-select-option>
-            <a-select-option value="application">应用</a-select-option>
-            <a-select-option value="server">服务器</a-select-option>
-            <a-select-option value="database">数据库</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="环境">
-          <a-select v-model:value="createNodeForm.env" placeholder="请选择环境">
-            <a-select-option value="dev">开发环境</a-select-option>
-            <a-select-option value="test">测试环境</a-select-option>
-            <a-select-option value="staging">预发环境</a-select-option>
-            <a-select-option value="prod">生产环境</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="描述">
-          <a-textarea v-model:value="createNodeForm.description" placeholder="请输入描述信息" :rows="4" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 绑定资源弹窗 -->
-    <a-modal v-model:visible="bindResourceModalVisible" title="绑定资源" @ok="handleBindResource" width="800px">
-      <a-form :layout="'vertical'">
-        <a-form-item label="资源类型" required>
-          <a-select v-model:value="bindResourceForm.resourceType" placeholder="请选择资源类型">
-            <a-select-option value="ecs">服务器 (ECS)</a-select-option>
-            <a-select-option value="rds">数据库 (RDS)</a-select-option>
-            <a-select-option value="elb">负载均衡 (ELB)</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="选择资源" required>
-          <a-table :columns="resourceSelectColumns" :data-source="mockData.availableResources" row-key="instanceId"
-            :pagination="{ pageSize: 5 }" :rowSelection="{
-              selectedRowKeys: bindResourceForm.selectedResourceIds,
-              onChange: onSelectedResourceChange
-            }">
-            <template #bodyCell="{ column, record }">
-              <template v-if="column.key === 'status'">
-                <a-tag :color="getStatusColor(record.status)">
-                  {{ record.status }}
-                </a-tag>
-              </template>
-              <template v-if="column.key === 'provider'">
-                <span>
-                  <cloud-outlined v-if="record.provider === 'aliyun'" />
-                  <aws-outlined v-else-if="record.provider === 'aws'" />
-                  {{ getProviderLabel(record.provider) }}
-                </span>
-              </template>
-            </template>
-          </a-table>
-        </a-form-item>
-      </a-form>
-    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted, watch, nextTick, onBeforeUnmount, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import {
-  PlusOutlined,
-  SyncOutlined,
-  SettingOutlined,
-  CloudServerOutlined,
   ReloadOutlined,
-  FolderOutlined,
+  SettingOutlined,
   AppstoreOutlined,
-  LaptopOutlined,
-  DatabaseOutlined,
-  ClusterOutlined,
-  UserAddOutlined,
+  CloudServerOutlined,
   TeamOutlined,
-  LinkOutlined,
-  DisconnectOutlined,
-  EyeOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  CloudOutlined,
-  GoogleOutlined
+  ClockCircleOutlined,
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
+import * as echarts from 'echarts';
+import { 
+  getTreeList,
+  getNodeDetail,
+  getTreeStatistics,
+  getNodeResources,
+  getNodeMembers,
+  type TreeNodeDetail,
+  type TreeNodeListItem,
+  type TreeStatistics,
+  type TreeNodeResource,
+  type GetTreeListParams,
+} from '#/api/core/tree_node';
 
-// 定义类型
-interface Admin {
+interface UserInfo {
   id: number;
-  name: string;
-  email: string;
+  username: string;
+  real_name: string;
+  mobile: string;
+  account_type: number;
+  enable: number;
 }
 
-interface Member {
-  id: number;
-  name: string;
-  email: string;
+// 定义树节点接口
+interface TreeNode {
+  key: string;
+  title: string;
+  isLeaf: boolean;
+  children?: TreeNode[];
+  [key: string]: any;
 }
 
-interface NodeChild {
-  id: string;
-  name: string;
-  type: string;
-  createdAt: string;
-}
+const router = useRouter();
+const loading = ref(false);
+const resourceLoading = ref(false);
+const nodeDetailLoading = ref(false);
+const selectedNode = ref<TreeNodeDetail | null>(null);
+const chartContainer = ref<HTMLElement | null>(null);
+let chart: echarts.ECharts | null = null;
 
-interface NodeMetadata {
-  env?: string;
-}
+// 组件卸载标志
+const isUnmounted = ref(false);
 
-interface NodeDetail {
-  id: string;
-  name: string;
-  type: string;
-  createdAt: string;
-  updatedAt: string;
-  description: string;
-  admins: Admin[];
-  members: Member[];
-  children: NodeChild[];
-  metadata?: NodeMetadata;
-}
+// 统计数据
+const statistics = ref<TreeStatistics | null>(null);
 
-interface Resource {
-  instanceId: string;
-  instanceName: string;
-  provider: string;
-  type: string;
-  regionId: string;
-  zoneId?: string;
-  status: string;
-  cpu?: number;
-  memory?: number;
-  privateIpAddress?: string[];
-  publicIpAddress?: string[];
-  creationTime: string;
-  env?: string;
-  engine?: string;
-  engineVersion?: string;
-  connectionString?: string;
-  port?: number;
-  addressType?: string;
-  address?: string;
-}
+// 树形数据
+const treeData = ref<TreeNode[]>([]);
+const defaultExpandedKeys = ref<string[]>([]);
 
-interface MockData {
-  stats: {
-    totalNodes: number;
-    totalResources: number;
-  };
-  treeData: any[];
-  nodeDetails: NodeDetail[];
-  resources: Resource[];
-  availableResources: Resource[];
-}
+// 节点详情缓存
+const nodeDetails = ref<Record<string, TreeNodeDetail>>({});
 
-interface CreateNodeForm {
-  parentId: string | null;
-  name: string;
-  type: string;
-  env: string;
-  description: string;
-}
+// 节点资源数据
+const nodeResources = ref<TreeNodeResource[]>([]);
 
-interface BindResourceForm {
-  resourceType: string;
-  selectedResourceIds: string[];
-}
-
-// 假数据
-const mockData = ref<MockData>({
-  stats: {
-    totalNodes: 56,
-    totalResources: 128
+// 资源表格列定义
+const resourceColumns = [
+  { 
+    title: '资源名称', 
+    dataIndex: 'resourceName', 
+    key: 'resourceName',
+    ellipsis: true,
+    width: 120
   },
-  treeData: [
-    {
-      id: '1',
-      name: '总部',
-      type: 'folder',
-      children: [
-        {
-          id: '2',
-          name: '研发部门',
-          type: 'folder',
-          children: [
-            {
-              id: '5',
-              name: '订单系统',
-              type: 'application',
-              metadata: { env: 'prod' }
-            },
-            {
-              id: '6',
-              name: '支付系统',
-              type: 'application',
-              metadata: { env: 'prod' }
-            }
-          ]
+  { 
+    title: '资源类型', 
+    dataIndex: 'resourceType', 
+    key: 'resourceType',
+    width: 100
+  },
+  { 
+    title: '状态', 
+    dataIndex: 'resourceStatus', 
+    key: 'resourceStatus',
+    width: 80
+  },
+  { 
+    title: '创建时间', 
+    dataIndex: 'resourceCreateTime', 
+    key: 'resourceCreateTime',
+    width: 140
+  },
+];
+
+// 防抖处理
+const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number): T => {
+  let timeoutId: NodeJS.Timeout;
+  return ((...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  }) as T;
+};
+
+// 工具函数
+const formatDateTime = (dateStr: string | number): string => {
+  if (!dateStr) return '-';
+  
+  try {
+    let date: Date;
+    if (typeof dateStr === 'number') {
+      date = new Date(dateStr * 1000);
+    } else {
+      date = new Date(dateStr);
+    }
+    
+    if (isNaN(date.getTime())) {
+      return '-';
+    }
+    
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch (error) {
+    console.error('日期格式化错误:', error);
+    return '-';
+  }
+};
+
+const getResourceStatusColor = (status: string): string => {
+  const colorMap: Record<string, string> = {
+    'running': 'green',
+    'stopped': 'red',
+    'starting': 'orange',
+    'stopping': 'orange',
+    'active': 'green',
+    'inactive': 'red',
+    'online': 'green',
+    'offline': 'red',
+    'pending': 'orange',
+    'error': 'red',
+    'warning': 'orange',
+  };
+  return colorMap[status?.toLowerCase()] || 'default';
+};
+
+// 获取节点资源数量（使用computed优化性能）
+const getNodeResourceCount = (key: string | number): number => {
+  if (isUnmounted.value) return 0;
+  const nodeId = parseInt(key.toString());
+  return nodeDetails.value[nodeId]?.resourceCount || 0;
+};
+
+// 获取节点成员总数
+const getNodeMemberCount = (key: string | number): number => {
+  if (isUnmounted.value) return 0;
+  const nodeId = parseInt(key.toString());
+  const node = nodeDetails.value[nodeId];
+  if (!node) return 0;
+  
+  const adminUsers = node.adminUsers || [];
+  const memberUsers = node.memberUsers || [];
+  
+  // 使用Set去重
+  const allUsers = new Set([...adminUsers, ...memberUsers]);
+  return allUsers.size;
+};
+
+// 错误处理函数
+const handleError = (error: any, operation: string) => {
+  if (isUnmounted.value) return;
+  
+  console.error(`${operation}失败:`, error);
+  
+  let errorMessage = `${operation}失败`;
+  if (error?.response?.data?.message) {
+    errorMessage = error.response.data.message;
+  } else if (error?.message) {
+    errorMessage = error.message;
+  }
+  
+  message.error(errorMessage);
+};
+
+// 异步请求重试机制
+const withRetry = async <T>(
+  fn: () => Promise<T>, 
+  retries = 3, 
+  delay = 1000
+): Promise<T> => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      if (isUnmounted.value) throw new Error('Component unmounted');
+      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+    }
+  }
+  throw new Error('Max retries exceeded');
+};
+
+// 加载节点成员信息
+const loadNodeMembers = async (nodeId: number): Promise<{ adminUsers: UserInfo[], memberUsers: UserInfo[] }> => {
+  if (isUnmounted.value) {
+    return { adminUsers: [], memberUsers: [] };
+  }
+  
+  try {
+    const [adminRes, memberRes] = await Promise.all([
+      getNodeMembers(nodeId, { type: 'admin' }).catch(() => []),
+      getNodeMembers(nodeId, { type: 'member' }).catch(() => [])
+    ]);
+    
+    if (isUnmounted.value) {
+      return { adminUsers: [], memberUsers: [] };
+    }
+    
+    return {
+      adminUsers: Array.isArray(adminRes) ? adminRes : [],
+      memberUsers: Array.isArray(memberRes) ? memberRes : []
+    };
+  } catch (error) {
+    if (!isUnmounted.value) {
+      console.warn('获取节点成员失败:', error);
+    }
+    return {
+      adminUsers: [],
+      memberUsers: []
+    };
+  }
+};
+
+// 数据加载函数优化
+const loadTreeData = async () => {
+  if (isUnmounted.value) return;
+  
+  try {
+    const params: GetTreeListParams = {};
+    const response = await withRetry(() => getTreeList(params));
+    
+    if (isUnmounted.value) return;
+    
+    // 处理响应数据
+    const data = response?.data || response;
+    const items = data?.items || data;
+    
+    if (!Array.isArray(items)) {
+      throw new Error('API返回的数据格式不正确');
+    }
+    
+    // 批量处理节点（减少API调用）
+    const nodeIds = new Set<number>();
+    const collectNodeIds = (node: TreeNodeListItem) => {
+      nodeIds.add(node.id);
+      if (node.children && node.children.length > 0) {
+        node.children.forEach(collectNodeIds);
+      }
+    };
+    
+    items.forEach(collectNodeIds);
+    
+    // 批量加载成员信息
+    const memberPromises = Array.from(nodeIds).map(async (nodeId) => {
+      try {
+        const members = await loadNodeMembers(nodeId);
+        return { nodeId, members };
+      } catch (error) {
+        return { nodeId, members: { adminUsers: [], memberUsers: [] } };
+      }
+    });
+    
+    const memberResults = await Promise.allSettled(memberPromises);
+    
+    if (isUnmounted.value) return;
+    
+    // 处理树节点数据
+    const processNode = (node: TreeNodeListItem) => {
+      const memberResult = memberResults.find(result => 
+        result.status === 'fulfilled' && result.value.nodeId === node.id
+      );
+      
+      const members = memberResult?.status === 'fulfilled' 
+        ? memberResult.value.members 
+        : { adminUsers: [], memberUsers: [] };
+      
+      nodeDetails.value[node.id] = {
+        id: node.id,
+        name: node.name,
+        parentId: node.parentId,
+        level: node.level,
+        description: '',
+        creatorId: node.creatorId,
+        status: node.status || 'active',
+        isLeaf: node.isLeaf,
+        createdAt: node.created_at,
+        updatedAt: node.updated_at,
+        creatorName: '',
+        parentName: '',
+        childCount: node.children?.length || 0,
+        adminUsers: members.adminUsers.map(user => user.username),
+        memberUsers: members.memberUsers.map(user => user.username),
+        resourceCount: 0,
+      };
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach(processNode);
+      }
+    };
+    
+    // 处理所有节点
+    items.forEach(processNode);
+    
+    if (isUnmounted.value) return;
+    
+    // 构建树形结构
+    const transformNode = (node: TreeNodeListItem): TreeNode => ({
+      key: node.id.toString(),
+      title: node.name,
+      isLeaf: node.isLeaf,
+      children: node.children && node.children.length > 0 
+        ? node.children.map(transformNode) 
+        : undefined
+    });
+    
+    treeData.value = items.map(transformNode);
+    
+    // 设置默认展开的键
+    if (treeData.value.length > 0) {
+      defaultExpandedKeys.value = [treeData.value[0]?.key || ''];
+    }
+    
+    console.log('树形数据加载成功, 节点数量:', nodeIds.size);
+  } catch (error) {
+    handleError(error, '加载树形数据');
+  }
+};
+
+const loadStatistics = async () => {
+  if (isUnmounted.value) return;
+  
+  try {
+    const res = await withRetry(() => getTreeStatistics());
+    if (!isUnmounted.value) {
+      statistics.value = res;
+    }
+  } catch (error) {
+    handleError(error, '获取统计数据');
+  }
+};
+
+const loadNodeResources = async (nodeId: number) => {
+  if (!nodeId || isUnmounted.value) return;
+  
+  resourceLoading.value = true;
+  try {
+    const res = await withRetry(() => getNodeResources(nodeId));
+    
+    if (isUnmounted.value) return;
+    
+    nodeResources.value = Array.isArray(res) ? res : [];
+    
+    // 更新节点详情中的资源数量
+    if (nodeDetails.value[nodeId]) {
+      nodeDetails.value[nodeId].resourceCount = nodeResources.value.length;
+    }
+  } catch (error) {
+    if (!isUnmounted.value) {
+      handleError(error, '获取节点资源');
+      nodeResources.value = [];
+    }
+  } finally {
+    if (!isUnmounted.value) {
+      resourceLoading.value = false;
+    }
+  }
+};
+
+// 图表相关函数
+const destroyChart = () => {
+  if (chart && !chart.isDisposed()) {
+    try {
+      chart.dispose();
+    } catch (error) {
+      console.warn('图表销毁时出现错误:', error);
+    } finally {
+      chart = null;
+    }
+  }
+};
+
+const initChart = () => {
+  if (isUnmounted.value || !chartContainer.value) return;
+  
+  destroyChart();
+  
+  try {
+    chart = echarts.init(chartContainer.value, null, {
+      renderer: 'svg',
+      useDirtyRect: false
+    });
+    updateChart();
+  } catch (error) {
+    console.error('初始化图表失败:', error);
+  }
+};
+
+const updateChart = () => {
+  if (isUnmounted.value || !chart || chart.isDisposed() || treeData.value.length === 0) return;
+
+  try {
+    const nodes: any[] = [];
+    const links: any[] = [];
+    const nodeRelations = new Map();
+    
+    const buildRelationsMap = (node: TreeNode, parentKey?: string) => {
+      if (parentKey) {
+        nodeRelations.set(node.key, parentKey);
+      }
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child) => {
+          buildRelationsMap(child, node.key);
+        });
+      }
+    };
+    
+    treeData.value.forEach((rootNode) => {
+      buildRelationsMap(rootNode);
+    });
+
+    const processNode = (node: TreeNode) => {
+      const resourceCount = getNodeResourceCount(node.key);
+      const memberCount = getNodeMemberCount(node.key);
+      const totalValue = resourceCount + memberCount;
+      
+      nodes.push({
+        name: node.title,
+        id: node.key,
+        value: totalValue,
+        symbolSize: Math.max(20, Math.min(80, 20 + (totalValue * 2))),
+        itemStyle: {
+          color: node.isLeaf ? '#52c41a' : '#1890ff'
         },
-        {
-          id: '3',
-          name: '运维部门',
-          type: 'folder',
-          children: [
-            {
-              id: '7',
-              name: '监控系统',
-              type: 'application',
-              metadata: { env: 'prod' }
-            },
-            {
-              id: '8',
-              name: '日志系统',
-              type: 'application',
-              metadata: { env: 'prod' }
-            }
-          ]
+        label: {
+          show: true,
+          position: 'inside',
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: Math.max(10, Math.min(14, 10 + totalValue * 0.3))
+        }
+      });
+      
+      if (nodeRelations.has(node.key)) {
+        const parentKey = nodeRelations.get(node.key);
+        links.push({
+          source: parentKey,
+          target: node.key,
+          lineStyle: {
+            width: 2,
+            curveness: 0.2,
+            opacity: 0.8
+          }
+        });
+      }
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child) => {
+          processNode(child);
+        });
+      }
+    };
+    
+    treeData.value.forEach((rootNode) => {
+      processNode(rootNode);
+    });
+
+    const option = {
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        borderColor: 'rgba(0, 0, 0, 0.8)',
+        textStyle: {
+          color: '#fff'
         },
+        formatter: (params: any) => {
+          const nodeId = parseInt(params.data.id);
+          const nodeDetail = nodeDetails.value[nodeId];
+          const resourceCount = nodeDetail?.resourceCount || 0;
+          const adminCount = nodeDetail?.adminUsers?.length || 0;
+          const memberCount = nodeDetail?.memberUsers?.length || 0;
+          
+          return `
+            <div style="padding: 8px;">
+              <div style="font-weight: bold; margin-bottom: 6px;">${params.data.name}</div>
+              <div>资源数量: ${resourceCount}</div>
+              <div>管理员: ${adminCount}</div>
+              <div>成员: ${memberCount}</div>
+            </div>
+          `;
+        }
+      },
+      animationDurationUpdate: 1000,
+      animationEasingUpdate: 'quinticInOut' as const,
+      series: [
         {
-          id: '4',
-          name: '测试部门',
-          type: 'folder',
-          children: [
-            {
-              id: '9',
-              name: '测试环境',
-              type: 'server',
-              metadata: { env: 'test' }
+          type: 'graph',
+          layout: 'force',
+          data: nodes,
+          links: links,
+          roam: true,
+          focusNodeAdjacency: true,
+          draggable: true,
+          itemStyle: {
+            borderColor: '#fff',
+            borderWidth: 2,
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.3)'
+          },
+          label: {
+            show: true,
+            position: 'inside'
+          },
+          lineStyle: {
+            color: 'source',
+            curveness: 0.3,
+            opacity: 0.9
+          },
+          emphasis: {
+            focus: 'adjacency',
+            lineStyle: {
+              width: 4
+            },
+            itemStyle: {
+              shadowBlur: 20,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
             }
-          ]
+          },
+          force: {
+            repulsion: 300,
+            edgeLength: [80, 150],
+            gravity: 0.05,
+            friction: 0.6,
+            layoutAnimation: true
+          }
         }
       ]
-    }
-  ],
-  nodeDetails: [
-    {
-      id: '1',
-      name: '总部',
-      type: 'folder',
-      createdAt: '2023-12-01T08:00:00Z',
-      updatedAt: '2024-04-15T10:30:00Z',
-      description: '公司总部所有资源的根节点',
-      admins: [
-        { id: 1, name: '张三', email: 'zhangsan@example.com' },
-        { id: 2, name: '李四', email: 'lisi@example.com' }
-      ],
-      members: [
-        { id: 3, name: '王五', email: 'wangwu@example.com' },
-        { id: 4, name: '赵六', email: 'zhaoliu@example.com' },
-        { id: 5, name: '孙七', email: 'sunqi@example.com' }
-      ],
-      children: [
-        { id: '2', name: '研发部门', type: 'folder', createdAt: '2023-12-02T09:00:00Z' },
-        { id: '3', name: '运维部门', type: 'folder', createdAt: '2023-12-02T09:30:00Z' },
-        { id: '4', name: '测试部门', type: 'folder', createdAt: '2023-12-02T10:00:00Z' }
-      ]
-    },
-    {
-      id: '5',
-      name: '订单系统',
-      type: 'application',
-      createdAt: '2023-12-03T08:00:00Z',
-      updatedAt: '2024-04-10T10:30:00Z',
-      description: '处理用户订单的核心系统',
-      metadata: { env: 'prod' },
-      admins: [
-        { id: 1, name: '张三', email: 'zhangsan@example.com' }
-      ],
-      members: [
-        { id: 3, name: '王五', email: 'wangwu@example.com' },
-        { id: 4, name: '赵六', email: 'zhaoliu@example.com' }
-      ],
-      children: []
-    }
-  ],
-  resources: [
-    {
-      instanceId: 'i-bp67acfmxazb4p****',
-      instanceName: 'order-server-01',
-      provider: 'aliyun',
-      type: 'ecs',
-      regionId: 'cn-hangzhou',
-      zoneId: 'cn-hangzhou-b',
-      status: 'Running',
-      cpu: 4,
-      memory: 8,
-      privateIpAddress: ['172.16.1.10'],
-      publicIpAddress: ['47.98.99.100'],
-      creationTime: '2023-10-01T08:00:00Z',
-      env: 'prod'
-    },
-    {
-      instanceId: 'i-bp67acfmxazb4p****2',
-      instanceName: 'order-server-02',
-      provider: 'aliyun',
-      type: 'ecs',
-      regionId: 'cn-hangzhou',
-      zoneId: 'cn-hangzhou-b',
-      status: 'Running',
-      cpu: 4,
-      memory: 8,
-      privateIpAddress: ['172.16.1.11'],
-      publicIpAddress: ['47.98.99.101'],
-      creationTime: '2023-10-01T08:00:00Z',
-      env: 'prod'
-    },
-    {
-      instanceId: 'rm-bp1**********',
-      instanceName: 'order-db-master',
-      provider: 'aliyun',
-      type: 'rds',
-      regionId: 'cn-hangzhou',
-      zoneId: 'cn-hangzhou-b',
-      status: 'Running',
-      engine: 'MySQL',
-      engineVersion: '8.0',
-      connectionString: 'rm-bp1**********.mysql.rds.aliyuncs.com',
-      port: 3306,
-      creationTime: '2023-10-01T09:00:00Z',
-      env: 'prod'
-    },
-    {
-      instanceId: 'lb-bp1**********',
-      instanceName: 'order-elb',
-      provider: 'aliyun',
-      type: 'elb',
-      regionId: 'cn-hangzhou',
-      status: 'active',
-      addressType: 'internet',
-      address: 'lb-bp1**********.cn-hangzhou.elb.aliyuncs.com',
-      creationTime: '2023-10-01T10:00:00Z',
-      env: 'prod'
-    }
-  ],
-  availableResources: [
-    {
-      instanceId: 'i-bp67acfmxazb4p****3',
-      instanceName: 'app-server-01',
-      provider: 'aliyun',
-      type: 'ecs',
-      regionId: 'cn-hangzhou',
-      zoneId: 'cn-hangzhou-b',
-      status: 'Running',
-      privateIpAddress: ['172.16.1.20'],
-      creationTime: '2023-11-01T08:00:00Z'
-    },
-    {
-      instanceId: 'i-bp67acfmxazb4p****4',
-      instanceName: 'app-server-02',
-      provider: 'aws',
-      type: 'ecs',
-      regionId: 'ap-northeast-1',
-      zoneId: 'ap-northeast-1a',
-      status: 'Running',
-      privateIpAddress: ['10.0.1.21'],
-      creationTime: '2023-11-01T08:10:00Z'
-    },
-    {
-      instanceId: 'rm-bp1**********2',
-      instanceName: 'user-db',
-      provider: 'aliyun',
-      type: 'rds',
-      regionId: 'cn-hangzhou',
-      zoneId: 'cn-hangzhou-b',
-      status: 'Running',
-      creationTime: '2023-11-01T09:00:00Z'
-    }
-  ]
-});
-
-// 状态变量
-const selectedNode = ref<NodeDetail | null>(null);
-const selectedNodePath = ref<string>('');
-const treeLoading = ref<boolean>(false);
-const resourcesLoading = ref<boolean>(false);
-const searchValue = ref<string>('');
-const resourceType = ref<string>('all');
-
-// 弹窗控制
-const createNodeModalVisible = ref<boolean>(false);
-const bindResourceModalVisible = ref<boolean>(false);
-const createNodeForm = ref<CreateNodeForm>({
-  parentId: null,
-  name: '',
-  type: 'folder',
-  env: 'prod',
-  description: ''
-});
-const bindResourceForm = ref<BindResourceForm>({
-  resourceType: 'ecs',
-  selectedResourceIds: []
-});
-
-// 表格列定义
-const resourceColumns = [
-  {
-    title: '实例名称',
-    dataIndex: 'instanceName',
-    key: 'instanceName',
-  },
-  {
-    title: '实例ID',
-    dataIndex: 'instanceId',
-    key: 'instanceId',
-    width: 180,
-  },
-  {
-    title: '类型',
-    dataIndex: 'type',
-    key: 'type',
-    width: 100,
-  },
-  {
-    title: '云厂商',
-    dataIndex: 'provider',
-    key: 'provider',
-    width: 120,
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 100,
-  },
-  {
-    title: '区域',
-    dataIndex: 'regionId',
-    key: 'regionId',
-    width: 120,
-  },
-  {
-    title: '操作',
-    key: 'action',
-    width: 150,
-  }
-];
-
-const resourceSelectColumns = [
-  {
-    title: '实例名称',
-    dataIndex: 'instanceName',
-    key: 'instanceName',
-  },
-  {
-    title: '实例ID',
-    dataIndex: 'instanceId',
-    key: 'instanceId',
-  },
-  {
-    title: '类型',
-    dataIndex: 'type',
-    key: 'type',
-  },
-  {
-    title: '厂商',
-    dataIndex: 'provider',
-    key: 'provider',
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-  }
-];
-
-const childNodeColumns = [
-  {
-    title: '节点名称',
-    dataIndex: 'name',
-    key: 'name',
-  },
-  {
-    title: '节点类型',
-    dataIndex: 'type',
-    key: 'type',
-  },
-  {
-    title: '创建时间',
-    dataIndex: 'createdAt',
-    key: 'createdAt',
-    render: (text: string) => formatDate(text),
-  },
-  {
-    title: '操作',
-    key: 'action',
-  }
-];
-
-// 计算属性
-const filteredResources = computed(() => {
-  if (resourceType.value === 'all') {
-    return mockData.value.resources;
-  } else {
-    return mockData.value.resources.filter(r => r.type === resourceType.value);
-  }
-});
-
-// 方法
-const onSelectNode = (selectedKeys: string[]) => {
-  if (selectedKeys.length > 0) {
-    const nodeId = selectedKeys[0];
-
-    // 模拟数据加载
-    treeLoading.value = true;
-    resourcesLoading.value = true;
-
-    setTimeout(() => {
-      const node = mockData.value.nodeDetails.find(n => n.id === nodeId);
-      if (node) {
-        selectedNode.value = node;
-        selectedNodePath.value = `/总部/${node.name}`;
-      } else {
-        selectedNode.value = null;
-        selectedNodePath.value = '';
-      }
-      treeLoading.value = false;
-      resourcesLoading.value = false;
-    }, 500);
-  }
-};
-
-const refreshTreeData = () => {
-  treeLoading.value = true;
-  setTimeout(() => {
-    treeLoading.value = false;
-    message.success('服务树数据已刷新');
-  }, 800);
-};
-
-const formatDate = (dateString: string) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleString();
-};
-
-const getStatusColor = (status: string) => {
-  const statusMap: Record<string, string> = {
-    'Running': 'green',
-    'Stopped': 'orange',
-    'active': 'green',
-    'inactive': 'orange',
-    'Error': 'red'
-  };
-  return statusMap[status] || 'blue';
-};
-
-const getProviderLabel = (provider: string) => {
-  const providerMap: Record<string, string> = {
-    'aliyun': '阿里云',
-    'aws': 'AWS',
-    'gcp': 'GCP',
-    'azure': 'Azure',
-    'tencent': '腾讯云'
-  };
-  return providerMap[provider] || provider;
-};
-
-const showCreateNodeModal = () => {
-  createNodeForm.value = {
-    parentId: null,
-    name: '',
-    type: 'folder',
-    env: 'prod',
-    description: ''
-  };
-  createNodeModalVisible.value = true;
-};
-
-const showCreateChildNodeModal = () => {
-  if (selectedNode.value) {
-    createNodeForm.value = {
-      parentId: selectedNode.value.id,
-      name: '',
-      type: 'folder',
-      env: selectedNode.value.metadata?.env || 'prod',
-      description: ''
     };
-    createNodeModalVisible.value = true;
+
+    if (!isUnmounted.value && chart && !chart.isDisposed()) {
+      chart.setOption(option, true);
+    }
+  } catch (error) {
+    console.error('更新图表失败:', error);
   }
 };
 
-const handleCreateNode = () => {
-  // 模拟创建节点
-  message.success(`节点 "${createNodeForm.value.name}" 创建成功`);
-  createNodeModalVisible.value = false;
-};
-
-const showBindResourceModal = () => {
-  if (!selectedNode.value) {
-    message.warning('请先选择一个节点');
-    return;
+// 树节点选择事件
+const onTreeNodeSelect = async (selectedKeys: string[]) => {
+  if (isUnmounted.value) return;
+  
+  if (selectedKeys.length > 0) {
+    const nodeId = parseInt(selectedKeys[0] || '0');
+    
+    if (nodeId > 0) {
+      nodeDetailLoading.value = true;
+      try {
+        let nodeDetail = nodeDetails.value[nodeId];
+        if (!nodeDetail) {
+          // 重新加载节点详情
+          const [detailRes, membersRes] = await Promise.all([
+            getNodeDetail(nodeId).catch(() => null),
+            loadNodeMembers(nodeId)
+          ]);
+          
+          if (isUnmounted.value) return;
+          
+          if (detailRes) {
+            nodeDetail = {
+              ...detailRes,
+              adminUsers: membersRes.adminUsers.map(user => user.username),
+              memberUsers: membersRes.memberUsers.map(user => user.username)
+            };
+            nodeDetails.value[nodeId] = nodeDetail as TreeNodeDetail;
+          }
+        }
+        
+        if (!isUnmounted.value) {
+          if (nodeDetail) {
+            selectedNode.value = nodeDetail;
+            await loadNodeResources(nodeId);
+          } else {
+            selectedNode.value = null;
+            message.error('获取节点详情失败');
+          }
+        }
+      } catch (error) {
+        if (!isUnmounted.value) {
+          handleError(error, '获取节点数据');
+          selectedNode.value = null;
+        }
+      } finally {
+        if (!isUnmounted.value) {
+          nodeDetailLoading.value = false;
+        }
+      }
+    }
+  } else {
+    if (!isUnmounted.value) {
+      selectedNode.value = null;
+      nodeResources.value = [];
+    }
   }
-
-  bindResourceForm.value = {
-    resourceType: 'ecs',
-    selectedResourceIds: []
-  };
-  bindResourceModalVisible.value = true;
 };
 
-const onSelectedResourceChange = (selectedRowKeys: string[]) => {
-  bindResourceForm.value.selectedResourceIds = selectedRowKeys;
-};
-
-const handleBindResource = () => {
-  if (bindResourceForm.value.selectedResourceIds.length === 0) {
-    message.warning('请至少选择一个资源');
-    return;
+// 刷新数据
+const refreshData = async () => {
+  if (isUnmounted.value) return;
+  
+  loading.value = true;
+  try {
+    await Promise.all([
+      loadTreeData(),
+      loadStatistics(),
+    ]);
+    
+    if (isUnmounted.value) return;
+    
+    // 延迟初始化图表，确保DOM已更新
+    await nextTick();
+    setTimeout(() => {
+      if (!isUnmounted.value && chartContainer.value) {
+        if (chart && !chart.isDisposed()) {
+          updateChart();
+        } else {
+          initChart();
+        }
+      }
+    }, 100);
+    
+    message.success('数据刷新成功');
+  } catch (error) {
+    handleError(error, '刷新数据');
+  } finally {
+    if (!isUnmounted.value) {
+      loading.value = false;
+    }
   }
-
-  // 模拟绑定资源
-  message.success(`已成功绑定 ${bindResourceForm.value.selectedResourceIds.length} 个资源到当前节点`);
-  bindResourceModalVisible.value = false;
 };
 
-const handleUnbindResource = (resource: Resource) => {
-  // 模拟解绑资源
-  message.success(`资源 "${resource.instanceName}" 已成功解绑`);
+// 导航函数
+const navigateToManagePage = () => {
+  if (!isUnmounted.value) {
+    router.push('/tree_node_manager');
+  }
 };
 
-const handleDeleteNode = (node: NodeDetail) => {
-  // 模拟删除节点
-  message.success(`节点 "${node.name}" 已成功删除`);
-};
+// 窗口大小变化处理
+const handleResize = debounce(() => {
+  if (!isUnmounted.value && chart && !chart.isDisposed()) {
+    try {
+      chart.resize();
+    } catch (error) {
+      console.warn('图表resize失败:', error);
+    }
+  }
+}, 300);
 
-const showAddAdminModal = () => {
-  message.info('添加管理员功能即将上线');
-};
+// 监听树数据变化
+watch(treeData, () => {
+  if (!isUnmounted.value && chart && !chart.isDisposed() && chartContainer.value) {
+    // 防抖更新图表
+    setTimeout(() => {
+      if (!isUnmounted.value) {
+        updateChart();
+      }
+    }, 200);
+  }
+}, { deep: true });
 
-const showAddMemberModal = () => {
-  message.info('添加成员功能即将上线');
-};
-
+// 生命周期钩子
 onMounted(() => {
-  // 模拟初始加载根节点
-  onSelectNode(['1']);
+  refreshData();
+  window.addEventListener('resize', handleResize);
+});
+
+onBeforeUnmount(() => {
+  isUnmounted.value = true;
+  window.removeEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+  destroyChart();
+  selectedNode.value = null;
+  nodeResources.value = [];
+  treeData.value = [];
+  nodeDetails.value = {};
+  statistics.value = null;
 });
 </script>
 
 <style scoped lang="scss">
-.service-tree-overview {
-  min-height: 100vh;
+.overview-container {
   padding: 16px;
+  min-height: 100vh;
+  background-color: #f5f5f5;
 
-  /* 添加到您的样式表中 */
-  .action-buttons {
+  .dashboard-cards {
     margin-top: 16px;
-    display: flex;
-    justify-content: flex-end;
-  }
+    margin-bottom: 24px;
 
-  .header {
-    margin-bottom: 2px;
-    border-radius: 4px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-
-    .page-header {
-      padding: 16px 24px;
-    }
-
-    .stats-cards {
-      display: flex;
+    .stat-card {
+      text-align: center;
       padding: 24px 16px;
-      justify-content: space-around;
+      background: linear-gradient(135deg, #1890ff0a 0%, #1890ff1a 100%);
+      border-radius: 8px;
 
-      .stat-item {
-        text-align: center;
+      .card-icon {
+        font-size: 36px;
+        color: #1890ff;
+        margin-bottom: 16px;
+        display: block;
+        transition: all 0.3s ease;
+      }
+
+      .stat-number {
+        font-size: 28px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #262626;
+        line-height: 1;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: #8c8c8c;
+        font-weight: 500;
+      }
+
+      &:hover .card-icon {
+        transform: scale(1.1);
+        color: #096dd9;
       }
     }
   }
 
-  .main-content {
-    .tree-card {
-      height: calc(100vh - 140px);
-      overflow: auto;
+  .tree-visualization {
+    margin-bottom: 24px;
 
-      .action-icon {
-        cursor: pointer;
-        color: var(--primary-color, #1890ff);
-        margin-left: 8px;
-        font-size: 14px;
+    .tree-card, .graph-card {
+      min-height: 420px;
+
+      :deep(.ant-card-body) {
+        padding: 16px;
+        height: calc(100% - 57px);
       }
 
-      .service-tree {
-        margin-top: 12px;
+      .tree-content, .graph-content {
+        height: 100%;
+
+        .service-tree {
+          height: 100%;
+          overflow: auto;
+          padding: 8px;
+
+          :deep(.ant-tree-node-content-wrapper) {
+            width: 100%;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+
+            &:hover {
+              background-color: #f0f8ff;
+            }
+
+            &.ant-tree-node-selected {
+              background-color: #e6f7ff;
+            }
+          }
+
+          .tree-node-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 8px;
+
+            .node-name {
+              flex: 1;
+              font-weight: 500;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .node-tags {
+              display: flex;
+              gap: 4px;
+              flex-shrink: 0;
+
+              .ant-tag {
+                margin: 0;
+                font-size: 11px;
+                line-height: 18px;
+              }
+            }
+          }
+        }
       }
     }
 
-    .detail-card {
-      min-height: calc(100vh - 140px);
+    .graph-view {
+      height: 350px;
+      width: 100%;
+      border-radius: 6px;
+      position: relative;
+      border: 1px solid #e8e8e8;
+      background: #fff;
 
-      .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin: 24px 0 12px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--border-color-split, #f0f0f0);
-
-        h3 {
-          margin: 0;
-        }
+      .chart-container {
+        width: 100%;
+        height: 100%;
+        border-radius: 6px;
       }
+    }
+  }
 
-      .resources-header {
-        margin-top: 0;
+  .node-details-row {
+    .details-card,
+    .resources-card {
+      min-height: 450px;
+
+      :deep(.ant-card-body) {
+        padding: 16px;
       }
-
-      .user-card {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-
-        .user-name {
-          flex: 1;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+    }
+    
+    .member-list {
+      margin-bottom: 8px;
+      
+      .ant-tag {
+        margin-right: 4px;
+        margin-bottom: 4px;
       }
+    }
+    
+    .member-count {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+      font-style: italic;
+    }
+    
+    .empty-text {
+      color: #999;
+      font-style: italic;
+    }
 
-      .child-nodes-header {
+    .empty-detail,
+    .empty-resource {
+      margin-top: 100px;
+    }
+  }
+
+  // 表格优化
+  :deep(.ant-table) {
+    .ant-table-thead > tr > th {
+      background-color: #fafafa;
+      font-weight: 600;
+      color: #262626;
+    }
+
+    .ant-table-tbody > tr:hover > td {
+      background-color: #f5f5f5;
+    }
+  }
+
+  // 描述列表优化
+  :deep(.ant-descriptions) {
+    .ant-descriptions-item-label {
+      font-weight: 600;
+      color: #262626;
+      background-color: #fafafa;
+    }
+
+    .ant-descriptions-item-content {
+      color: #595959;
+    }
+  }
+}
+
+// 响应式调整
+@media (max-width: 1200px) {
+  .overview-container {
+    .tree-visualization {
+      .tree-card, .graph-card {
         margin-bottom: 16px;
-        display: flex;
-        justify-content: flex-end;
+      }
+    }
+    
+    .node-details-row {
+      .details-card,
+      .resources-card {
+        margin-bottom: 16px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .overview-container {
+    padding: 8px;
+    
+    .dashboard-cards {
+      .stat-card {
+        padding: 16px 8px;
+        
+        .card-icon {
+          font-size: 28px;
+          margin-bottom: 12px;
+        }
+        
+        .stat-number {
+          font-size: 24px;
+        }
+
+        .stat-label {
+          font-size: 13px;
+        }
+      }
+    }
+    
+    .tree-visualization {
+      .tree-card, .graph-card {
+        height: 300px;
+        margin-bottom: 12px;
+      }
+
+      .graph-view {
+        height: 250px;
+      }
+    }
+
+    .node-details-row {
+      .details-card,
+      .resources-card {
+        min-height: 350px;
+        margin-bottom: 12px;
+      }
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .overview-container {
+    .tree-visualization {
+      .tree-content {
+        .tree-node-title {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+
+          .node-tags {
+            align-self: flex-end;
+          }
+        }
       }
     }
   }

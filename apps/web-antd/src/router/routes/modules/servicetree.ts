@@ -41,49 +41,12 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: 'ECS管理',
-        path: '/ecs_resource_operation',
-        component: () => import('#/views/servicetree/ECSResourceOperation.vue'),
+        name: '本地资源管理',
+        path: '/local_resource_management',
+        component: () => import('#/views/servicetree/LocalResourceManagement.vue'),
         meta: {
-          title: 'ECS管理',
-          icon: 'mdi:server',
-        },
-      },
-      {
-        name: 'VPC管理',
-        path: '/vpc_resource_operation',
-        component: () => import('#/views/servicetree/VPCResourceOperation.vue'),
-        meta: {
-          title: 'VPC管理',
-          icon: 'mdi:lan',
-        },
-      },
-      {
-        name: '安全组管理',
-        path: '/security_group_operation',
-        component: () =>
-          import('#/views/servicetree/SecurityGroupOperation.vue'),
-        meta: {
-          title: '安全组管理',
-          icon: 'mdi:shield-outline',
-        },
-      },
-      {
-        name: 'ELB管理',
-        path: '/elb_resource_operation',
-        component: () => import('#/views/servicetree/ELBResourceOperation.vue'),
-        meta: {
-          title: 'ELB管理',
+          title: '本地资源管理',
           icon: 'mdi:server-network',
-        },
-      },
-      {
-        name: 'RDS管理',
-        path: '/rds_resource_operation',
-        component: () => import('#/views/servicetree/RDSResourceOperation.vue'),
-        meta: {
-          title: 'RDS管理',
-          icon: 'mdi:database',
         },
       },
       {

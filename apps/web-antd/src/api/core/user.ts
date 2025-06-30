@@ -5,48 +5,65 @@ import { requestClient } from '#/api/request';
 /**
  * 获取用户信息
  */
-type changePasswordReq = {
+export interface ChangePasswordReq {
+  user_id: number;
   username: string;
   password: string;
-  newPassword: string;
-  confirmPassword: string;
+  new_password: string;
+  confirm_password: string;
 }
 
-type RegisterParams = {
+export interface UserSignUpReq {
   username: string;
   password: string;
-  confirmPassword: string;
   mobile: string;
-  fei_shu_user_id: string;
   real_name: string;
-  desc: string;
-  home_path: string
-};
+  fei_shu_user_id?: string;
+  desc?: string;
+  account_type: 1 | 2; // 1普通用户 2服务账号
+  home_path?: string;
+  enable?: 1 | 2; // 1正常 2冻结
+}
 
-type updateUserInfoReq = {
-  user_id: number;
+export interface UpdateProfileReq {
+  id: number;
   real_name: string;
-  desc: string;
+  desc?: string;
+  avatar?: string;
   mobile: string;
-  fei_shu_user_id: string;
-  account_type: number;
-  home_path: string;
-  enable: number;
+  email?: string;
+  fei_shu_user_id?: string;
+  account_type: 1 | 2;
+  home_path?: string;
+  enable?: 1 | 2;
+}
+
+export interface WriteOffReq {
+  username: string;
+  password: string;
+}
+
+export interface GetUserListReq {
+  page: number;
+  size: number;
+  search: string;
+  enable?: number;
+  account_type?: number;
 }
 
 export async function getUserInfoApi() {
   return requestClient.get<UserInfo>('/user/profile');
 }
 
-export async function getAllUsers() {
-  return requestClient.get('/user/list');
-}
+export const getUserList = (data: GetUserListReq) => {
+  return requestClient.get('/user/list', { params: data });
+};
 
-export async function registerApi(data: RegisterParams) {
+export async function registerApi(data: UserSignUpReq) {
   return requestClient.post('/user/signup', data);
 }
 
-export async function changePassword(data: changePasswordReq) {
+export async function changePassword(data: ChangePasswordReq) {
   return requestClient.post('/user/change_password', data);
 }
 
@@ -54,6 +71,18 @@ export async function deleteUser(id: number) {
   return requestClient.delete(`/user/${id}`);
 }
 
-export async function updateUserInfo(data: updateUserInfoReq) {
+export async function updateUserInfo(data: UpdateProfileReq) {
   return requestClient.post('/user/profile/update', data);
+}
+
+export async function getUserDetailApi(id: number) {
+  return requestClient.get(`/user/detail/${id}`);
+}
+
+export async function writeOffAccount(data: WriteOffReq) {
+  return requestClient.post('/user/write_off', data);
+}
+
+export async function getUserStatistics() {
+  return requestClient.get('/user/statistics');
 }

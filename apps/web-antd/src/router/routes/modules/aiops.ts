@@ -23,15 +23,6 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: '告警分析',
-        path: '/alarm',
-        component: () => import('#/views/aiops/Alarm.vue'),
-        meta: {
-          icon: 'lucide:file-text',
-          title: '告警分析',
-        },
-      },
-      {
         name: '告警预测',
         path: '/alarm_prediction',
         component: () => import('#/views/aiops/AlarmPrediction.vue'),
@@ -47,15 +38,6 @@ const routes: RouteRecordRaw[] = [
         meta: {
           icon: 'lucide:copy',
           title: '故障自动修复',
-        },
-      },
-      {
-        name: '集群智能运维',
-        path: '/intelligent_cluster',
-        component: () => import('#/views/aiops/IntelligentCluster.vue'),
-        meta: {
-          icon: 'lucide:bar-chart',
-          title: '集群智能运维',
         },
       },
     ],

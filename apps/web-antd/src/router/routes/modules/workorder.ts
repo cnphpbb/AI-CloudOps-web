@@ -23,12 +23,21 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: '工单实例',
-        path: '/instance',
-        component: () => import('#/views/workorder/Instance.vue'),
+        name: '表单管理',
+        path: '/form_management',
+        component: () => import('#/views/workorder/FormManagement.vue'),
         meta: {
           icon: 'lucide:file-text',
-          title: '工单实例',
+          title: '表单管理',
+        },
+      },
+      {
+        name: '分类管理',
+        path: '/category',
+        component: () => import('#/views/workorder/Category.vue'),
+        meta: {
+          icon: 'lucide:folder',
+          title: '分类管理',
         },
       },
       {
@@ -38,6 +47,24 @@ const routes: RouteRecordRaw[] = [
         meta: {
           icon: 'lucide:git-branch',
           title: '流程管理',
+        },
+      },
+      {
+        name: '工单实例',
+        path: '/instance',
+        component: () => import('#/views/workorder/Instance.vue'),
+        meta: {
+          icon: 'lucide:ticket',
+          title: '工单实例',
+        },
+      },
+      {
+        name: '通知配置',
+        path: '/notification',
+        component: () => import('#/views/workorder/Notification.vue'),
+        meta: {
+          icon: 'lucide:bell',
+          title: '通知配置',
         },
       },
       {
