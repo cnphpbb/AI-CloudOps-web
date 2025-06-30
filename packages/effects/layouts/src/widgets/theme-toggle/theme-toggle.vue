@@ -53,13 +53,8 @@ const PRESETS = [
 <template>
   <div>
     <VbenTooltip :disabled="!shouldOnHover" side="bottom">
-      <!-- 不显示切换主题按钮 -->
       <!-- <template #trigger>
-        <ThemeButton
-          :model-value="isDark"
-          type="icon"
-          @update:model-value="handleChange"
-        />
+        <ThemeButton :model-value="isDark" type="icon" @update:model-value="handleChange" />
       </template> -->
       <ToggleGroup :model-value="preferences.theme.mode" class="gap-2" type="single" variant="outline"
         @update:model-value="

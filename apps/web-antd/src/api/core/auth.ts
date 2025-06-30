@@ -11,6 +11,7 @@ export namespace AuthApi {
   export interface RefreshTokenParams {
     refreshToken: string;
   }
+  
   /** 登录接口返回值 */
   export interface LoginResult {
     accessToken: string;
@@ -62,7 +63,3 @@ export async function logoutApi() {
 export async function getAccessCodesApi() {
   return requestClient.get<string[]>('/user/codes');
 }
-
-export const getUserList = () => {
-  return requestClient.get('/user/list');
-};
