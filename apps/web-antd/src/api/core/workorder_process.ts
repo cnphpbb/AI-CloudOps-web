@@ -1,6 +1,29 @@
 import { requestClient } from '#/api/request';
 
-// ==================== 流程定义相关类型 ====================
+// 流程状态常量
+export const ProcessStatus = {
+  Draft: 1, // 草稿
+  Published: 2, // 已发布
+  Disabled: 3, // 已禁用
+};
+
+// 步骤类型常量
+export const StepType = {
+  Start: 'start', // 开始节点
+  Approval: 'approval', // 审批节点
+  End: 'end', // 结束节点
+  Task: 'task', // 任务节点
+  Decision: 'decision', // 决策节点
+};
+
+// 操作类型常量
+export const ActionType = {
+  Approve: 'approve', // 同意
+  Reject: 'reject', // 拒绝
+  Transfer: 'transfer', // 转交
+  Revoke: 'revoke', // 撤回
+  Cancel: 'cancel', // 取消
+};
 
 // 流程步骤定义
 export interface ProcessStep {
@@ -54,15 +77,14 @@ export interface ProcessDefinition {
   variables: ProcessVariable[];
 }
 
-// ==================== 请求结构 ====================
-
 // 创建流程请求
 export interface CreateProcessReq {
   name: string;
   description?: string;
-  form_design_id?: number;
+  form_design_id: number;
   definition: ProcessDefinition;
   category_id?: number;
+  version: string;
 }
 
 // 更新流程请求
@@ -73,6 +95,8 @@ export interface UpdateProcessReq {
   form_design_id: number;
   definition: ProcessDefinition;
   category_id?: number;
+  version: string;
+  status: number;
 }
 
 // 删除流程请求
@@ -82,6 +106,11 @@ export interface DeleteProcessReq {
 
 // 流程详情请求
 export interface DetailProcessReq {
+  id: number;
+}
+
+// 获取流程及关联信息请求
+export interface GetProcessWithRelationsReq {
   id: number;
 }
 
@@ -106,51 +135,6 @@ export interface CloneProcessReq {
   name: string;
 }
 
-// ==================== 响应结构 ====================
-
-// 流程详情响应
-export interface ProcessResp {
-  id: number;
-  name: string;
-  description: string;
-  form_design_id: number;
-  form_design?: any; // 可替换为FormDesign类型
-  definition: ProcessDefinition;
-  version: number;
-  status: number;
-  category_id?: number;
-  category?: any; // 可替换为Category类型
-  creator_id: number;
-  creator_name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// 流程验证响应
-export interface ValidateProcessResp {
-  is_valid: boolean;
-  errors?: string[];
-}
-
-// 流程列表项
-export interface ProcessItem {
-  id: number;
-  name: string;
-  description: string;
-  form_design_id: number;
-  form_design?: any; // 可替换为FormDesign类型
-  version: number;
-  status: number;
-  category_id?: number;
-  category?: any; // 可替换为Category类型
-  creator_id: number;
-  creator_name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// ==================== API接口实现 ====================
-
 // 创建流程
 export async function createProcess(data: CreateProcessReq) {
   return requestClient.post('/workorder/process/create', data);
@@ -172,7 +156,9 @@ export async function detailProcess(data: DetailProcessReq) {
 }
 
 // 获取流程及关联信息
-export async function getProcessWithRelations(data: DetailProcessReq) {
+export async function getProcessWithRelations(
+  data: GetProcessWithRelationsReq,
+) {
   return requestClient.get(`/workorder/process/relations/${data.id}`);
 }
 
@@ -189,9 +175,4 @@ export async function publishProcess(data: PublishProcessReq) {
 // 克隆流程
 export async function cloneProcess(data: CloneProcessReq) {
   return requestClient.post(`/workorder/process/clone/${data.id}`, data);
-}
-
-// 校验流程
-export async function validateProcess(id: number) {
-  return requestClient.get(`/workorder/process/validate/${id}`);
 }

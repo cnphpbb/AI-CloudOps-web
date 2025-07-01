@@ -1,53 +1,36 @@
 <template>
-  <div class="process-container">
-    <!-- 优化头部布局 -->
+  <div class="process-management-container">
     <div class="page-header">
-      <div class="header-left">
+      <div class="header-actions">
         <a-button type="primary" @click="handleCreateProcess" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
           创建新流程
         </a-button>
-      </div>
-      
-      <div class="header-right">
-        <a-input-search 
-          v-model:value="searchQuery" 
-          placeholder="搜索流程..." 
-          style="width: 280px" 
-          @search="handleSearch"
-          allow-clear 
-        />
-        <a-select 
-          v-model:value="statusFilter" 
-          placeholder="全部" 
-          style="width: 100px" 
-          @change="handleStatusChange"
-        >
-          <a-select-option :value="null">全部</a-select-option>
-          <a-select-option :value="0">草稿</a-select-option>
-          <a-select-option :value="1">已发布</a-select-option>
-          <a-select-option :value="2">已禁用</a-select-option>
-        </a-select>
-        <a-select 
-          v-model:value="categoryFilter" 
-          placeholder="全部分类" 
-          style="width: 120px" 
-          @change="handleCategoryChange"
-        >
-          <a-select-option :value="null">全部分类</a-select-option>
-          <a-select-option v-for="category in categories" :key="category.id" :value="category.id">
-            {{ category.name }}
-          </a-select-option>
-        </a-select>
+        <div class="search-filters">
+          <a-input-search v-model:value="searchQuery" placeholder="搜索流程..." class="search-input" @search="handleSearch"
+            allow-clear />
+          <a-select v-model:value="statusFilter" placeholder="状态" class="status-filter" @change="handleStatusChange">
+            <a-select-option :value="null">全部</a-select-option>
+            <a-select-option :value="1">草稿</a-select-option>
+            <a-select-option :value="2">已发布</a-select-option>
+            <a-select-option :value="3">已禁用</a-select-option>
+          </a-select>
+          <a-select v-model:value="categoryFilter" placeholder="分类" class="category-filter"
+            @change="handleCategoryChange">
+            <a-select-option :value="null">全部分类</a-select-option>
+            <a-select-option v-for="category in categories" :key="category.id" :value="category.id">
+              {{ category.name }}
+            </a-select-option>
+          </a-select>
+        </div>
       </div>
     </div>
 
-    <!-- 统计卡片 -->
-    <div class="stats-section">
+    <div class="stats-row">
       <a-row :gutter="16">
-        <a-col :xs="24" :sm="12" :md="6">
+        <a-col :span="6">
           <a-card class="stats-card">
             <a-statistic title="总流程数" :value="stats.total" :value-style="{ color: '#3f8600' }">
               <template #prefix>
@@ -56,7 +39,7 @@
             </a-statistic>
           </a-card>
         </a-col>
-        <a-col :xs="24" :sm="12" :md="6">
+        <a-col :span="6">
           <a-card class="stats-card">
             <a-statistic title="已发布" :value="stats.published" :value-style="{ color: '#52c41a' }">
               <template #prefix>
@@ -65,7 +48,7 @@
             </a-statistic>
           </a-card>
         </a-col>
-        <a-col :xs="24" :sm="12" :md="6">
+        <a-col :span="6">
           <a-card class="stats-card">
             <a-statistic title="草稿" :value="stats.draft" :value-style="{ color: '#faad14' }">
               <template #prefix>
@@ -74,7 +57,7 @@
             </a-statistic>
           </a-card>
         </a-col>
-        <a-col :xs="24" :sm="12" :md="6">
+        <a-col :span="6">
           <a-card class="stats-card">
             <a-statistic title="已禁用" :value="stats.disabled" :value-style="{ color: '#cf1322' }">
               <template #prefix>
@@ -86,18 +69,10 @@
       </a-row>
     </div>
 
-    <!-- 表格区域 -->
-    <div class="table-section">
-      <a-card :bordered="false" class="table-card">
-        <a-table 
-          :data-source="processList" 
-          :columns="columns" 
-          :pagination="false" 
-          :loading="loading"
-          row-key="id" 
-          :scroll="{ x: 1200 }"
-          size="middle"
-        >
+    <div class="table-container">
+      <a-card>
+        <a-table :data-source="processList" :columns="columns" :pagination="paginationConfig" :loading="loading"
+          row-key="id" bordered :scroll="{ x: 1200 }" @change="handleTableChange">
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="process-name-cell">
@@ -107,9 +82,7 @@
             </template>
 
             <template v-if="column.key === 'description'">
-              <div class="description-text" :title="record.description">
-                {{ record.description || '无描述' }}
-              </div>
+              <span class="description-text">{{ record.description || '无描述' }}</span>
             </template>
 
             <template v-if="column.key === 'version'">
@@ -117,8 +90,8 @@
             </template>
 
             <template v-if="column.key === 'status'">
-              <a-tag :color="record.status === 0 ? 'orange' : record.status === 1 ? 'green' : 'default'">
-                {{ record.status === 0 ? '草稿' : record.status === 1 ? '已发布' : '已禁用' }}
+              <a-tag :color="record.status === 1 ? 'orange' : record.status === 2 ? 'green' : 'default'">
+                {{ record.status === 1 ? '草稿' : record.status === 2 ? '已发布' : '已禁用' }}
               </a-tag>
             </template>
 
@@ -141,8 +114,8 @@
 
             <template v-if="column.key === 'createdAt'">
               <div class="date-info">
-                <div class="date">{{ formatDate(record.created_at) }}</div>
-                <div class="time">{{ formatTime(record.created_at) }}</div>
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
               </div>
             </template>
 
@@ -151,14 +124,14 @@
                 <a-button type="primary" size="small" @click="handleViewProcess(record)">
                   查看
                 </a-button>
-                <a-button size="small" @click="handleEditProcess(record)">
+                <a-button type="default" size="small" @click="handleEditProcess(record)">
                   编辑
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleCommand(e.key, record)">
-                      <a-menu-item key="publish" v-if="record.status === 0">发布</a-menu-item>
-                      <a-menu-item key="unpublish" v-if="record.status === 1">取消发布</a-menu-item>
+                      <a-menu-item key="publish" v-if="record.status === 1">发布</a-menu-item>
+                      <a-menu-item key="unpublish" v-if="record.status === 2">取消发布</a-menu-item>
                       <a-menu-item key="validate">验证流程</a-menu-item>
                       <a-menu-item key="clone">克隆</a-menu-item>
                       <a-menu-divider />
@@ -174,27 +147,13 @@
             </template>
           </template>
         </a-table>
-
-        <!-- 分页 -->
-        <div class="pagination-wrapper">
-          <a-pagination 
-            v-model:current="currentPage" 
-            :total="total" 
-            :page-size="pageSize"
-            :page-size-options="['10', '20', '50', '100']" 
-            :show-size-changer="true" 
-            @change="handleCurrentChange" 
-            @showSizeChange="handleSizeChange" 
-            :show-total="(total: number) => `共 ${total} 条`"
-            show-quick-jumper
-          />
-        </div>
       </a-card>
     </div>
 
     <!-- 流程创建/编辑对话框 -->
-    <a-modal v-model:visible="processDialog.visible" :title="processDialog.isEdit ? '编辑流程' : '创建流程'" width="900px"
-      @ok="saveProcess" :destroy-on-close="true">
+    <a-modal :open="processDialog.visible" :title="processDialog.isEdit ? '编辑流程' : '创建流程'" :width="formDialogWidth"
+      @ok="saveProcess" @cancel="() => { processDialog.visible = false }" :destroy-on-close="true"
+      class="responsive-modal process-design-modal" :confirm-loading="loading">
       <a-form ref="formRef" :model="processDialog.form" :rules="formRules" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
@@ -204,9 +163,43 @@
           </a-col>
           <a-col :span="12">
             <a-form-item label="关联表单" name="form_design_id">
-              <a-select v-model:value="processDialog.form.form_design_id" placeholder="请选择关联表单" style="width: 100%">
-                <a-select-option v-for="form in forms" :key="form.id" :value="form.id">
-                  {{ form.name }}
+              <a-select v-model:value="processDialog.form.form_design_id" placeholder="请选择关联表单" style="width: 100%"
+                show-search :filter-option="false" option-label-prop="children"
+                :not-found-content="formSelectorLoading ? undefined : (formSearchKeyword ? '无搜索结果' : '无数据')"
+                @search="handleFormSearch" @dropdown-visible-change="handleFormDropdownChange"
+                @popup-scroll="handleFormScroll" allow-clear :loading="formSelectorLoading">
+                <template #notFoundContent>
+                  <div v-if="formSelectorLoading" class="selector-loading">
+                    <a-spin size="small" />
+                    <span style="margin-left: 8px;">加载中...</span>
+                  </div>
+                  <div v-else class="selector-empty">
+                    {{ formSearchKeyword ? '无搜索结果' : '暂无表单数据' }}
+                  </div>
+                </template>
+
+                <!-- 表单选项 -->
+                <a-select-option v-for="form in processDialogForms" :key="form.id" :value="form.id">
+                  <div class="form-option">
+                    <span class="form-name">{{ form.name }}</span>
+                    <span v-if="form.description" class="form-desc">{{ form.description }}</span>
+                  </div>
+                </a-select-option>
+
+                <!-- 加载更多指示器 -->
+                <a-select-option v-if="formPagination.hasMore" :value="'__load_more_form__'" disabled
+                  class="load-more-option">
+                  <div class="load-more-content" @click.stop="loadMoreForms">
+                    <a-button type="link" size="small" :loading="formSelectorLoading"
+                      style="padding: 0; height: auto; font-size: 12px;">
+                      <template v-if="!formSelectorLoading">
+                        加载更多 ({{ formPagination.current }}/{{ formTotalPages }})
+                      </template>
+                      <template v-else>
+                        正在加载...
+                      </template>
+                    </a-button>
+                  </div>
                 </a-select-option>
               </a-select>
             </a-form-item>
@@ -214,21 +207,61 @@
         </a-row>
 
         <a-row :gutter="16">
-          <a-col :span="12">
+          <a-col :span="8">
             <a-form-item label="分类" name="category_id">
-              <a-select v-model:value="processDialog.form.category_id" placeholder="请选择分类" style="width: 100%" allow-clear>
-                <a-select-option v-for="category in categories" :key="category.id" :value="category.id">
-                  {{ category.name }}
+              <a-select v-model:value="processDialog.form.category_id" placeholder="请选择分类" style="width: 100%"
+                show-search :filter-option="false" option-label-prop="children"
+                :not-found-content="categorySelectorLoading ? undefined : (categorySearchKeyword ? '无搜索结果' : '无数据')"
+                @search="handleCategorySearch" @dropdown-visible-change="handleCategoryDropdownChange"
+                @popup-scroll="handleCategoryScroll" allow-clear :loading="categorySelectorLoading">
+                <template #notFoundContent>
+                  <div v-if="categorySelectorLoading" class="selector-loading">
+                    <a-spin size="small" />
+                    <span style="margin-left: 8px;">加载中...</span>
+                  </div>
+                  <div v-else class="selector-empty">
+                    {{ categorySearchKeyword ? '无搜索结果' : '暂无分类数据' }}
+                  </div>
+                </template>
+
+                <!-- 分类选项 -->
+                <a-select-option v-for="cat in processDialogCategories" :key="cat.id" :value="cat.id">
+                  <div class="category-option">
+                    <span class="category-name">{{ cat.name }}</span>
+                    <span v-if="cat.description" class="category-desc">{{ cat.description }}</span>
+                  </div>
+                </a-select-option>
+
+                <!-- 加载更多指示器 -->
+                <a-select-option v-if="categoryPagination.hasMore" :value="'__load_more__'" disabled
+                  class="load-more-option">
+                  <div class="load-more-content" @click.stop="loadMoreCategories">
+                    <a-button type="link" size="small" :loading="categorySelectorLoading"
+                      style="padding: 0; height: auto; font-size: 12px;">
+                      <template v-if="!categorySelectorLoading">
+                        加载更多 ({{ categoryPagination.current }}/{{ totalPages }})
+                      </template>
+                      <template v-else>
+                        正在加载...
+                      </template>
+                    </a-button>
+                  </div>
                 </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
-          <a-col :span="12">
+          <a-col :span="8">
+            <a-form-item label="版本号" name="version">
+              <a-input v-model:value="processDialog.form.version" placeholder="请输入版本号"
+                :disabled="processDialog.isEdit" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="8">
             <a-form-item label="状态" name="status" v-if="processDialog.isEdit">
               <a-radio-group v-model:value="processDialog.form.status">
-                <a-radio :value="0">草稿</a-radio>
-                <a-radio :value="1">已发布</a-radio>
-                <a-radio :value="2">已禁用</a-radio>
+                <a-radio :value="1">草稿</a-radio>
+                <a-radio :value="2">已发布</a-radio>
+                <a-radio :value="3">已禁用</a-radio>
               </a-radio-group>
             </a-form-item>
           </a-col>
@@ -262,8 +295,8 @@
                       <a-select v-model:value="step.type" placeholder="选择步骤类型">
                         <a-select-option value="start">开始</a-select-option>
                         <a-select-option value="approval">审批</a-select-option>
-                        <a-select-option value="condition">条件</a-select-option>
-                        <a-select-option value="notification">通知</a-select-option>
+                        <a-select-option value="task">任务</a-select-option>
+                        <a-select-option value="decision">决策</a-select-option>
                         <a-select-option value="end">结束</a-select-option>
                       </a-select>
                     </a-form-item>
@@ -282,9 +315,46 @@
                   </a-col>
                   <a-col :span="12">
                     <a-form-item label="用户ID">
-                      <a-select v-model:value="step.users" mode="multiple" placeholder="选择用户">
-                        <a-select-option v-for="user in users" :key="user.id" :value="user.id">
-                          {{ user.name }}
+                      <a-select v-model:value="step.users" mode="multiple" placeholder="选择用户" show-search
+                        :filter-option="false" option-label-prop="children"
+                        :not-found-content="userSelectorLoading ? undefined : (userSearchKeyword ? '无搜索结果' : '无数据')"
+                        @search="handleUserSearch" @dropdown-visible-change="handleUserDropdownChange"
+                        @popup-scroll="handleUserScroll" allow-clear :loading="userSelectorLoading">
+                        <template #notFoundContent>
+                          <div v-if="userSelectorLoading" class="selector-loading">
+                            <a-spin size="small" />
+                            <span style="margin-left: 8px;">加载中...</span>
+                          </div>
+                          <div v-else class="selector-empty">
+                            {{ userSearchKeyword ? '无搜索结果' : '暂无用户数据' }}
+                          </div>
+                        </template>
+
+                        <!-- 用户选项 -->
+                        <a-select-option v-for="user in processDialogUsers" :key="user.id" :value="user.id">
+                          <div class="user-option">
+                            <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(user.username) }">
+                              {{ getInitials(user.username) }}
+                            </a-avatar>
+                            <span class="user-name">{{ user.username }}</span>
+                            <span v-if="user.real_name" class="user-real-name">({{ user.real_name }})</span>
+                          </div>
+                        </a-select-option>
+
+                        <!-- 加载更多指示器 -->
+                        <a-select-option v-if="userPagination.hasMore" :value="'__load_more_user__'" disabled
+                          class="load-more-option">
+                          <div class="load-more-content" @click.stop="loadMoreUsers">
+                            <a-button type="link" size="small" :loading="userSelectorLoading"
+                              style="padding: 0; height: auto; font-size: 12px;">
+                              <template v-if="!userSelectorLoading">
+                                加载更多 ({{ userPagination.current }}/{{ userTotalPages }})
+                              </template>
+                              <template v-else>
+                                正在加载...
+                              </template>
+                            </a-button>
+                          </div>
                         </a-select-option>
                       </a-select>
                     </a-form-item>
@@ -297,8 +367,9 @@
                       <a-select v-model:value="step.actions" mode="multiple" placeholder="选择动作">
                         <a-select-option value="approve">同意</a-select-option>
                         <a-select-option value="reject">拒绝</a-select-option>
-                        <a-select-option value="return">退回</a-select-option>
                         <a-select-option value="transfer">转交</a-select-option>
+                        <a-select-option value="revoke">撤回</a-select-option>
+                        <a-select-option value="cancel">取消</a-select-option>
                       </a-select>
                     </a-form-item>
                   </a-col>
@@ -347,18 +418,21 @@
 
         <div class="connections-editor">
           <div class="connection-list">
-            <div v-for="(connection, index) in processDialog.form.definition.connections" :key="index" class="connection-item">
+            <div v-for="(connection, index) in processDialog.form.definition.connections" :key="index"
+              class="connection-item">
               <a-row :gutter="16" align="middle">
                 <a-col :span="10">
                   <a-select v-model:value="connection.from" placeholder="来源步骤" class="select-step">
-                    <a-select-option v-for="step in processDialog.form.definition.steps" :key="step.id" :value="step.id">
+                    <a-select-option v-for="step in processDialog.form.definition.steps" :key="step.id"
+                      :value="step.id">
                       {{ step.name }}
                     </a-select-option>
                   </a-select>
                 </a-col>
                 <a-col :span="10">
                   <a-select v-model:value="connection.to" placeholder="目标步骤" class="select-step">
-                    <a-select-option v-for="step in processDialog.form.definition.steps" :key="step.id" :value="step.id">
+                    <a-select-option v-for="step in processDialog.form.definition.steps" :key="step.id"
+                      :value="step.id">
                       {{ step.name }}
                     </a-select-option>
                   </a-select>
@@ -388,7 +462,8 @@
 
         <div class="variables-editor">
           <div class="variable-list">
-            <div v-for="(variable, index) in processDialog.form.definition.variables" :key="index" class="variable-item">
+            <div v-for="(variable, index) in processDialog.form.definition.variables" :key="index"
+              class="variable-item">
               <a-row :gutter="16" align="middle">
                 <a-col :span="5">
                   <a-input v-model:value="variable.name" placeholder="变量名" />
@@ -423,7 +498,8 @@
     </a-modal>
 
     <!-- 克隆对话框 -->
-    <a-modal v-model:visible="cloneDialog.visible" title="克隆流程" @ok="confirmClone" :destroy-on-close="true">
+    <a-modal :open="cloneDialog.visible" title="克隆流程" :width="dialogWidth" @ok="confirmClone"
+      @cancel="() => { cloneDialog.visible = false }" :destroy-on-close="true" class="responsive-modal">
       <a-form :model="cloneDialog.form" layout="vertical">
         <a-form-item label="新流程名称" name="name">
           <a-input v-model:value="cloneDialog.form.name" placeholder="请输入新流程名称" />
@@ -432,13 +508,14 @@
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal v-model:visible="detailDialog.visible" title="流程详情" width="80%" :footer="null" class="detail-dialog">
+    <a-modal :open="detailDialog.visible" title="流程详情" :width="previewDialogWidth" :footer="null"
+      @cancel="() => { detailDialog.visible = false }" class="detail-dialog responsive-modal">
       <div v-if="detailDialog.process" class="process-details">
         <div class="detail-header">
           <h2>{{ detailDialog.process.name }}</h2>
           <a-tag
-            :color="detailDialog.process.status === 0 ? 'orange' : detailDialog.process.status === 1 ? 'green' : 'default'">
-            {{ detailDialog.process.status === 0 ? '草稿' : detailDialog.process.status === 1 ? '已发布' : '已禁用' }}
+            :color="detailDialog.process.status === 1 ? 'orange' : detailDialog.process.status === 2 ? 'green' : 'default'">
+            {{ detailDialog.process.status === 1 ? '草稿' : detailDialog.process.status === 2 ? '已发布' : '已禁用' }}
           </a-tag>
         </div>
 
@@ -446,10 +523,12 @@
           <a-descriptions-item label="ID">{{ detailDialog.process.id }}</a-descriptions-item>
           <a-descriptions-item label="版本">v{{ detailDialog.process.version }}</a-descriptions-item>
           <a-descriptions-item label="创建人">{{ detailDialog.process.creator_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.process.created_at) }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.process.created_at)
+          }}</a-descriptions-item>
           <a-descriptions-item label="关联表单">{{ getFormName(detailDialog.process.form_design_id) }}</a-descriptions-item>
           <a-descriptions-item label="分类">{{ getCategoryName(detailDialog.process.category_id) }}</a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">{{ detailDialog.process.description || '无描述' }}</a-descriptions-item>
+          <a-descriptions-item label="描述" :span="2">{{ detailDialog.process.description || '无描述'
+          }}</a-descriptions-item>
         </a-descriptions>
 
         <div class="process-preview">
@@ -479,13 +558,15 @@
 
           <div v-if="parseProcessConnections(detailDialog.process)?.length" class="connections-section">
             <h3>流程连接</h3>
-            <a-table :data-source="parseProcessConnections(detailDialog.process)" :columns="connectionDisplayColumns" :pagination="false" size="small">
+            <a-table :data-source="parseProcessConnections(detailDialog.process)" :columns="connectionDisplayColumns"
+              :pagination="false" size="small">
             </a-table>
           </div>
 
           <div v-if="parseProcessVariables(detailDialog.process)?.length" class="variables-section">
             <h3>流程变量</h3>
-            <a-table :data-source="parseProcessVariables(detailDialog.process)" :columns="variableColumns" :pagination="false" size="small">
+            <a-table :data-source="parseProcessVariables(detailDialog.process)" :columns="variableColumns"
+              :pagination="false" size="small">
             </a-table>
           </div>
         </div>
@@ -514,34 +595,63 @@ import {
 } from '@ant-design/icons-vue';
 
 import {
-  type ProcessItem,
-  type ProcessResp,
-  type CreateProcessReq,
-  type UpdateProcessReq,
-  type DeleteProcessReq,
-  type PublishProcessReq,
-  type CloneProcessReq,
-  type ListProcessReq,
   type ProcessStep,
   type ProcessConnection,
   type ProcessVariable,
   type ProcessDefinition,
+  type CreateProcessReq,
+  type UpdateProcessReq,
+  type DeleteProcessReq,
+  type CloneProcessReq,
+  type ListProcessReq,
+  type DetailProcessReq,
+  ProcessStatus,
+  StepType,
   listProcess,
   detailProcess,
   createProcess,
   updateProcess,
   deleteProcess,
-  publishProcess,
-  cloneProcess,
-  validateProcess
+  cloneProcess
 } from '#/api/core/workorder_process';
 
-import {listFormDesign} from '#/api/core/workorder_form_design'
-import type { ListFormDesignReq } from '#/api/core/workorder';
+import { listFormDesign } from '#/api/core/workorder_form_design'
+import type { ListFormDesignReq } from '#/api/core/workorder_form_design';
 
-// 添加分类接口导入
 import type { Category } from '#/api/core/workorder_category'
 import { listCategory } from '#/api/core/workorder_category'
+
+import { getUserList } from '#/api/core/user'
+import type { GetUserListReq } from '#/api/core/user'
+
+// 流程项接口
+interface ProcessItem {
+  id: number;
+  name: string;
+  description?: string;
+  form_design_id: number;
+  category_id?: number;
+  status: number;
+  version: string;
+  creator_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// 流程响应接口
+interface ProcessResp extends ProcessItem {
+  definition: ProcessDefinition | string;
+  category?: {
+    name: string;
+    description?: string;
+  };
+}
+
+// 列表响应接口
+interface ProcessListResp {
+  items: ProcessItem[];
+  total: number;
+}
 
 // 列定义
 const columns = [
@@ -549,8 +659,7 @@ const columns = [
     title: '流程名称',
     dataIndex: 'name',
     key: 'name',
-    width: 180,
-    fixed: 'left',
+    width: 200,
   },
   {
     title: '描述',
@@ -576,14 +685,14 @@ const columns = [
     dataIndex: 'version',
     key: 'version',
     width: 100,
-    align: 'center',
+    align: 'center' as const,
   },
   {
     title: '状态',
     dataIndex: 'status',
     key: 'status',
     width: 120,
-    align: 'center',
+    align: 'center' as const,
   },
   {
     title: '创建人',
@@ -601,32 +710,23 @@ const columns = [
     title: '操作',
     key: 'action',
     width: 200,
-    align: 'center',
-    fixed: 'right',
+    align: 'center' as const,
   },
-];
-
-// 连接表格列定义
-const connectionColumns = [
-  { title: '来源步骤', dataIndex: 'from', key: 'from' },
-  { title: '目标步骤', dataIndex: 'to', key: 'to' },
-  { title: '条件', dataIndex: 'condition', key: 'condition' },
-  { title: '标签', dataIndex: 'label', key: 'label' },
 ];
 
 // 用于显示连接的表格列
 const connectionDisplayColumns = [
-  { 
+  {
     title: '来源步骤',
-    dataIndex: 'from', 
+    dataIndex: 'from',
     key: 'from',
     customRender: ({ text, record }: any) => {
       return getStepNameById(text, record._process);
     }
   },
-  { 
-    title: '目标步骤', 
-    dataIndex: 'to', 
+  {
+    title: '目标步骤',
+    dataIndex: 'to',
     key: 'to',
     customRender: ({ text, record }: any) => {
       return getStepNameById(text, record._process);
@@ -661,12 +761,23 @@ const stats = reactive({
   disabled: 0
 });
 
-// 数据列表 - 修复分类数据类型
+// 数据列表
 const processList = ref<ProcessItem[]>([]);
 const forms = ref<any[]>([]);
-const categories = ref<Category[]>([]); // 使用正确的类型
+const categories = ref<Category[]>([]);
 const roles = ref<string[]>(['admin', 'user', 'manager', 'reviewer']);
 const users = ref<any[]>([]);
+
+// 分页配置
+const paginationConfig = computed(() => ({
+  current: currentPage.value,
+  pageSize: pageSize.value,
+  total: total.value,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条`,
+  pageSizeOptions: ['10', '20', '50', '100'],
+}));
 
 // 流程对话框
 const processDialog = reactive({
@@ -676,9 +787,10 @@ const processDialog = reactive({
     id: undefined,
     name: '',
     description: '',
-    form_design_id: undefined as number | undefined,
-    category_id: undefined as number | undefined,
-    status: 0,
+    form_design_id: 0,
+    category_id: 0,
+    status: ProcessStatus.Draft,
+    version: '1.0',
     definition: {
       steps: [],
       connections: [],
@@ -698,6 +810,10 @@ const formRules = {
   ],
   form_design_id: [
     { required: true, message: '请选择关联表单', trigger: 'change' }
+  ],
+  version: [
+    { required: true, message: '请输入版本号', trigger: 'blur' },
+    { pattern: /^[\d]+\.[\d]+$/, message: '版本号格式应为：x.x（如：1.0、2.1）', trigger: 'blur' }
   ]
 };
 
@@ -716,6 +832,94 @@ const detailDialog = reactive({
   process: null as ProcessResp | null
 });
 
+// 响应式对话框宽度
+const dialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '80%';
+    return '600px';
+  }
+  return '600px';
+});
+
+// 表单对话框宽度（更大以容纳编辑器）
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
+
+// 预览对话框宽度
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
+
+// 表单对话框中的分页分类数据
+const processDialogCategories = ref<Category[]>([]);
+const categorySelectorLoading = ref(false);
+const categorySearchKeyword = ref('');
+let categorySearchTimeout: any = null;
+
+// 分类分页状态
+const categoryPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: false
+});
+
+// 表单对话框中的分页表单数据
+const processDialogForms = ref<any[]>([]);
+const formSelectorLoading = ref(false);
+const formSearchKeyword = ref('');
+let formSearchTimeout: any = null;
+
+// 表单分页状态
+const formPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: false
+});
+
+// 表单对话框中的分页用户数据
+const processDialogUsers = ref<any[]>([]);
+const userSelectorLoading = ref(false);
+const userSearchKeyword = ref('');
+let userSearchTimeout: any = null;
+
+// 用户分页状态
+const userPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: false
+});
+
+// 计算总页数
+const totalPages = computed(() => {
+  return Math.ceil(categoryPagination.total / categoryPagination.pageSize);
+});
+
+const formTotalPages = computed(() => {
+  return Math.ceil(formPagination.total / formPagination.pageSize);
+});
+
+const userTotalPages = computed(() => {
+  return Math.ceil(userPagination.total / userPagination.pageSize);
+});
+
 // 生成唯一ID
 const generateId = () => {
   return 'step_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -724,7 +928,7 @@ const generateId = () => {
 // 解析流程定义JSON字符串
 const parseProcessDefinition = (process: any): ProcessDefinition => {
   if (!process) return { steps: [], connections: [], variables: [] };
-  
+
   if (typeof process.definition === 'string') {
     try {
       return JSON.parse(process.definition);
@@ -733,7 +937,7 @@ const parseProcessDefinition = (process: any): ProcessDefinition => {
       return { steps: [], connections: [], variables: [] };
     }
   }
-  
+
   return process.definition || { steps: [], connections: [], variables: [] };
 };
 
@@ -761,7 +965,7 @@ const parseProcessVariables = (process: any): ProcessVariable[] => {
 // 根据步骤ID获取步骤名称
 const getStepNameById = (stepId: string, process: any): string => {
   if (!process || !stepId) return '未知步骤';
-  
+
   const steps = parseProcessSteps(process);
   const step = steps.find(s => s.id === stepId);
   return step ? step.name : '未知步骤';
@@ -770,15 +974,27 @@ const getStepNameById = (stepId: string, process: any): string => {
 // 获取下一个步骤的名称
 const getNextStepName = (stepId: string, process: any): string => {
   if (!process || !stepId) return '';
-  
+
   const connections = parseProcessConnections(process);
   const nextConnection = connections.find(conn => conn.from === stepId);
-  
+
   if (nextConnection) {
     return getStepNameById(nextConnection.to, process);
   }
-  
+
   return '';
+};
+
+// 表格变化处理
+const handleTableChange = (pagination: any): void => {
+  if (pagination.current !== currentPage.value) {
+    currentPage.value = pagination.current;
+  }
+  if (pagination.pageSize !== pageSize.value) {
+    pageSize.value = pagination.pageSize;
+    currentPage.value = 1; // 切换页面大小时重置到第一页
+  }
+  loadProcesses();
 };
 
 // 初始化加载数据
@@ -792,17 +1008,17 @@ const loadProcesses = async () => {
       status: statusFilter.value || undefined,
       category_id: categoryFilter.value || undefined
     };
-    
-    const res = await listProcess(params);
+
+    const res = await listProcess(params) as ProcessListResp;
     if (res && res.items) {
       processList.value = res.items || [];
       total.value = res.total || 0;
-      
+
       // 更新统计数据
       stats.total = res.total || 0;
-      stats.published = processList.value.filter((p: ProcessItem) => p.status === 1).length;
-      stats.draft = processList.value.filter((p: ProcessItem) => p.status === 0).length;
-      stats.disabled = processList.value.filter((p: ProcessItem) => p.status === 2).length;
+      stats.published = processList.value.filter((p: ProcessItem) => p.status === ProcessStatus.Published).length;
+      stats.draft = processList.value.filter((p: ProcessItem) => p.status === ProcessStatus.Draft).length;
+      stats.disabled = processList.value.filter((p: ProcessItem) => p.status === ProcessStatus.Disabled).length;
     }
   } catch (error) {
     message.error('加载流程数据失败');
@@ -822,67 +1038,17 @@ const loadForms = async () => {
     const res = await listFormDesign(params)
     if (res && res.items) {
       forms.value = res.items;
-      console.log('表单数据加载成功:', forms.value);
     } else {
-      console.warn('表单接口返回数据格式异常:', res);
       forms.value = [];
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to load forms:', error);
-    message.error('加载表单列表失败');
+    message.error(`加载表单列表失败: ${error.message || '未知错误'}`);
     forms.value = [];
   }
 };
 
-// 修复加载分类列表函数
-const loadCategories = async (): Promise<void> => {
-  try {
-    // 使用真实的分类接口
-    const response = await listCategory({ page: 1, size: 100 });
-    if (response && response.items) {
-      categories.value = response.items;
-      console.log('分类数据加载成功:', categories.value);
-    } else {
-      console.warn('分类接口返回数据格式异常:', response);
-      categories.value = [];
-    }
-  } catch (error) {
-    console.error('Failed to load categories:', error);
-    message.error('加载分类列表失败');
-    // 出错时提供默认的分类数据
-    categories.value = [];
-  }
-};
-
-// 加载用户列表
-const loadUsers = async () => {
-  try {
-    // 这里模拟用户列表数据，实际应调用相关API
-    // 如果有用户管理接口，可以替换为真实接口调用
-    users.value = [
-      { id: 1, name: '张三' },
-      { id: 2, name: '李四' },
-      { id: 3, name: '王五' }
-    ];
-    console.log('用户数据加载成功:', users.value);
-  } catch (error) {
-    console.error('Failed to load users:', error);
-    users.value = [];
-  }
-};
-
 // 方法
-const handleSizeChange = (_: number, size: number) => {
-  pageSize.value = size;
-  currentPage.value = 1;
-  loadProcesses();
-};
-
-const handleCurrentChange = (page: number) => {
-  currentPage.value = page;
-  loadProcesses();
-};
-
 const handleSearch = () => {
   currentPage.value = 1;
   loadProcesses();
@@ -903,14 +1069,16 @@ const handleCreateProcess = () => {
   processDialog.form = {
     name: '',
     description: '',
-    form_design_id: undefined,
-    category_id: undefined,
+    form_design_id: 0,
+    category_id: 0,
+    status: ProcessStatus.Draft,
+    version: '1.0',
     definition: {
       steps: [
         {
           id: generateId(),
           name: '开始',
-          type: 'start',
+          type: StepType.Start,
           roles: [],
           users: [],
           actions: [],
@@ -927,20 +1095,20 @@ const handleCreateProcess = () => {
   };
   activeStepKeys.value = ['0'];
   processDialog.visible = true;
+  resetSelectors();
 };
 
 const handleEditProcess = async (row: ProcessItem) => {
   processDialog.isEdit = true;
   loading.value = true;
-  
+
   try {
-    const res = await detailProcess({ id: row.id });
+    const res = await detailProcess({ id: row.id } as DetailProcessReq) as ProcessResp;
     if (res) {
-      // 确保从字符串转换为对象
-      const definition = typeof res.definition === 'string' 
-        ? JSON.parse(res.definition) 
+      const definition = typeof res.definition === 'string'
+        ? JSON.parse(res.definition)
         : res.definition;
-      
+
       processDialog.form = {
         id: res.id,
         name: res.name,
@@ -948,12 +1116,16 @@ const handleEditProcess = async (row: ProcessItem) => {
         form_design_id: res.form_design_id,
         category_id: res.category_id,
         status: res.status,
+        version: res.version,
         definition: definition
       };
-      
+
       processDialog.visible = true;
       detailDialog.visible = false;
-      activeStepKeys.value = processDialog.form.definition.steps.map((step: any, index: number) => index.toString());
+      // 自动展开所有步骤
+      activeStepKeys.value = processDialog.form.definition.steps.map((_step: any, index: number) => index.toString());
+
+      await loadSelectorsForEdit(res);
     }
   } catch (error) {
     message.error('获取流程详情失败');
@@ -965,9 +1137,9 @@ const handleEditProcess = async (row: ProcessItem) => {
 
 const handleViewProcess = async (row: ProcessItem) => {
   loading.value = true;
-  
+
   try {
-    const res = await detailProcess({ id: row.id });
+    const res = await detailProcess({ id: row.id } as DetailProcessReq) as ProcessResp;
     if (res) {
       detailDialog.process = res;
       detailDialog.visible = true;
@@ -980,14 +1152,20 @@ const handleViewProcess = async (row: ProcessItem) => {
   }
 };
 
+
 const handleCommand = async (command: string, row: ProcessItem) => {
   switch (command) {
     case 'publish':
       await publishProcessHandler(row);
       break;
     case 'unpublish':
-      // 实际项目中应使用unpublishProcess API，这里简化处理
-      message.info('取消发布功能需要实现相应的API');
+      Modal.confirm({
+        title: '取消发布',
+        content: `确定要取消发布流程 "${row.name}" 吗？这将使该流程无法被新的工单使用。`,
+        async onOk() {
+          await unpublishProcessHandler(row);
+        }
+      });
       break;
     case 'validate':
       await validateProcessHandler(row);
@@ -1002,31 +1180,134 @@ const handleCommand = async (command: string, row: ProcessItem) => {
 };
 
 const publishProcessHandler = async (process: ProcessItem) => {
+  loading.value = true;
   try {
-    const params: PublishProcessReq = {
-      id: process.id
+    // 首先获取完整的流程详情，确保有完整的definition
+    const detail = await detailProcess({ id: process.id });
+
+    const params: UpdateProcessReq = {
+      id: process.id,
+      name: process.name,
+      description: process.description || '',
+      form_design_id: process.form_design_id,
+      category_id: process.category_id,
+      version: process.version,
+      status: ProcessStatus.Published,
+      definition: typeof detail.definition === 'string'
+        ? JSON.parse(detail.definition)
+        : detail.definition
     };
-    
-    await publishProcess(params);
+
+    await updateProcess(params);
     message.success(`流程 "${process.name}" 已发布`);
     loadProcesses();
-  } catch (error) {
-    message.error('发布流程失败');
+  } catch (error: any) {
+    message.error(`发布流程失败: ${error.message || '未知错误'}`);
     console.error('Failed to publish process:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
-const validateProcessHandler = async (process: ProcessItem) => {
+const unpublishProcessHandler = async (process: ProcessItem) => {
+  loading.value = true;
   try {
-    const res = await validateProcess(process.id);
-    if (res && res.is_valid) {
+    // 首先获取完整的流程详情，确保有完整的definition
+    const detail = await detailProcess({ id: process.id });
+
+    const params: UpdateProcessReq = {
+      id: process.id,
+      name: process.name,
+      description: process.description || '',
+      form_design_id: process.form_design_id,
+      category_id: process.category_id,
+      version: process.version,
+      status: ProcessStatus.Draft, // 改为草稿状态
+      definition: typeof detail.definition === 'string'
+        ? JSON.parse(detail.definition)
+        : detail.definition
+    };
+
+    await updateProcess(params);
+    message.success(`流程 "${process.name}" 已取消发布`);
+    loadProcesses();
+  } catch (error: any) {
+    message.error(`取消发布流程失败: ${error.message || '未知错误'}`);
+    console.error('Failed to unpublish process:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 流程验证现在通过检查流程定义的结构来实现，不再调用专门的API
+const validateProcessHandler = async (process: ProcessItem) => {
+  loading.value = true;
+  try {
+    // 获取流程详情
+    const detail = await detailProcess({ id: process.id });
+    const definition = typeof detail.definition === 'string'
+      ? JSON.parse(detail.definition)
+      : detail.definition;
+
+    // 验证流程定义
+    const errors = [];
+
+    // 检查是否有起始步骤
+    const hasStartStep = definition.steps.some((step: ProcessStep) => step.type === StepType.Start);
+    if (!hasStartStep) {
+      errors.push('流程缺少起始步骤');
+    }
+
+    // 检查是否有结束步骤
+    const hasEndStep = definition.steps.some((step: ProcessStep) => step.type === StepType.End);
+    if (!hasEndStep) {
+      errors.push('流程缺少结束步骤');
+    }
+
+    // 检查步骤是否有效
+    for (const step of definition.steps) {
+      if (!step.name || !step.type) {
+        errors.push(`步骤 "${step.name || step.id}" 缺少名称或类型`);
+      }
+
+      if (step.type === StepType.Approval && (!step.roles || step.roles.length === 0) && (!step.users || step.users.length === 0)) {
+        errors.push(`审批步骤 "${step.name}" 需要至少分配一个角色或用户`);
+      }
+    }
+
+    // 检查连接是否有效
+    for (const connection of definition.connections) {
+      if (!connection.from || !connection.to) {
+        errors.push('存在不完整的连接');
+        continue;
+      }
+
+      const fromStep = definition.steps.find((step: ProcessStep) => step.id === connection.from);
+      const toStep = definition.steps.find((step: ProcessStep) => step.id === connection.to);
+
+      if (!fromStep) {
+        errors.push(`连接的来源步骤 "${connection.from}" 不存在`);
+      }
+
+      if (!toStep) {
+        errors.push(`连接的目标步骤 "${connection.to}" 不存在`);
+      }
+    }
+
+    if (errors.length === 0) {
       message.success(`流程 "${process.name}" 验证通过`);
     } else {
-      message.error(`流程验证失败：${res?.errors?.join(', ') || '未知错误'}`);
+      // 使用警告而不是错误，因为这是预期的验证结果
+      message.warning({
+        content: `流程验证失败：${errors.join(', ')}`,
+        duration: 5 // 延长显示时间以便阅读
+      });
     }
-  } catch (error) {
-    message.error('验证流程失败');
+  } catch (error: any) {
+    message.error(`验证流程失败: ${error.message || '未知错误'}`);
     console.error('Failed to validate process:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -1044,36 +1325,48 @@ const confirmClone = async () => {
       message.error('请输入新流程名称');
       return;
     }
-    
+
+    loading.value = true;
     await cloneProcess(cloneDialog.form);
     message.success(`流程已克隆为 "${cloneDialog.form.name}"`);
     cloneDialog.visible = false;
     loadProcesses();
-  } catch (error) {
-    message.error('克隆流程失败');
+  } catch (error: any) {
+    message.error(`克隆流程失败: ${error.message || '未知错误'}`);
     console.error('Failed to clone process:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
 const confirmDelete = (process: ProcessItem) => {
   Modal.confirm({
     title: '警告',
-    content: `确定要删除流程 "${process.name}" 吗？`,
+    content: `确定要删除流程 "${process.name}" 吗？这个操作不可恢复！`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
     async onOk() {
       try {
+        loading.value = true;
         const params: DeleteProcessReq = {
           id: process.id
         };
-        
+
         await deleteProcess(params);
         message.success(`流程 "${process.name}" 已删除`);
+
+        // 检查当前页是否还有数据，如果删除后当前页没有数据且不是第一页，则回到上一页
+        if (processList.value.length === 1 && currentPage.value > 1) {
+          currentPage.value = currentPage.value - 1;
+        }
+
         loadProcesses();
-      } catch (error) {
-        message.error('删除流程失败');
+      } catch (error: any) {
+        message.error(`删除流程失败: ${error.message || '未知错误'}`);
         console.error('Failed to delete process:', error);
+      } finally {
+        loading.value = false;
       }
     }
   });
@@ -1084,7 +1377,7 @@ const addStep = () => {
   const newStep: ProcessStep = {
     id: generateId(),
     name: '',
-    type: 'approval',
+    type: StepType.Approval,
     roles: [],
     users: [],
     actions: [],
@@ -1094,7 +1387,7 @@ const addStep = () => {
     props: {},
     position: { x: 100, y: 100 + processDialog.form.definition.steps.length * 150 }
   };
-  
+
   processDialog.form.definition.steps.push(newStep);
   activeStepKeys.value.push((processDialog.form.definition.steps.length - 1).toString());
 };
@@ -1112,7 +1405,7 @@ const addConnection = () => {
     condition: '',
     label: ''
   };
-  
+
   processDialog.form.definition.connections.push(newConnection);
 };
 
@@ -1128,7 +1421,7 @@ const addVariable = () => {
     default_value: '',
     description: ''
   };
-  
+
   processDialog.form.definition.variables.push(newVariable);
 };
 
@@ -1138,7 +1431,7 @@ const removeVariable = (index: number) => {
 
 const saveProcess = async () => {
   try {
-    // 基础验证
+    // 表单基础验证
     if (!processDialog.form.name.trim()) {
       message.error('流程名称不能为空');
       return;
@@ -1149,12 +1442,24 @@ const saveProcess = async () => {
       return;
     }
 
+    if (!processDialog.form.version.trim()) {
+      message.error('版本号不能为空');
+      return;
+    }
+
+    // 版本号格式验证
+    const versionPattern = /^[\d]+\.[\d]+$/;
+    if (!versionPattern.test(processDialog.form.version)) {
+      message.error('版本号格式应为：x.x（如：1.0、2.1）');
+      return;
+    }
+
     if (processDialog.form.definition.steps.length === 0) {
       message.error('流程至少需要一个步骤');
       return;
     }
 
-    // 验证步骤
+    // 步骤验证
     for (let i = 0; i < processDialog.form.definition.steps.length; i++) {
       const step = processDialog.form.definition.steps[i];
       if (!step || !step.name || !step.name.trim()) {
@@ -1165,53 +1470,84 @@ const saveProcess = async () => {
         message.error(`步骤 ${i + 1} 类型不能为空`);
         return;
       }
+
+      // 审批类型步骤应有执行角色或用户
+      if (step.type === StepType.Approval && step.roles.length === 0 && step.users.length === 0) {
+        message.error(`审批步骤 "${step.name}" 需要至少分配一个角色或用户`);
+        return;
+      }
+
+      // 审批类型应有可执行动作
+      if (step.type === StepType.Approval && (!step.actions || step.actions.length === 0)) {
+        message.error(`审批步骤 "${step.name}" 需要至少有一个可执行动作`);
+        return;
+      }
     }
 
+    // 连接验证
+    for (let i = 0; i < processDialog.form.definition.connections.length; i++) {
+      const connection = processDialog.form.definition.connections[i];
+      if (!connection || !connection.from) {
+        message.error(`连接 ${i + 1} 的来源步骤不能为空`);
+        return;
+      }
+      if (!connection || !connection.to) {
+        message.error(`连接 ${i + 1} 的目标步骤不能为空`);
+        return;
+      }
+
+      // 确保不存在自我引用
+      if (connection.from === connection.to) {
+        message.error(`连接 ${i + 1} 不能指向自身`);
+        return;
+      }
+    }
+
+    // 保存前显示加载状态
+    loading.value = true;
+
     if (processDialog.isEdit && processDialog.form.id) {
-      // 更新现有流程
       const updateData: UpdateProcessReq = {
         id: processDialog.form.id,
         name: processDialog.form.name,
         description: processDialog.form.description || '',
         form_design_id: processDialog.form.form_design_id!,
         definition: processDialog.form.definition,
-        category_id: processDialog.form.category_id
+        category_id: processDialog.form.category_id,
+        version: processDialog.form.version!,
+        status: processDialog.form.status || ProcessStatus.Draft
       };
-      
+
       await updateProcess(updateData);
       message.success(`流程 "${processDialog.form.name}" 已更新`);
     } else {
-      // 创建新流程
       const createData: CreateProcessReq = {
         name: processDialog.form.name,
         description: processDialog.form.description,
         form_design_id: processDialog.form.form_design_id!,
         definition: processDialog.form.definition,
-        category_id: processDialog.form.category_id
+        category_id: processDialog.form.category_id,
+        version: processDialog.form.version
       };
-      
+
       await createProcess(createData);
       message.success(`流程 "${processDialog.form.name}" 已创建`);
+
+      // 如果是创建新流程，跳转到第一页查看新创建的流程
+      currentPage.value = 1;
     }
-    
+
     processDialog.visible = false;
     loadProcesses();
-  } catch (error) {
-    message.error(processDialog.isEdit ? '更新流程失败' : '创建流程失败');
+  } catch (error: any) {
+    message.error(processDialog.isEdit
+      ? `更新流程失败: ${error.message || '未知错误'}`
+      : `创建流程失败: ${error.message || '未知错误'}`
+    );
     console.error('Failed to save process:', error);
+  } finally {
+    loading.value = false;
   }
-};
-
-// 检查流程名是否存在（简化实现，实际应调用API）
-const checkProcessNameExists = async (name: string) => {
-  // 模拟API调用
-  return { exists: false };
-};
-
-// 更新流程状态（简化实现，实际应调用API）
-const updateProcessStatus = async (id: number, status: number) => {
-  message.info(`更新流程状态为 ${status}`);
-  // 实际项目中应调用相应的API
 };
 
 // 辅助方法
@@ -1250,16 +1586,16 @@ const getInitials = (name: string | undefined) => {
 
 const getStatusClass = (status: number) => {
   switch (status) {
-    case 0: return 'status-draft';
-    case 1: return 'status-published';
-    case 2: return 'status-disabled';
+    case ProcessStatus.Draft: return 'status-draft';
+    case ProcessStatus.Published: return 'status-published';
+    case ProcessStatus.Disabled: return 'status-disabled';
     default: return '';
   }
 };
 
 const getAvatarColor = (name: string | undefined) => {
   if (!name) return '#1890ff';
-  
+
   const colors = [
     '#1890ff', '#52c41a', '#faad14', '#f5222d',
     '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
@@ -1282,110 +1618,606 @@ const getFormName = (formId: number | undefined) => {
 const getCategoryName = (categoryId: number | undefined) => {
   if (!categoryId) return '无分类';
   const category = categories.value.find(c => c.id === categoryId);
-  return category ? category.name : '无分类';
+  return category ? category.name : `分类 ${categoryId}`; // 显示分类ID而不是"无分类"
 };
 
 const getNodeTypeClass = (type: string) => {
   const map: Record<string, string> = {
-    'start': 'start',
-    'approval': 'approval',
-    'condition': 'condition',
-    'notification': 'notice',
-    'end': 'end'
+    [StepType.Start]: 'start',
+    [StepType.Approval]: 'approval',
+    [StepType.Task]: 'task',
+    [StepType.Decision]: 'condition',
+    [StepType.End]: 'end'
   };
   return map[type] || 'approval';
 };
 
 const getNodeTypeName = (type: string) => {
   const typeMap: Record<string, string> = {
-    'start': '开始',
-    'approval': '审批',
-    'condition': '条件',
-    'notification': '通知',
-    'end': '结束'
+    [StepType.Start]: '开始',
+    [StepType.Approval]: '审批',
+    [StepType.Task]: '任务',
+    [StepType.Decision]: '决策',
+    [StepType.End]: '结束'
   };
   return typeMap[type] || type;
 };
 
-// 修复初始化加载 - 并行加载所有数据
-onMounted(async () => {
+// 分页分类加载方法
+const loadProcessDialogCategories = async (reset: boolean = false, search?: string): Promise<void> => {
+  if (categorySelectorLoading.value && !reset) {
+    return;
+  }
+
+  categorySelectorLoading.value = true;
+
   try {
-    // 并行加载所有数据，提高加载效率
+    const params = {
+      page: reset ? 1 : categoryPagination.current,
+      size: categoryPagination.pageSize,
+      search: search !== undefined ? search : categorySearchKeyword.value || undefined
+    };
+
+    const response = await listCategory(params);
+
+    if (response) {
+      if (reset) {
+        processDialogCategories.value = response.items || [];
+        categoryPagination.current = 1;
+      } else {
+        const existingIds = new Set(processDialogCategories.value.map(cat => cat.id));
+        const newItems = (response.items || []).filter((cat: any) => !existingIds.has(cat.id));
+        processDialogCategories.value = [...processDialogCategories.value, ...newItems];
+      }
+
+      categoryPagination.total = response.total || 0;
+      categoryPagination.hasMore = (response.items || []).length === categoryPagination.pageSize &&
+        processDialogCategories.value.length < categoryPagination.total;
+    }
+  } catch (error: any) {
+    console.error('加载分类列表失败:', error);
+    if (reset) {
+      message.error(error.message || '加载分类列表失败');
+      processDialogCategories.value = [];
+      categoryPagination.current = 1;
+      categoryPagination.total = 0;
+      categoryPagination.hasMore = false;
+    }
+  } finally {
+    categorySelectorLoading.value = false;
+  }
+};
+
+// 处理分类搜索
+const handleCategorySearch = (value: string): void => {
+  categorySearchKeyword.value = value;
+
+  if (categorySearchTimeout) {
+    clearTimeout(categorySearchTimeout);
+  }
+
+  categorySearchTimeout = setTimeout(() => {
+    categoryPagination.current = 1;
+    loadProcessDialogCategories(true, value);
+  }, 300);
+};
+
+// 处理分类下拉框显示/隐藏
+const handleCategoryDropdownChange = (open: boolean): void => {
+  if (open) {
+    if (processDialogCategories.value.length === 0) {
+      loadProcessDialogCategories(true);
+    }
+  }
+};
+
+// 处理分类滚动加载更多
+const handleCategoryScroll = (e: Event): void => {
+  const { target } = e;
+  if (!target) return;
+
+  const element = target as HTMLElement;
+  const { scrollTop, scrollHeight, clientHeight } = element;
+
+  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+    categoryPagination.hasMore &&
+    !categorySelectorLoading.value) {
+    loadMoreCategories();
+  }
+};
+
+// 加载更多分类
+const loadMoreCategories = async (): Promise<void> => {
+  if (!categoryPagination.hasMore || categorySelectorLoading.value) {
+    return;
+  }
+
+  categoryPagination.current += 1;
+  await loadProcessDialogCategories(false);
+};
+
+// ==================== 分页表单选择器 ====================
+
+// 分页表单加载方法
+const loadProcessDialogForms = async (reset: boolean = false, search?: string): Promise<void> => {
+  if (formSelectorLoading.value && !reset) {
+    return;
+  }
+
+  formSelectorLoading.value = true;
+
+  try {
+    const params: ListFormDesignReq = {
+      page: reset ? 1 : formPagination.current,
+      size: formPagination.pageSize,
+      search: search !== undefined ? search : formSearchKeyword.value || undefined
+    };
+
+    const response = await listFormDesign(params);
+
+    if (response) {
+      if (reset) {
+        processDialogForms.value = response.items || [];
+        formPagination.current = 1;
+      } else {
+        const existingIds = new Set(processDialogForms.value.map(form => form.id));
+        const newItems = (response.items || []).filter((form: any) => !existingIds.has(form.id));
+        processDialogForms.value = [...processDialogForms.value, ...newItems];
+      }
+
+      formPagination.total = response.total || 0;
+      formPagination.hasMore = (response.items || []).length === formPagination.pageSize &&
+        processDialogForms.value.length < formPagination.total;
+    }
+  } catch (error: any) {
+    console.error('加载表单列表失败:', error);
+    if (reset) {
+      message.error(error.message || '加载表单列表失败');
+      processDialogForms.value = [];
+      formPagination.current = 1;
+      formPagination.total = 0;
+      formPagination.hasMore = false;
+    }
+  } finally {
+    formSelectorLoading.value = false;
+  }
+};
+
+// 处理表单搜索
+const handleFormSearch = (value: string): void => {
+  formSearchKeyword.value = value;
+
+  if (formSearchTimeout) {
+    clearTimeout(formSearchTimeout);
+  }
+
+  formSearchTimeout = setTimeout(() => {
+    formPagination.current = 1;
+    loadProcessDialogForms(true, value);
+  }, 300);
+};
+
+// 处理表单下拉框显示/隐藏
+const handleFormDropdownChange = (open: boolean): void => {
+  if (open) {
+    if (processDialogForms.value.length === 0) {
+      loadProcessDialogForms(true);
+    }
+  }
+};
+
+// 处理表单滚动加载更多
+const handleFormScroll = (e: Event): void => {
+  const { target } = e;
+  if (!target) return;
+
+  const element = target as HTMLElement;
+  const { scrollTop, scrollHeight, clientHeight } = element;
+
+  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+    formPagination.hasMore &&
+    !formSelectorLoading.value) {
+    loadMoreForms();
+  }
+};
+
+// 加载更多表单
+const loadMoreForms = async (): Promise<void> => {
+  if (!formPagination.hasMore || formSelectorLoading.value) {
+    return;
+  }
+
+  formPagination.current += 1;
+  await loadProcessDialogForms(false);
+};
+
+// ==================== 分页用户选择器 ====================
+
+// 分页用户加载方法
+const loadProcessDialogUsers = async (reset: boolean = false, search?: string): Promise<void> => {
+  if (userSelectorLoading.value && !reset) {
+    return;
+  }
+
+  userSelectorLoading.value = true;
+
+  try {
+    const params: GetUserListReq = {
+      page: reset ? 1 : userPagination.current,
+      size: userPagination.pageSize,
+      search: search !== undefined ? search : userSearchKeyword.value || ''
+    };
+
+    const response = await getUserList(params);
+
+    if (response) {
+      if (reset) {
+        processDialogUsers.value = response.items || [];
+        userPagination.current = 1;
+      } else {
+        const existingIds = new Set(processDialogUsers.value.map(user => user.id));
+        const newItems = (response.items || []).filter((user: any) => !existingIds.has(user.id));
+        processDialogUsers.value = [...processDialogUsers.value, ...newItems];
+      }
+
+      userPagination.total = response.total || 0;
+      userPagination.hasMore = (response.items || []).length === userPagination.pageSize &&
+        processDialogUsers.value.length < userPagination.total;
+    }
+  } catch (error: any) {
+    console.error('加载用户列表失败:', error);
+    if (reset) {
+      message.error(error.message || '加载用户列表失败');
+      processDialogUsers.value = [];
+      userPagination.current = 1;
+      userPagination.total = 0;
+      userPagination.hasMore = false;
+    }
+  } finally {
+    userSelectorLoading.value = false;
+  }
+};
+
+// 处理用户搜索
+const handleUserSearch = (value: string): void => {
+  userSearchKeyword.value = value;
+
+  if (userSearchTimeout) {
+    clearTimeout(userSearchTimeout);
+  }
+
+  userSearchTimeout = setTimeout(() => {
+    userPagination.current = 1;
+    loadProcessDialogUsers(true, value);
+  }, 300);
+};
+
+// 处理用户下拉框显示/隐藏
+const handleUserDropdownChange = (open: boolean): void => {
+  if (open) {
+    if (processDialogUsers.value.length === 0) {
+      loadProcessDialogUsers(true);
+    }
+  }
+};
+
+// 处理用户滚动加载更多
+const handleUserScroll = (e: Event): void => {
+  const { target } = e;
+  if (!target) return;
+
+  const element = target as HTMLElement;
+  const { scrollTop, scrollHeight, clientHeight } = element;
+
+  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+    userPagination.hasMore &&
+    !userSelectorLoading.value) {
+    loadMoreUsers();
+  }
+};
+
+// 加载更多用户
+const loadMoreUsers = async (): Promise<void> => {
+  if (!userPagination.hasMore || userSelectorLoading.value) {
+    return;
+  }
+
+  userPagination.current += 1;
+  await loadProcessDialogUsers(false);
+};
+
+// ==================== 重置和初始化方法 ====================
+
+// 重置所有选择器状态
+const resetSelectors = (): void => {
+  resetCategorySelector();
+  resetFormSelector();
+  resetUserSelector();
+};
+
+// 重置分类选择器状态
+const resetCategorySelector = (): void => {
+  processDialogCategories.value = [];
+  categoryPagination.current = 1;
+  categoryPagination.total = 0;
+  categoryPagination.hasMore = false;
+  categorySearchKeyword.value = '';
+  categorySelectorLoading.value = false;
+
+  if (categorySearchTimeout) {
+    clearTimeout(categorySearchTimeout);
+    categorySearchTimeout = null;
+  }
+};
+
+// 重置表单选择器状态
+const resetFormSelector = (): void => {
+  processDialogForms.value = [];
+  formPagination.current = 1;
+  formPagination.total = 0;
+  formPagination.hasMore = false;
+  formSearchKeyword.value = '';
+  formSelectorLoading.value = false;
+
+  if (formSearchTimeout) {
+    clearTimeout(formSearchTimeout);
+    formSearchTimeout = null;
+  }
+};
+
+// 重置用户选择器状态
+const resetUserSelector = (): void => {
+  processDialogUsers.value = [];
+  userPagination.current = 1;
+  userPagination.total = 0;
+  userPagination.hasMore = false;
+  userSearchKeyword.value = '';
+  userSelectorLoading.value = false;
+
+  if (userSearchTimeout) {
+    clearTimeout(userSearchTimeout);
+    userSearchTimeout = null;
+  }
+};
+
+// 为编辑模式加载选择器信息
+const loadSelectorsForEdit = async (processData: ProcessResp): Promise<void> => {
+  resetSelectors();
+
+  try {
+    // 优先加载分类和表单数据，确保即使出错也能显示当前选中的值
+    // 并行加载所有选择器数据
+    await Promise.all([
+      loadCategoryForEdit(processData),
+      loadFormForEdit(processData),
+      loadUserForEdit(processData)
+    ]);
+  } catch (error) {
+    console.error('加载编辑模式选择器信息失败:', error);
+  }
+};
+
+// 为编辑模式加载分类信息
+const loadCategoryForEdit = async (processData: ProcessResp): Promise<void> => {
+  try {
+    // 先检查全局分类列表中是否有此分类
+    const existingCategory = categories.value.find(cat => cat.id === processData.category_id);
+
+    // 如果全局分类中有，优先添加到选择器列表中确保能立即显示
+    if (processData.category_id && existingCategory) {
+      processDialogCategories.value = [existingCategory];
+    }
+
+    // 再加载更多分类
+    await loadProcessDialogCategories(true);
+
+    // 如果加载完后还是没找到当前分类，创建一个占位项
+    if (processData.category_id && !processDialogCategories.value.find(cat => cat.id === processData.category_id)) {
+      if (processData.category) {
+        const categoryInfo: Category = {
+          id: processData.category_id,
+          name: processData.category?.name || `分类${processData.category_id}`,
+          description: processData.category?.description || '',
+          icon: '',
+          sort_order: 0,
+          status: 1,
+          parent_id: null
+        };
+
+        // 确保选中的分类在列表最前面
+        processDialogCategories.value = [categoryInfo, ...processDialogCategories.value.filter(c => c.id !== categoryInfo.id)];
+      } else {
+        // 如果没有分类详情，创建一个基本项
+        const categoryInfo: Category = {
+          id: processData.category_id,
+          name: `分类 ${processData.category_id}`,
+          description: '',
+          icon: '',
+          sort_order: 0,
+          status: 1,
+          parent_id: null
+        };
+
+        // 确保选中的分类在列表最前面
+        processDialogCategories.value = [categoryInfo, ...processDialogCategories.value.filter(c => c.id !== categoryInfo.id)];
+      }
+    }
+  } catch (error) {
+    console.error('加载编辑模式分类信息失败:', error);
+    if (processData.category_id) {
+      // 出错时也要确保至少有当前分类可选
+      const categoryInfo: Category = {
+        id: processData.category_id,
+        name: `分类 ${processData.category_id}`,
+        description: '',
+        icon: '',
+        sort_order: 0,
+        status: 1,
+        parent_id: null
+      };
+      processDialogCategories.value = [categoryInfo];
+    }
+  }
+};
+
+// 为编辑模式加载表单信息
+const loadFormForEdit = async (processData: ProcessResp): Promise<void> => {
+  try {
+    // 先检查全局表单列表中是否有此表单
+    const globalForm = forms.value.find(form => form.id === processData.form_design_id);
+
+    // 如果全局表单中有，优先添加到选择器列表中确保能立即显示
+    if (processData.form_design_id && globalForm) {
+      processDialogForms.value = [globalForm];
+    }
+
+    // 再加载更多表单
+    await loadProcessDialogForms(true);
+
+    // 如果加载完后还是没找到当前表单，创建一个占位项
+    if (processData.form_design_id && !processDialogForms.value.find(form => form.id === processData.form_design_id)) {
+      // 创建一个占位表单项
+      const formInfo = {
+        id: processData.form_design_id,
+        name: `表单 ${processData.form_design_id}`,
+        description: ''
+      };
+      // 确保选中的表单在列表最前面
+      processDialogForms.value = [formInfo, ...processDialogForms.value.filter(f => f.id !== formInfo.id)];
+    }
+  } catch (error) {
+    console.error('加载编辑模式表单信息失败:', error);
+    if (processData.form_design_id) {
+      // 出错时也要确保至少有当前表单可选
+      const formInfo = {
+        id: processData.form_design_id,
+        name: `表单 ${processData.form_design_id}`,
+        description: ''
+      };
+      processDialogForms.value = [formInfo];
+    }
+  }
+};
+
+// 为编辑模式加载用户信息
+const loadUserForEdit = async (processData: ProcessResp): Promise<void> => {
+  try {
+    await loadProcessDialogUsers(true);
+
+    // 检查流程定义中的用户ID，确保它们在选择器中可用
+    const definition = parseProcessDefinition(processData);
+    const allUserIds = new Set<number>();
+
+    definition.steps?.forEach(step => {
+      step.users?.forEach(userId => {
+        if (typeof userId === 'number') {
+          allUserIds.add(userId);
+        }
+      });
+    });
+
+    // 检查缺失的用户并添加到列表中
+    const missingUserIds = Array.from(allUserIds).filter(userId =>
+      !processDialogUsers.value.find(user => user.id === userId)
+    );
+
+    if (missingUserIds.length > 0) {
+      // 从全局users中查找缺失的用户
+      const missingUsers = missingUserIds.map(userId => {
+        const globalUser = users.value.find(user => user.id === userId);
+        return globalUser || {
+          id: userId,
+          username: `用户${userId}`,
+          real_name: ''
+        };
+      });
+
+      processDialogUsers.value = [...missingUsers, ...processDialogUsers.value];
+    }
+  } catch (error) {
+    console.error('加载编辑模式用户信息失败:', error);
+  }
+};
+
+// 初始化加载
+onMounted(async () => {
+  loading.value = true;
+  try {
     await Promise.all([
       loadForms(),
-      loadCategories(),
-      loadUsers(),
+      loadProcessDialogCategories(),
+      loadProcessDialogUsers(),
       loadProcesses()
     ]);
-    console.log('所有数据加载完成');
-  } catch (error) {
+  } catch (error: any) {
     console.error('初始化数据加载失败:', error);
-    message.error('初始化数据加载失败，请刷新页面重试');
+    message.error(`初始化数据加载失败: ${error.message || '未知错误'}, 请刷新页面重试`);
+  } finally {
+    loading.value = false;
   }
 });
 </script>
 
 <style scoped>
-.process-container {
-  padding: 20px;
-  background-color: #f0f2f5;
+.process-management-container {
+  padding: 12px;
   min-height: 100vh;
 }
 
-/* 头部布局 */
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 20px;
-  padding: 16px 20px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.header-left .btn-create {
-  height: 38px;
-  padding: 0 20px;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
-}
-
-.header-right {
+.header-actions {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
+  align-items: center;
 }
 
-/* 统计区域 */
-.stats-section {
+.btn-create {
+  background: linear-gradient(135deg, #1890ff 0%);
+  border: none;
+  flex-shrink: 0;
+}
+
+.search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-input {
+  width: 250px;
+  min-width: 200px;
+}
+
+.status-filter {
+  width: 120px;
+  min-width: 100px;
+}
+
+.category-filter {
+  width: 120px;
+  min-width: 100px;
+}
+
+.stats-row {
   margin-bottom: 20px;
 }
 
 .stats-card {
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: none;
-  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  height: 100%;
 }
 
-.stats-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+.table-container {
+  margin-bottom: 24px;
 }
 
-/* 表格区域 */
-.table-section {
-  margin-bottom: 20px;
-}
-
-.table-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: none;
-}
-
-/* 表格单元格样式 */
 .process-name-cell {
   display: flex;
   align-items: center;
@@ -1413,16 +2245,15 @@ onMounted(async () => {
 
 .process-name-text {
   font-weight: 500;
-  color: #262626;
+  word-break: break-all;
 }
 
 .description-text {
-  color: #8c8c8c;
-  font-size: 14px;
-  max-width: 180px;
+  color: #606266;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-all;
 }
 
 .creator-info {
@@ -1433,19 +2264,17 @@ onMounted(async () => {
 
 .creator-name {
   font-size: 14px;
-  color: #595959;
+  word-break: break-all;
 }
 
 .date-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .date {
   font-weight: 500;
   font-size: 14px;
-  color: #262626;
 }
 
 .time {
@@ -1455,18 +2284,9 @@ onMounted(async () => {
 
 .action-buttons {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   justify-content: center;
   flex-wrap: wrap;
-}
-
-/* 分页 */
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
 }
 
 /* 步骤编辑器 */
@@ -1521,15 +2341,14 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  flex-wrap: wrap;
 }
 
 .detail-header h2 {
   margin: 0;
   font-size: 24px;
   color: #1f2937;
-  font-weight: 600;
+  word-break: break-all;
 }
 
 .process-preview {
@@ -1577,7 +2396,7 @@ onMounted(async () => {
   border-color: #b7eb8f;
 }
 
-.node-type-notice {
+.node-type-task {
   background: linear-gradient(135deg, #fffbe6 0%, #fff1b8 100%);
   border-color: #ffe58f;
 }
@@ -1617,7 +2436,7 @@ onMounted(async () => {
   background-color: #52c41a;
 }
 
-.node-type-notice .node-type-badge {
+.node-type-task .node-type-badge {
   background-color: #faad14;
 }
 
@@ -1678,8 +2497,7 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  flex-wrap: wrap;
 }
 
 /* 下拉框宽度修复 */
@@ -1688,40 +2506,256 @@ onMounted(async () => {
   min-width: 180px;
 }
 
-/* 响应式设计 */
+/* 通用选择器样式 */
+.selector-loading,
+.selector-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+/* 分类选择器样式 */
+.category-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.category-name {
+  font-weight: 500;
+  color: #262626;
+}
+
+.category-desc {
+  font-size: 12px;
+  color: #8c8c8c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* 表单选择器样式 */
+.form-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.form-name {
+  font-weight: 500;
+  color: #262626;
+}
+
+.form-desc {
+  font-size: 12px;
+  color: #8c8c8c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* 用户选择器样式 */
+.user-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #262626;
+}
+
+.user-real-name {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* 加载更多按钮样式 */
+.load-more-option {
+  text-align: center;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 4px;
+  background-color: #fafafa !important;
+}
+
+.load-more-option:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.load-more-content {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.load-more-content:hover {
+  background-color: #e6f7ff;
+  border-radius: 4px;
+}
+
+/* 表格滚动优化 */
+.table-container :deep(.ant-table-wrapper) {
+  overflow: auto;
+}
+
+.table-container :deep(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.table-container :deep(.ant-table-tbody > tr > td) {
+  word-break: break-word;
+}
+
+/* 对话框响应式优化 */
+.responsive-modal :deep(.ant-modal) {
+  max-width: calc(100vw - 16px);
+  margin: 8px;
+}
+
+/* 流程设计模态框样式 */
+.process-design-modal :deep(.ant-modal-body) {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* 移动端适配 */
 @media (max-width: 768px) {
-  .process-container {
-    padding: 12px;
+  .process-management-container {
+    padding: 8px;
   }
-  
-  .page-header {
+
+  .header-actions {
     flex-direction: column;
-    gap: 12px;
     align-items: stretch;
   }
-  
-  .header-right {
-    flex-wrap: wrap;
-    gap: 8px;
+
+  .search-filters {
+    width: 100%;
   }
-  
+
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .status-filter,
+  .category-filter {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .btn-create {
+    padding: 4px 8px;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
   .action-buttons {
-    flex-direction: column;
     gap: 4px;
   }
-  
-  .stats-section .ant-col {
-    margin-bottom: 12px;
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+
+  .category-desc,
+  .form-desc {
+    max-width: 150px;
+  }
+
+  .load-more-content {
+    padding: 6px 8px;
   }
 }
 
-@media (max-width: 576px) {
-  .header-right > * {
-    width: 100%;
+/* 平板端适配 */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .process-management-container {
+    padding: 16px;
   }
-  
-  .action-buttons .ant-btn {
-    width: 100%;
+
+  .search-input {
+    width: 200px;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .stats-card {
+    text-align: center;
+  }
+
+  .creator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .creator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+
+  .category-desc,
+  .form-desc {
+    max-width: 120px;
+  }
+
+  .load-more-content {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .user-option {
+    flex-wrap: wrap;
+    gap: 4px;
   }
 }
 </style>
