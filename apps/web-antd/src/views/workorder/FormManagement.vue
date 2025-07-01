@@ -9,33 +9,17 @@
           <span class="btn-text">创建新表单</span>
         </a-button>
         <div class="search-filters">
-          <a-input-search 
-            v-model:value="searchQuery" 
-            placeholder="搜索表单..." 
-            class="search-input"
-            @search="handleSearch"
-            @change="handleSearchChange"
-            allow-clear 
-          />
-          <a-select 
-            v-model:value="categoryFilter" 
-            placeholder="选择分类" 
-            class="category-filter"
-            @change="handleCategoryChange"
-            allow-clear
-          >
+          <a-input-search v-model:value="searchQuery" placeholder="搜索表单..." class="search-input" @search="handleSearch"
+            @change="handleSearchChange" allow-clear />
+          <a-select v-model:value="categoryFilter" placeholder="选择分类" class="category-filter"
+            @change="handleCategoryChange" allow-clear>
             <a-select-option :value="undefined">全部分类</a-select-option>
             <a-select-option v-for="category in categories" :key="category.id" :value="category.id">
               {{ category.name }}
             </a-select-option>
           </a-select>
-          <a-select 
-            v-model:value="statusFilter" 
-            placeholder="状态" 
-            class="status-filter"
-            @change="handleStatusChange"
-            allow-clear
-          >
+          <a-select v-model:value="statusFilter" placeholder="状态" class="status-filter" @change="handleStatusChange"
+            allow-clear>
             <a-select-option :value="undefined">全部状态</a-select-option>
             <a-select-option :value="1">草稿</a-select-option>
             <a-select-option :value="2">已发布</a-select-option>
@@ -91,16 +75,8 @@
 
     <div class="table-container">
       <a-card>
-        <a-table 
-          :data-source="formDesigns" 
-          :columns="columns" 
-          :pagination="paginationConfig" 
-          :loading="loading" 
-          row-key="id"
-          bordered
-          :scroll="{ x: 1200 }"
-          @change="handleTableChange"
-        >
+        <a-table :data-source="formDesigns" :columns="columns" :pagination="paginationConfig" :loading="loading"
+          row-key="id" bordered :scroll="{ x: 1200 }" @change="handleTableChange">
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="form-name-cell">
@@ -180,16 +156,9 @@
       </a-card>
     </div>
 
-    <!-- 表单创建/编辑对话框 - 新增表单字段设计 -->
-    <a-modal 
-      :open="formDialogVisible" 
-      :title="formDialog.isEdit ? '编辑表单' : '创建表单'" 
-      :width="formDialogWidth"
-      @ok="saveForm" 
-      @cancel="closeFormDialog"
-      :destroy-on-close="true"
-      class="responsive-modal form-design-modal"
-    >
+    <!-- 表单创建/编辑对话框 - 修改分类选择为真实分页选择器 -->
+    <a-modal :open="formDialogVisible" :title="formDialog.isEdit ? '编辑表单' : '创建表单'" :width="formDialogWidth"
+      @ok="saveForm" @cancel="closeFormDialog" :destroy-on-close="true" class="responsive-modal form-design-modal">
       <a-form ref="formRef" :model="formDialog.form" :rules="formRules" layout="vertical">
         <a-form-item label="表单名称" name="name">
           <a-input v-model:value="formDialog.form.name" placeholder="请输入表单名称" />
@@ -199,10 +168,46 @@
           <a-textarea v-model:value="formDialog.form.description" :rows="3" placeholder="请输入表单描述" />
         </a-form-item>
 
+        <!-- 修改为真实分页选择器 -->
         <a-form-item label="分类" name="category_id">
-          <a-select v-model:value="formDialog.form.category_id" placeholder="请选择分类" style="width: 100%">
-            <a-select-option v-for="cat in categories" :key="cat.id" :value="cat.id">
-              {{ cat.name }}
+          <a-select v-model:value="formDialog.form.category_id" placeholder="请选择分类" style="width: 100%" show-search
+            :filter-option="false" option-label-prop="children"
+            :not-found-content="categorySelectorLoading ? undefined : (categorySearchKeyword ? '无搜索结果' : '无数据')"
+            @search="handleCategorySearch" @dropdown-visible-change="handleCategoryDropdownChange"
+            @popup-scroll="handleCategoryScroll" allow-clear :loading="categorySelectorLoading">
+            <template #notFoundContent>
+              <div v-if="categorySelectorLoading" class="category-loading">
+                <a-spin size="small" />
+                <span style="margin-left: 8px;">加载中...</span>
+              </div>
+              <div v-else class="category-empty">
+                {{ categorySearchKeyword ? '无搜索结果' : '暂无分类数据' }}
+              </div>
+            </template>
+
+            <!-- 分类选项 -->
+            <a-select-option v-for="cat in formDialogCategories" :key="cat.id" :value="cat.id">
+              <div class="category-option">
+                <span class="category-name">{{ cat.name }}</span>
+                <span v-if="cat.description" class="category-desc">{{ cat.description }}</span>
+              </div>
+            </a-select-option>
+
+            <!-- 加载更多指示器 -->
+            <a-select-option v-if="categoryPagination.hasMore" :value="'__load_more__'" disabled
+              class="load-more-option">
+              <div class="load-more-content" @click.stop="loadMoreCategories">
+                <a-button type="link" size="small" :loading="categorySelectorLoading"
+                  style="padding: 0; height: auto; font-size: 12px;">
+                  <template v-if="!categorySelectorLoading">
+                    <Icon icon="material-symbols:keyboard-arrow-down" style="margin-right: 4px;" />
+                    加载更多 ({{ categoryPagination.current }}/{{ totalPages }})
+                  </template>
+                  <template v-else>
+                    正在加载...
+                  </template>
+                </a-button>
+              </div>
             </a-select-option>
           </a-select>
         </a-form-item>
@@ -214,6 +219,7 @@
             <a-select-option :value="3">已禁用</a-select-option>
           </a-select>
         </a-form-item>
+
         <a-form-item label="表单字段设计" name="fields">
           <div class="form-fields-section">
             <div class="section-header">
@@ -230,56 +236,29 @@
                 </a-button>
               </div>
             </div>
-            
-            <a-textarea
-              v-model:value="formDialog.form.fieldsJson"
-              placeholder="请输入表单字段JSON配置..."
-              :rows="12"
-              class="json-editor"
-              :class="{ 'json-error': jsonValidationError }"
-            />
-            
+
+            <a-textarea v-model:value="formDialog.form.fieldsJson" placeholder="请输入表单字段JSON配置..." :rows="12"
+              class="json-editor" :class="{ 'json-error': jsonValidationError }" />
+
             <div v-if="jsonValidationError" class="json-error-message">
-              <a-alert
-                type="error"
-                :message="jsonValidationError"
-                show-icon
-                closable
-                @close="jsonValidationError = ''"
-              />
+              <a-alert type="error" :message="jsonValidationError" show-icon closable
+                @close="jsonValidationError = ''" />
             </div>
-            
+
             <div class="json-help">
-              <a-alert
-                type="info"
-                message="字段配置说明"
-                :description="fieldsHelpText"
-                show-icon
-              />
+              <a-alert type="info" message="字段配置说明" :description="fieldsHelpText" show-icon />
             </div>
           </div>
         </a-form-item>
 
-        <a-alert
-          v-if="!formDialog.isEdit"
-          message="提示"
-          description="您可以现在设计表单字段，也可以创建后再进行设计。"
-          type="info"
-          show-icon
-          style="margin-bottom: 16px;"
-        />
+        <a-alert v-if="!formDialog.isEdit" message="提示" description="您可以现在设计表单字段，也可以创建后再进行设计。" type="info" show-icon
+          style="margin-bottom: 16px;" />
       </a-form>
     </a-modal>
 
     <!-- 字段示例对话框 -->
-    <a-modal
-      :open="exampleDialogVisible"
-      title="表单字段JSON示例"
-      :width="800"
-      :footer="null"
-      @cancel="closeExampleDialog"
-      class="example-dialog"
-    >
+    <a-modal :open="exampleDialogVisible" title="表单字段JSON示例" :width="800" :footer="null" @cancel="closeExampleDialog"
+      class="example-dialog">
       <div class="example-content">
         <a-tabs>
           <a-tab-pane key="simple" tab="简单示例">
@@ -299,14 +278,8 @@
     </a-modal>
 
     <!-- 克隆对话框 -->
-    <a-modal 
-      :open="cloneDialogVisible" 
-      title="克隆表单" 
-      :width="dialogWidth"
-      @ok="confirmClone" 
-      @cancel="closeCloneDialog"
-      :destroy-on-close="true"
-    >
+    <a-modal :open="cloneDialogVisible" title="克隆表单" :width="dialogWidth" @ok="confirmClone" @cancel="closeCloneDialog"
+      :destroy-on-close="true">
       <a-form :model="cloneDialog.form" layout="vertical">
         <a-form-item label="新表单名称" name="name" :rules="[{ required: true, message: '请输入新表单名称' }]">
           <a-input v-model:value="cloneDialog.form.name" placeholder="请输入新表单名称" />
@@ -315,14 +288,8 @@
     </a-modal>
 
     <!-- 预览对话框 -->
-    <a-modal 
-      :open="previewDialogVisible" 
-      title="表单预览" 
-      :width="previewDialogWidth"
-      :footer="null" 
-      @cancel="closePreviewDialog"
-      class="preview-dialog"
-    >
+    <a-modal :open="previewDialogVisible" title="表单预览" :width="previewDialogWidth" :footer="null"
+      @cancel="closePreviewDialog" class="preview-dialog">
       <div v-if="previewDialog.form" class="form-preview-wrapper">
         <a-spin :spinning="previewLoading">
           <div class="preview-header">
@@ -331,116 +298,59 @@
               {{ previewDialog.form.description }}
             </p>
             <div class="preview-mode-notice">
-              <a-alert
-                message="预览模式"
-                description="您可以查看和选择表单字段，但无法提交表单。"
-                type="info"
-                show-icon
-                banner
-              />
+              <a-alert message="预览模式" description="您可以查看和选择表单字段，但无法提交表单。" type="info" show-icon banner />
             </div>
           </div>
-          
+
           <div class="preview-form">
-            <a-form 
-              :model="previewFormData" 
-              layout="vertical" 
-              class="dynamic-form"
-            >
+            <a-form :model="previewFormData" layout="vertical" class="dynamic-form">
               <template v-for="field in previewDialog.form.schema.fields" :key="field.id">
-                <a-form-item 
-                  :label="field.label" 
-                  :name="field.name"
-                  :required="field.required"
-                  class="form-field"
-                >
+                <a-form-item :label="field.label" :name="field.name" :required="field.required" class="form-field">
                   <!-- 文本输入框 -->
-                  <a-input 
-                    v-if="field.type === 'text'"
-                    v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder"
-                    class="preview-input"
-                  />
+                  <a-input v-if="field.type === 'text'" v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder" class="preview-input" />
 
                   <!-- 数字输入框 -->
-                  <a-input-number 
-                    v-else-if="field.type === 'number'"
-                    v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder"
-                    style="width: 100%"
-                    class="preview-input"
-                  />
+                  <a-input-number v-else-if="field.type === 'number'" v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder" style="width: 100%" class="preview-input" />
 
                   <!-- 日期选择器 -->
-                  <a-date-picker 
-                    v-else-if="field.type === 'date'"
-                    v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder"
-                    style="width: 100%"
-                    class="preview-input"
-                  />
+                  <a-date-picker v-else-if="field.type === 'date'" v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder" style="width: 100%" class="preview-input" />
 
                   <!-- 下拉选择 -->
-                  <a-select 
-                    v-else-if="field.type === 'select'"
-                    v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder || '请选择'"
-                    style="width: 100%"
-                    class="preview-input"
-                  >
-                    <a-select-option 
-                      v-for="option in field.options" 
-                      :key="option.value" 
-                      :value="option.value"
-                    >
+                  <a-select v-else-if="field.type === 'select'" v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder || '请选择'" style="width: 100%" class="preview-input">
+                    <a-select-option v-for="option in field.options" :key="option.value" :value="option.value">
                       {{ option.label }}
                     </a-select-option>
                   </a-select>
 
                   <!-- 单选框组 -->
-                  <a-radio-group 
-                    v-else-if="field.type === 'radio'"
-                    v-model:value="previewFormData[field.name]"
-                    class="preview-radio-group"
-                  >
+                  <a-radio-group v-else-if="field.type === 'radio'" v-model:value="previewFormData[field.name]"
+                    class="preview-radio-group">
                     <div class="radio-options">
-                      <a-radio 
-                        v-for="option in field.options" 
-                        :key="option.value" 
-                        :value="option.value"
-                        class="preview-radio"
-                      >
+                      <a-radio v-for="option in field.options" :key="option.value" :value="option.value"
+                        class="preview-radio">
                         {{ option.label }}
                       </a-radio>
                     </div>
                   </a-radio-group>
 
                   <!-- 复选框组 -->
-                  <a-checkbox-group 
-                    v-else-if="field.type === 'checkbox'"
-                    v-model:value="previewFormData[field.name]"
-                    class="preview-checkbox-group"
-                  >
+                  <a-checkbox-group v-else-if="field.type === 'checkbox'" v-model:value="previewFormData[field.name]"
+                    class="preview-checkbox-group">
                     <div class="checkbox-options">
-                      <a-checkbox 
-                        v-for="option in field.options" 
-                        :key="option.value" 
-                        :value="option.value"
-                        class="preview-checkbox"
-                      >
+                      <a-checkbox v-for="option in field.options" :key="option.value" :value="option.value"
+                        class="preview-checkbox">
                         {{ option.label }}
                       </a-checkbox>
                     </div>
                   </a-checkbox-group>
 
                   <!-- 多行文本 -->
-                  <a-textarea 
-                    v-else-if="field.type === 'textarea'"
-                    v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder"
-                    :rows="4"
-                    class="preview-input"
-                  />
+                  <a-textarea v-else-if="field.type === 'textarea'" v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder" :rows="4" class="preview-input" />
                 </a-form-item>
               </template>
 
@@ -461,14 +371,8 @@
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal 
-      :open="detailDialogVisible" 
-      title="表单详情" 
-      :width="previewDialogWidth"
-      :footer="null" 
-      @cancel="closeDetailDialog"
-      class="detail-dialog"
-    >
+    <a-modal :open="detailDialogVisible" title="表单详情" :width="previewDialogWidth" :footer="null"
+      @cancel="closeDetailDialog" class="detail-dialog">
       <div v-if="detailDialog.form" class="form-details">
         <div class="detail-header">
           <h2>{{ detailDialog.form.name }}</h2>
@@ -487,21 +391,15 @@
             <span v-else class="text-gray">未分类</span>
           </a-descriptions-item>
           <a-descriptions-item label="创建人">{{ detailDialog.form.creator_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '') }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '')
+            }}</a-descriptions-item>
           <a-descriptions-item label="描述">{{ detailDialog.form.description || '无描述' }}</a-descriptions-item>
         </a-descriptions>
 
         <div class="schema-preview">
           <h3>表单结构</h3>
-          <a-table 
-            :data-source="detailDialog.form.schema.fields" 
-            :columns="schemaColumns" 
-            :pagination="false" 
-            bordered
-            size="small" 
-            row-key="name"
-            :scroll="{ x: 600 }"
-          >
+          <a-table :data-source="detailDialog.form.schema.fields" :columns="schemaColumns" :pagination="false" bordered
+            size="small" row-key="name" :scroll="{ x: 600 }">
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'required'">
                 <a-tag :color="record.required ? 'red' : ''">
@@ -538,6 +436,7 @@ import {
   DownOutlined,
   EyeOutlined
 } from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
 import {
   listFormDesign,
   detailFormDesign,
@@ -592,6 +491,11 @@ const previewDialogWidth = computed(() => {
   return '80%';
 });
 
+// 计算总页数
+const totalPages = computed(() => {
+  return Math.ceil(categoryPagination.total / categoryPagination.pageSize);
+});
+
 // 列定义
 const columns = [
   { title: '表单名称', dataIndex: 'name', key: 'name', width: 180, fixed: 'left' },
@@ -620,6 +524,20 @@ const statusFilter = ref<number | undefined>(undefined);
 const formDesigns = ref<FormDesignResp[]>([]);
 const categories = ref<Category[]>([]);
 const previewFormData = ref<Record<string, any>>({});
+
+// 表单对话框中的分页分类数据
+const formDialogCategories = ref<Category[]>([]);
+const categorySelectorLoading = ref(false);
+const categorySearchKeyword = ref('');
+let categorySearchTimeout: any = null;
+
+// 分类分页状态 - 参考API页面的分页配置
+const categoryPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: false
+});
 
 // JSON相关状态
 const jsonValidationError = ref('');
@@ -714,7 +632,7 @@ const simpleFieldsExample = JSON.stringify([
     "hidden": false
   },
   {
-    "id": "field2", 
+    "id": "field2",
     "type": "select",
     "label": "性别",
     "name": "gender",
@@ -930,6 +848,107 @@ const getAvatarColor = (name: string): string => {
   return colors[Math.abs(hash) % colors.length]!;
 };
 
+// 分页分类加载方法
+const loadFormDialogCategories = async (reset: boolean = false, search?: string): Promise<void> => {
+  if (categorySelectorLoading.value && !reset) {
+    return; // 避免重复请求
+  }
+
+  categorySelectorLoading.value = true;
+
+  try {
+    const params = {
+      page: reset ? 1 : categoryPagination.current,
+      size: categoryPagination.pageSize,
+      search: search !== undefined ? search : categorySearchKeyword.value || undefined
+    };
+
+    const response = await listCategory(params);
+
+    if (response) {
+      if (reset) {
+        // 重置数据
+        formDialogCategories.value = response.items || [];
+        categoryPagination.current = 1;
+      } else {
+        // 追加数据，去重
+        const existingIds = new Set(formDialogCategories.value.map(cat => cat.id));
+        const newItems = (response.items || []).filter((cat: any) => !existingIds.has(cat.id));
+        formDialogCategories.value = [...formDialogCategories.value, ...newItems];
+      }
+
+      // 更新分页信息
+      categoryPagination.total = response.total || 0;
+      categoryPagination.hasMore = (response.items || []).length === categoryPagination.pageSize &&
+        formDialogCategories.value.length < categoryPagination.total;
+    }
+  } catch (error: any) {
+    console.error('加载分类列表失败:', error);
+    if (reset) {
+      message.error(error.message || '加载分类列表失败');
+      // 重置状态
+      formDialogCategories.value = [];
+      categoryPagination.current = 1;
+      categoryPagination.total = 0;
+      categoryPagination.hasMore = false;
+    }
+  } finally {
+    categorySelectorLoading.value = false;
+  }
+};
+
+// 处理分类搜索
+const handleCategorySearch = (value: string): void => {
+  categorySearchKeyword.value = value;
+
+  // 清除之前的定时器
+  if (categorySearchTimeout) {
+    clearTimeout(categorySearchTimeout);
+  }
+
+  // 防抖处理
+  categorySearchTimeout = setTimeout(() => {
+    categoryPagination.current = 1;
+    loadFormDialogCategories(true, value);
+  }, 300);
+};
+
+// 处理下拉框显示/隐藏
+const handleCategoryDropdownChange = (open: boolean): void => {
+  if (open) {
+    // 首次打开或数据为空时加载数据
+    if (formDialogCategories.value.length === 0) {
+      loadFormDialogCategories(true);
+    }
+  }
+};
+
+// 处理滚动加载更多 - 参考API页面的滚动处理
+const handleCategoryScroll = (e: Event): void => {
+  const { target } = e;
+  if (!target) return;
+
+  const element = target as HTMLElement;
+  const { scrollTop, scrollHeight, clientHeight } = element;
+
+  // 滚动到底部时触发加载更多
+  if (scrollTop + clientHeight >= scrollHeight - 10 && // 提前10px触发
+    categoryPagination.hasMore &&
+    !categorySelectorLoading.value) {
+    loadMoreCategories();
+  }
+};
+
+// 加载更多分类
+const loadMoreCategories = async (): Promise<void> => {
+  if (!categoryPagination.hasMore || categorySelectorLoading.value) {
+    return;
+  }
+
+  categoryPagination.current += 1;
+  await loadFormDialogCategories(false);
+};
+
 // JSON相关方法
 const formatFieldsJson = (): void => {
   try {
@@ -954,9 +973,9 @@ const validateFieldsJson = (): void => {
       message.info('JSON内容为空');
       return;
     }
-    
+
     const parsed = JSON.parse(formDialog.form.fieldsJson);
-    
+
     if (!Array.isArray(parsed)) {
       throw new Error('字段配置必须是数组格式');
     }
@@ -965,7 +984,7 @@ const validateFieldsJson = (): void => {
     parsed.forEach((field: any, index: number) => {
       const requiredProps = ['id', 'type', 'label', 'name', 'required', 'sort_order', 'disabled', 'hidden'];
       const missingProps = requiredProps.filter(prop => field[prop] === undefined);
-      
+
       if (missingProps.length > 0) {
         throw new Error(`字段 ${index + 1} 缺少必需属性: ${missingProps.join(', ')}`);
       }
@@ -1046,7 +1065,7 @@ const loadFormDesigns = async (): Promise<void> => {
       status: statusFilter.value,
       category_id: categoryFilter.value
     };
-    
+
     const response = await listFormDesign(params);
     if (response) {
       formDesigns.value = response.items || [];
@@ -1126,6 +1145,9 @@ const handleCreateForm = (): void => {
   };
   jsonValidationError.value = '';
   formDialogVisible.value = true;
+
+  // 重置分类选择器状态
+  resetCategorySelector();
 };
 
 const handleEditForm = async (record: FormDesignResp): Promise<void> => {
@@ -1144,10 +1166,74 @@ const handleEditForm = async (record: FormDesignResp): Promise<void> => {
       jsonValidationError.value = '';
       formDialogVisible.value = true;
       detailDialogVisible.value = false;
+
+      // 重置分类选择器状态并预加载分类信息
+      await loadCategoryForEdit(response);
     }
   } catch (error) {
     console.error('加载表单详情失败:', error);
     message.error('加载表单详情失败');
+  }
+};
+
+// 为编辑模式加载分类信息的专用方法
+const loadCategoryForEdit = async (formData: FormDesignResp): Promise<void> => {
+  // 重置分类选择器状态
+  resetCategorySelector();
+
+  try {
+    // 加载分类列表
+    await loadFormDialogCategories(true);
+
+    // 如果当前分类不在列表中，尝试单独加载该分类信息
+    if (formData.category_id && !formDialogCategories.value.find(cat => cat.id === formData.category_id)) {
+      // 如果API返回了完整的分类信息，直接添加到选择列表
+      if (formData.category && formData.category.name) {
+        const categoryInfo: Category = {
+          id: formData.category_id,
+          name: formData.category.name,
+          description: formData.category.description || '',
+          icon: '',
+          sort_order: 0,
+          status: 1,
+          parent_id: null
+        };
+
+        // 将分类信息添加到列表前面，确保显示
+        formDialogCategories.value = [categoryInfo, ...formDialogCategories.value];
+      }
+    }
+  } catch (error) {
+    console.error('加载编辑模式分类信息失败:', error);
+    // 即使加载失败，也确保当前分类信息可用
+    if (formData.category_id && formData.category?.name) {
+      const categoryInfo: Category = {
+        id: formData.category_id,
+        name: formData.category.name || `分类${formData.category_id}`,
+        description: formData.category?.description || '',
+        icon: '',
+        sort_order: 0,
+        status: 1,
+        parent_id: null
+      };
+      formDialogCategories.value = [categoryInfo];
+    }
+  }
+};
+
+// 重置分类选择器状态
+const resetCategorySelector = (): void => {
+  formDialogCategories.value = [];
+  categoryPagination.current = 1;
+  categoryPagination.total = 0;
+  categoryPagination.hasMore = false;
+  categorySearchKeyword.value = '';
+  categorySelectorLoading.value = false;
+
+  // 清除搜索定时器
+  if (categorySearchTimeout) {
+    clearTimeout(categorySearchTimeout);
+    categorySearchTimeout = null;
   }
 };
 
@@ -1198,7 +1284,7 @@ const handleMenuClick = (command: string, record: FormDesignResp): void => {
 const handlePreviewForm = async (record: FormDesignResp): Promise<void> => {
   previewLoading.value = true;
   previewDialogVisible.value = true;
-  
+
   try {
     const response = await previewFormDesign({ id: record.id });
     if (response) {
@@ -1254,7 +1340,7 @@ const confirmClone = async (): Promise<void> => {
     message.error('请输入新表单名称');
     return;
   }
-  
+
   try {
     await cloneFormDesign({
       id: cloneDialog.form.originalId,
@@ -1336,7 +1422,7 @@ const saveForm = async (): Promise<void> => {
       await createFormDesign(createData);
       message.success(`表单 "${formDialog.form.name}" 已创建`);
     }
-    
+
     formDialogVisible.value = false;
     loadFormDesigns();
   } catch (error) {
@@ -1348,7 +1434,7 @@ const saveForm = async (): Promise<void> => {
 // 预览表单数据初始化
 const initPreviewFormData = (schema: FormSchema): void => {
   const data: Record<string, any> = {};
-  
+
   schema.fields.forEach((field: FormField) => {
     switch (field.type) {
       case 'text':
@@ -1372,7 +1458,7 @@ const initPreviewFormData = (schema: FormSchema): void => {
         data[field.name] = field.default_value || '';
     }
   });
-  
+
   previewFormData.value = data;
 };
 
@@ -1387,6 +1473,7 @@ const resetPreviewForm = (): void => {
 const closeFormDialog = (): void => {
   formDialogVisible.value = false;
   jsonValidationError.value = '';
+  resetCategorySelector();
 };
 
 const closeCloneDialog = (): void => {
@@ -1545,6 +1632,62 @@ onMounted(() => {
   gap: 4px;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+/* 分页分类选择器样式 - 参考API页面样式 */
+.category-loading,
+.category-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.category-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.category-name {
+  font-weight: 500;
+  color: #262626;
+}
+
+.category-desc {
+  font-size: 12px;
+  color: #8c8c8c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.load-more-option {
+  text-align: center;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 4px;
+  background-color: #fafafa !important;
+}
+
+.load-more-option:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.load-more-content {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.load-more-content:hover {
+  background-color: #e6f7ff;
+  border-radius: 4px;
 }
 
 /* 表单字段设计样式 */
@@ -1793,53 +1936,79 @@ onMounted(() => {
   margin: 0;
 }
 
+/* 选择器下拉列表样式优化 */
+:deep(.ant-select-dropdown) {
+  .load-more-option.ant-select-item-option-disabled {
+    color: #1890ff !important;
+    cursor: pointer !important;
+    background-color: #fafafa !important;
+  }
+
+  .load-more-option.ant-select-item-option-disabled:hover {
+    background-color: #f0f0f0 !important;
+  }
+}
+
+/* 分类选择器加载状态 */
+:deep(.ant-select-selector) {
+  .ant-select-selection-placeholder {
+    color: #bfbfbf;
+  }
+}
+
+:deep(.ant-select-loading) {
+  .ant-select-clear {
+    display: none;
+  }
+}
+
 /* 移动端适配 */
 @media (max-width: 768px) {
   .form-management-container {
     padding: 8px;
   }
-  
+
   .header-actions {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .search-filters {
     width: 100%;
   }
-  
+
   .search-input {
     width: 100%;
     min-width: auto;
   }
-  
+
   .category-filter,
   .status-filter {
     width: 100%;
     min-width: auto;
   }
-  
+
   .btn-text {
     display: none;
   }
-  
+
   .btn-create {
     padding: 4px 8px;
     min-width: auto;
   }
-  
+
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
   }
-  
+
   .stats-card :deep(.ant-statistic-content) {
     font-size: 16px;
   }
-  
+
   .action-buttons {
     gap: 2px;
   }
-  
+
   .action-buttons .ant-btn {
     padding: 0 4px;
     font-size: 12px;
@@ -1857,41 +2026,49 @@ onMounted(() => {
   .json-editor {
     font-size: 12px;
   }
-  
+
   .form-preview-wrapper {
     padding: 12px;
   }
-  
+
   .preview-form {
     padding: 16px;
   }
-  
+
   .preview-header h3 {
     font-size: 18px;
   }
-  
+
   .radio-options,
   .checkbox-options {
     gap: 8px;
   }
-  
+
   .preview-form-actions {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .preview-form-actions .ant-btn {
     width: 100%;
     max-width: 200px;
   }
-  
+
   .detail-footer {
     justify-content: center;
   }
-  
+
   .detail-footer .ant-btn {
     flex: 1;
     max-width: 120px;
+  }
+
+  .category-desc {
+    max-width: 150px;
+  }
+
+  .load-more-content {
+    padding: 6px 8px;
   }
 }
 
@@ -1900,13 +2077,17 @@ onMounted(() => {
   .form-management-container {
     padding: 16px;
   }
-  
+
   .search-input {
     width: 200px;
   }
-  
+
   .preview-form {
     padding: 20px;
+  }
+
+  .category-desc {
+    max-width: 180px;
   }
 }
 
@@ -1915,29 +2096,29 @@ onMounted(() => {
   .header-actions {
     gap: 8px;
   }
-  
+
   .stats-card {
     text-align: center;
   }
-  
+
   .creator-info {
     flex-direction: column;
     gap: 4px;
     align-items: center;
   }
-  
+
   .creator-name {
     font-size: 12px;
   }
-  
+
   .date-info {
     text-align: center;
   }
-  
+
   .date {
     font-size: 12px;
   }
-  
+
   .time {
     font-size: 10px;
   }
@@ -1945,6 +2126,15 @@ onMounted(() => {
   .json-example {
     font-size: 10px;
     padding: 12px;
+  }
+
+  .category-desc {
+    max-width: 120px;
+  }
+
+  .load-more-content {
+    padding: 4px 6px;
+    font-size: 12px;
   }
 }
 
