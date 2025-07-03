@@ -9,11 +9,7 @@
     <!-- 查询和操作工具栏 -->
     <div class="dashboard-card custom-toolbar">
       <div class="search-filters">
-        <a-input 
-          v-model:value="searchText" 
-          placeholder="请输入发送组名称" 
-          class="search-input"
-        >
+        <a-input v-model:value="searchText" placeholder="请输入发送组名称" class="search-input">
           <template #prefix>
             <SearchOutlined class="search-icon" />
           </template>
@@ -44,14 +40,8 @@
     <!-- 发送组列表表格 -->
     <div class="dashboard-card table-container">
       <a-spin :spinning="loading">
-        <a-table 
-          :columns="columns" 
-          :data-source="data"
-          row-key="id" 
-          :pagination="false"
-          class="custom-table"
-          :scroll="{ x: 1200 }"
-        >
+        <a-table :columns="columns" :data-source="data" row-key="id" :pagination="false" class="custom-table"
+          :scroll="{ x: 1200 }">
           <template #enable="{ record }">
             {{ record.enable ? '启用' : '禁用' }}
           </template>
@@ -61,7 +51,7 @@
           <template #upgradeUsers="{ record }">
             {{ record.first_user_names.join(', ') }}
           </template>
-          
+
           <!-- 操作列 -->
           <template #action="{ record }">
             <div class="action-column">
@@ -86,16 +76,9 @@
 
       <!-- 分页器 -->
       <div class="pagination-container">
-        <a-pagination 
-          v-model:current="current" 
-          v-model:pageSize="pageSizeRef" 
-          :page-size-options="pageSizeOptions"
-          :total="total" 
-          show-size-changer 
-          @change="handlePageChange" 
-          @showSizeChange="handleSizeChange" 
-          class="custom-pagination"
-        >
+        <a-pagination v-model:current="current" v-model:pageSize="pageSizeRef" :page-size-options="pageSizeOptions"
+          :total="total" show-size-changer @change="handlePageChange" @showSizeChange="handleSizeChange"
+          class="custom-pagination">
           <template #buildOptionText="props">
             <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
             <span v-else>全部</span>
@@ -105,14 +88,8 @@
     </div>
 
     <!-- 新增/编辑模态框 -->
-    <a-modal
-      v-model:visible="isModalVisible"
-      :title="form.id === 0 ? '新增发送组' : '编辑发送组'"
-      @ok="handleSubmit"
-      @cancel="resetForm"
-      :width="700"
-      class="custom-modal"
-    >
+    <a-modal v-model:visible="isModalVisible" :title="form.id === 0 ? '新增发送组' : '编辑发送组'" @ok="handleSubmit"
+      @cancel="resetForm" :width="700" class="custom-modal">
       <a-form ref="formRef" :model="form" layout="vertical" class="custom-form">
         <div class="form-section">
           <div class="section-title">基本信息</div>
@@ -131,7 +108,7 @@
             </a-col>
           </a-row>
         </div>
-        
+
         <div class="form-section">
           <div class="section-title">关联配置</div>
           <a-row :gutter="16">
@@ -155,7 +132,7 @@
             </a-col>
           </a-row>
         </div>
-        
+
         <div class="form-section">
           <div class="section-title">告警配置</div>
           <a-row :gutter="16">
@@ -170,7 +147,7 @@
               </a-form-item>
             </a-col>
           </a-row>
-          
+
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="重复发送时间" name="repeat_interval">
@@ -184,7 +161,7 @@
             </a-col>
           </a-row>
         </div>
-        
+
         <div class="form-section">
           <div class="section-title">通知配置</div>
           <a-row :gutter="16">
@@ -203,7 +180,7 @@
 <script lang="ts" setup>
 import { reactive, ref, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { SearchOutlined, ReloadOutlined, PlusOutlined} from '@ant-design/icons-vue';
+import { SearchOutlined, ReloadOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
   getMonitorSendGroupListApi,
@@ -212,10 +189,10 @@ import {
   deleteMonitorSendGroupApi,
 } from '#/api/core/prometheus_send_group';
 import { getUserList } from '#/api/core/user';
-import { getAllMonitorScrapePoolApi } from '#/api/core/prometheus_scrape_pool';
+import { getMonitorScrapePoolListApi } from '#/api/core/prometheus_scrape_pool';
 import { getAllOnDutyGroupApi } from '#/api/core/prometheus_onduty';
 import type { SendGroupItem } from '#/api/core/prometheus_send_group';
-import type { MonitorScrapePoolItem } from '#/api/core/prometheus_scrape_pool';
+import type { ScrapePoolItem } from '#/api/core/prometheus_scrape_pool';
 import type { OnDutyGroupItem } from '#/api/core/prometheus_onduty';
 import type { FormInstance } from 'ant-design-vue';
 
@@ -297,9 +274,9 @@ const columns = [
   },
 ];
 
-const data = reactive<SendGroupItem[]>([]); 
+const data = reactive<SendGroupItem[]>([]);
 const searchText = ref('');
-const scrapePools = ref<MonitorScrapePoolItem[]>([]);
+const scrapePools = ref<ScrapePoolItem[]>([]);
 const onDutyGroups = ref<OnDutyGroupItem[]>([]);
 const isModalVisible = ref(false);
 const form = reactive({
@@ -483,7 +460,11 @@ const fetchSendGroups = async () => {
 // 获取采集池列表
 const fetchScrapePools = async () => {
   try {
-    const response = await getAllMonitorScrapePoolApi();
+    const response = await getMonitorScrapePoolListApi({
+      page: 1,
+      size: 100,
+      search: ''
+    });
     scrapePools.value = response.items;
   } catch (error: any) {
     message.error(error.message || '获取采集池列表失败');
@@ -498,7 +479,7 @@ const fetchOnDutyGroups = async () => {
     onDutyGroups.value = response.items;
   } catch (error: any) {
     message.error(error.message || '获取值班组列表失败');
-    console.error(error); 
+    console.error(error);
   }
 };
 

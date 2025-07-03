@@ -9,11 +9,7 @@
     <!-- 查询和操作工具栏 -->
     <div class="dashboard-card custom-toolbar">
       <div class="search-filters">
-        <a-input 
-          v-model:value="searchText" 
-          placeholder="请输入AlertRule名称" 
-          class="search-input"
-        >
+        <a-input v-model:value="searchText" placeholder="请输入AlertRule名称" class="search-input">
           <template #prefix>
             <SearchOutlined class="search-icon" />
           </template>
@@ -43,21 +39,14 @@
 
     <!-- AlertRule列表表格 -->
     <div class="dashboard-card table-container">
-      <a-table 
-        :columns="columns" 
-        :data-source="data" 
-        row-key="id" 
-        :loading="loading" 
-        :pagination="false"
-        class="custom-table"
-        :scroll="{ x: 1200 }"
-      >
+      <a-table :columns="columns" :data-source="data" row-key="id" :loading="loading" :pagination="false"
+        class="custom-table" :scroll="{ x: 1200 }">
         <template #expr="{ record }">
           <div style="max-width: 300px; word-break: break-all">
             {{ record.expr }}
           </div>
         </template>
-        
+
         <!-- 标签组列 -->
         <template #labels="{ record }">
           <div class="tag-container">
@@ -71,7 +60,7 @@
             <a-tag v-else class="tech-tag empty-tag">无标签</a-tag>
           </div>
         </template>
-        
+
         <!-- 注解列 -->
         <template #annotations="{ record }">
           <div class="tag-container">
@@ -85,26 +74,26 @@
             <a-tag v-else class="tech-tag empty-tag">无注解</a-tag>
           </div>
         </template>
-        
+
         <!-- 严重性列 -->
         <template #severity="{ record }">
           <a-tag :class="['tech-tag', `severity-${record.severity}`]">
             {{ record.severity }}
           </a-tag>
         </template>
-        
+
         <!-- 启用状态列 -->
         <template #enable="{ record }">
           <a-tag :class="['tech-tag', record.enable === 1 ? 'status-enabled' : 'status-disabled']">
             {{ record.enable === 1 ? '启用' : '禁用' }}
           </a-tag>
         </template>
-        
+
         <!-- IP地址列 -->
         <template #ip_address="{ record }">
           <span>{{ record.ip_address || '-' }}</span>
         </template>
-        
+
         <!-- 操作列 -->
         <template #action="{ record }">
           <div class="action-column">
@@ -128,16 +117,9 @@
 
       <!-- 分页器 -->
       <div class="pagination-container">
-        <a-pagination 
-          v-model:current="current" 
-          v-model:pageSize="pageSizeRef" 
-          :page-size-options="pageSizeOptions"
-          :total="total" 
-          show-size-changer 
-          @change="handlePageChange" 
-          @showSizeChange="handleSizeChange" 
-          class="custom-pagination"
-        >
+        <a-pagination v-model:current="current" v-model:pageSize="pageSizeRef" :page-size-options="pageSizeOptions"
+          :total="total" show-size-changer @change="handlePageChange" @showSizeChange="handleSizeChange"
+          class="custom-pagination">
           <template #buildOptionText="props">
             <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
             <span v-else>全部</span>
@@ -147,14 +129,8 @@
     </div>
 
     <!-- 新增AlertRule模态框 -->
-    <a-modal 
-      title="新增AlertRule" 
-      v-model:visible="isAddModalVisible" 
-      @ok="handleAdd" 
-      @cancel="closeAddModal"
-      :width="700"
-      class="custom-modal"
-    >
+    <a-modal title="新增AlertRule" v-model:visible="isAddModalVisible" @ok="handleAdd" @cancel="closeAddModal"
+      :width="700" class="custom-modal">
       <a-form :model="addForm" layout="vertical" class="custom-form">
         <div class="form-section">
           <div class="section-title">基本信息</div>
@@ -191,17 +167,9 @@
             <a-col :span="24">
               <a-form-item label="目标地址" name="ip_address" :rules="[{ required: true, message: '请输入IP地址和端口' }]">
                 <div class="ip-port-container">
-                  <a-input 
-                    v-model:value="addForm.ip" 
-                    placeholder="请输入IP地址" 
-                    class="ip-input"
-                  />
+                  <a-input v-model:value="addForm.ip" placeholder="请输入IP地址" class="ip-input" />
                   <span class="separator">:</span>
-                  <a-input 
-                    v-model:value="addForm.port" 
-                    placeholder="端口" 
-                    class="port-input"
-                  />
+                  <a-input v-model:value="addForm.port" placeholder="端口" class="port-input" />
                 </div>
               </a-form-item>
             </a-col>
@@ -220,7 +188,8 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item>
-                <a-button type="primary" class="action-button" @click="validateAddExpression(addForm.expr)">验证表达式</a-button>
+                <a-button type="primary" class="action-button"
+                  @click="validateAddExpression(addForm.expr)">验证表达式</a-button>
               </a-form-item>
             </a-col>
           </a-row>
@@ -245,14 +214,12 @@
         <div class="form-section">
           <div class="section-title">标签配置</div>
           <!-- 动态标签表单项 -->
-          <a-form-item v-for="(label, index) in addForm.labels" :key="label.key"
-            :label="index === 0 ? '分组标签' : ''">
+          <a-form-item v-for="(label, index) in addForm.labels" :key="label.key" :label="index === 0 ? '分组标签' : ''">
             <div class="label-input-group">
               <a-input v-model:value="label.labelKey" placeholder="标签名" class="label-key-input" />
               <div class="label-separator">:</div>
               <a-input v-model:value="label.labelValue" placeholder="标签值" class="label-value-input" />
-              <MinusCircleOutlined v-if="index > 0" class="dynamic-delete-button"
-                @click="removeLabel(label)" />
+              <MinusCircleOutlined v-if="index > 0" class="dynamic-delete-button" @click="removeLabel(label)" />
             </div>
           </a-form-item>
           <a-form-item>
@@ -287,14 +254,8 @@
     </a-modal>
 
     <!-- 编辑AlertRule模态框 -->
-    <a-modal 
-      title="编辑AlertRule" 
-      v-model:visible="isEditModalVisible" 
-      @ok="handleEdit" 
-      @cancel="closeEditModal"
-      :width="700"
-      class="custom-modal"
-    >
+    <a-modal title="编辑AlertRule" v-model:visible="isEditModalVisible" @ok="handleEdit" @cancel="closeEditModal"
+      :width="700" class="custom-modal">
       <a-form :model="editForm" layout="vertical" class="custom-form">
         <div class="form-section">
           <div class="section-title">基本信息</div>
@@ -331,17 +292,9 @@
             <a-col :span="24">
               <a-form-item label="目标地址" name="ip_address" :rules="[{ required: true, message: '请输入IP地址和端口' }]">
                 <div class="ip-port-container">
-                  <a-input 
-                    v-model:value="editForm.ip" 
-                    placeholder="请输入IP地址" 
-                    class="ip-input"
-                  />
+                  <a-input v-model:value="editForm.ip" placeholder="请输入IP地址" class="ip-input" />
                   <span class="separator">:</span>
-                  <a-input 
-                    v-model:value="editForm.port" 
-                    placeholder="端口" 
-                    class="port-input"
-                  />
+                  <a-input v-model:value="editForm.port" placeholder="端口" class="port-input" />
                 </div>
               </a-form-item>
             </a-col>
@@ -392,14 +345,12 @@
         <div class="form-section">
           <div class="section-title">标签配置</div>
           <!-- 动态标签表单项 -->
-          <a-form-item v-for="(label, index) in editForm.labels" :key="label.key"
-            :label="index === 0 ? '分组标签' : ''">
+          <a-form-item v-for="(label, index) in editForm.labels" :key="label.key" :label="index === 0 ? '分组标签' : ''">
             <div class="label-input-group">
               <a-input v-model:value="label.labelKey" placeholder="标签名" class="label-key-input" />
               <div class="label-separator">:</div>
               <a-input v-model:value="label.labelValue" placeholder="标签值" class="label-value-input" />
-              <MinusCircleOutlined v-if="index > 0" class="dynamic-delete-button"
-                @click="removeEditLabel(label)" />
+              <MinusCircleOutlined v-if="index > 0" class="dynamic-delete-button" @click="removeEditLabel(label)" />
             </div>
           </a-form-item>
           <a-form-item>
@@ -450,7 +401,7 @@ import {
   updateAlertRuleApi,
   deleteAlertRuleApi,
 } from '#/api/core/prometheus_alert_rule';
-import { getAllAlertManagerPoolApi } from '#/api/core/prometheus_alert_pool';
+import { getAlertManagerPoolListApi } from '#/api/core/prometheus_alert_pool';
 import { validateExprApi } from '#/api/core/prometheus_alert_rule';
 import { getAllMonitorSendGroupApi } from '#/api/core/prometheus_send_group';
 import { Icon } from '@iconify/vue';
@@ -623,7 +574,11 @@ const removeEditAnnotation = (annotation: any) => {
 // 获取实例池数据
 const fetchScrapePools = async () => {
   try {
-    const response = await getAllAlertManagerPoolApi();
+    const response = await getAlertManagerPoolListApi({
+      page: 1,
+      size: 100,
+      search: ''
+    });
     scrapePools.value = response.items;
   } catch (error: any) {
     message.error(error.message || '获取实例池数据失败');
@@ -731,7 +686,7 @@ const closeAddModal = () => {
 const showEditModal = (record: AlertRuleItem) => {
   // 解析IP地址（假设格式为ip:port）
   const ipParts = record.ip_address?.split(':') || ['', ''];
-  
+
   Object.assign(editForm, {
     id: record.id,
     name: record.name,

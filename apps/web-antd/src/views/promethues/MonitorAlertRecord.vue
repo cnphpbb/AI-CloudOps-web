@@ -9,11 +9,7 @@
     <!-- 查询和操作工具栏 -->
     <div class="dashboard-card custom-toolbar">
       <div class="search-filters">
-        <a-input 
-          v-model:value="searchText" 
-          placeholder="请输入记录名称" 
-          class="search-input"
-        >
+        <a-input v-model:value="searchText" placeholder="请输入记录名称" class="search-input">
           <template #prefix>
             <SearchOutlined class="search-icon" />
           </template>
@@ -43,15 +39,8 @@
 
     <!-- 记录列表表格 -->
     <div class="dashboard-card table-container">
-      <a-table 
-        :columns="columns" 
-        :data-source="data" 
-        row-key="id" 
-        :loading="loading"
-        :pagination="false"
-        class="custom-table"
-        :scroll="{ x: 1200 }"
-      >
+      <a-table :columns="columns" :data-source="data" row-key="id" :loading="loading" :pagination="false"
+        class="custom-table" :scroll="{ x: 1200 }">
         <!-- 标签组列 -->
         <template #labels="{ record }">
           <div class="tag-container">
@@ -60,14 +49,14 @@
             </a-tag>
           </div>
         </template>
-        
+
         <!-- 是否启用列 -->
         <template #enable="{ text }">
           <a-tag :class="text ? 'tech-tag status-enabled' : 'tech-tag status-disabled'">
             {{ text ? '启用' : '禁用' }}
           </a-tag>
         </template>
-        
+
         <!-- 操作列 -->
         <template #action="{ record }">
           <div class="action-column">
@@ -91,16 +80,9 @@
 
       <!-- 分页器 -->
       <div class="pagination-container">
-        <a-pagination 
-          v-model:current="current" 
-          v-model:pageSize="pageSizeRef" 
-          :page-size-options="pageSizeOptions"
-          :total="total" 
-          show-size-changer 
-          @change="handlePageChange" 
-          @showSizeChange="handleSizeChange" 
-          class="custom-pagination"
-        >
+        <a-pagination v-model:current="current" v-model:pageSize="pageSizeRef" :page-size-options="pageSizeOptions"
+          :total="total" show-size-changer @change="handlePageChange" @showSizeChange="handleSizeChange"
+          class="custom-pagination">
           <template #buildOptionText="props">
             <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
             <span v-else>全部</span>
@@ -110,17 +92,8 @@
     </div>
 
     <!-- 新增记录规则模态框 -->
-    <a-modal 
-      title="新增记录规则" 
-      v-model:visible="isAddModalVisible" 
-      @ok="handleAdd" 
-      @cancel="closeAddModal"
-      :confirmLoading="loading"
-      :width="700"
-      class="custom-modal"
-      ok-text="提交"
-      cancel-text="取消"
-    >
+    <a-modal title="新增记录规则" v-model:visible="isAddModalVisible" @ok="handleAdd" @cancel="closeAddModal"
+      :confirmLoading="loading" :width="700" class="custom-modal" ok-text="提交" cancel-text="取消">
       <a-form ref="addFormRef" :model="addForm" layout="vertical" class="custom-form">
         <div class="form-section">
           <div class="section-title">基本信息</div>
@@ -131,20 +104,12 @@
               </a-form-item>
             </a-col>
           </a-row>
-          
+
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="Prometheus 实例池" name="poolId" :rules="[{ required: true, message: '请选择实例池' }]">
-                <a-select
-                  v-model:value="addForm.pool_id"
-                  placeholder="请选择实例池"
-                  class="full-width"
-                >
-                  <a-select-option
-                    v-for="pool in poolOptions"
-                    :key="pool.id"
-                    :value="pool.id"
-                  >
+                <a-select v-model:value="addForm.pool_id" placeholder="请选择实例池" class="full-width">
+                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -186,7 +151,7 @@
               </a-form-item>
             </a-col>
           </a-row>
-          
+
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="表达式" name="expr">
@@ -207,17 +172,8 @@
     </a-modal>
 
     <!-- 编辑记录规则模态框 -->
-    <a-modal 
-      title="编辑记录规则" 
-      v-model:visible="isEditModalVisible" 
-      @ok="handleUpdate" 
-      @cancel="closeEditModal"
-      :confirmLoading="loading"
-      :width="700"
-      class="custom-modal"
-      ok-text="提交"
-      cancel-text="取消"
-    >
+    <a-modal title="编辑记录规则" v-model:visible="isEditModalVisible" @ok="handleUpdate" @cancel="closeEditModal"
+      :confirmLoading="loading" :width="700" class="custom-modal" ok-text="提交" cancel-text="取消">
       <a-form ref="editFormRef" :model="editForm" layout="vertical" class="custom-form">
         <div class="form-section">
           <div class="section-title">基本信息</div>
@@ -228,20 +184,12 @@
               </a-form-item>
             </a-col>
           </a-row>
-          
+
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="Prometheus 实例池" name="poolId" :rules="[{ required: true, message: '请选择实例池' }]">
-                <a-select
-                  v-model:value="editForm.pool_id"
-                  placeholder="请选择实例池"
-                  class="full-width"
-                >
-                  <a-select-option
-                    v-for="pool in poolOptions"
-                    :key="pool.id"
-                    :value="pool.id"
-                  >
+                <a-select v-model:value="editForm.pool_id" placeholder="请选择实例池" class="full-width">
+                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -283,7 +231,7 @@
               </a-form-item>
             </a-col>
           </a-row>
-          
+
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="表达式" name="expr">
@@ -320,7 +268,7 @@ import {
   deleteRecordRuleApi,
   getRecordRulesTotalApi,
 } from '#/api/core/prometheus_alert_record';
-import { getAllMonitorScrapePoolApi } from '#/api/core/prometheus_scrape_pool';
+import { getMonitorScrapePoolListApi } from '#/api/core/prometheus_scrape_pool';
 import { validateExprApi } from '#/api/core/prometheus_alert_rule';
 import { Icon } from '@iconify/vue';
 import type { AlertRecordItem } from '#/api/core/prometheus_alert_record';
@@ -517,7 +465,7 @@ const closeEditModal = () => {
 const handleAdd = async () => {
   try {
     await addFormRef.value?.validate();
-    
+
     const payload = {
       name: addForm.name,
       pool_id: addForm.pool_id,
@@ -547,7 +495,7 @@ const handleAdd = async () => {
 const handleUpdate = async () => {
   try {
     await editFormRef.value?.validate();
-    
+
     const payload = {
       id: editForm.id,
       name: editForm.name,
@@ -619,7 +567,11 @@ const fetchRecordRules = async () => {
 // 获取所有实例池数据
 const fetchPools = async () => {
   try {
-    const response = await getAllMonitorScrapePoolApi();
+    const response = await getMonitorScrapePoolListApi({
+      page: 1,
+      size: 100,
+      search: ''
+    });
     poolOptions.value = response.items;
   } catch (error: any) {
     message.error(error.message || '获取实例池数据失败，请稍后重试');
