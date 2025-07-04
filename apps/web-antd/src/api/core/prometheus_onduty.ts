@@ -1,21 +1,6 @@
 import { requestClient } from '#/api/request';
 
-export interface OnDutyGroupItem {
-  id: number;
-  created_at: number;
-  updated_at: number;
-  deleted_at: number;
-  name: string;
-  user_id: number;
-  members: any[];
-  shift_days: number;
-  yesterday_normal_duty_user_id: number;
-  today_duty_user: any;
-  user_names: string[];
-  create_user_name: string;
-}
-
-export interface OnDutyGroupChangeItem {
+export interface MonitorOnDutyChange {
   id: number;
   created_at: number;
   updated_at: number;
@@ -25,13 +10,34 @@ export interface OnDutyGroupChangeItem {
   date: string;
   origin_user_id: number;
   on_duty_user_id: number;
+  creator_name: string;
   target_user_name: string;
   origin_user_name: string;
   pool_name: string;
-  create_user_name: string;
 }
 
-export interface OnDutyGroupHistoryItem {
+export interface MonitorOnDutyGroup {
+  id: number;
+  created_at: number;
+  updated_at: number;
+  deleted_at: number;
+  name: string;
+  user_id: number;
+  members: {
+    id: number;
+    username: string;
+  }[];
+  shift_days: number;
+  yesterday_normal_duty_user_id: number;
+  creator_name: string;
+  today_duty_user: {
+    id: number;
+    username: string;
+  };
+  user_names: string[];
+}
+
+export interface MonitorOnDutyHistory {
   id: number;
   created_at: number;
   updated_at: number;
@@ -40,16 +46,24 @@ export interface OnDutyGroupHistoryItem {
   date_string: string;
   on_duty_user_id: number;
   origin_user_id: number;
+  creator_name: string;
   on_duty_user_name: string;
   origin_user_name: string;
   pool_name: string;
-  create_user_name: string;
+}
+
+export interface GetOnDutyListParams {
+  page: number;
+  size: number;
+  search?: string;
+  pool_id?: number;
+  enable?: number;
 }
 
 export interface createOnDutyReq {
   name: string;
+  member_ids: number[];
   shift_days: number;
-  user_names: string[];
 }
 
 export interface createOnDutychangeReq {
@@ -61,10 +75,9 @@ export interface createOnDutychangeReq {
 
 export interface updateOnDutyReq {
   id: number;
-  on_duty_group_id: number;
-  date: string;
-  origin_user_id: number;
-  on_duty_user_id: number;
+  name: string;
+  shift_days: number;
+  member_ids: number[];
 }
 
 export interface getOnDutyFuturePlan {
@@ -73,46 +86,30 @@ export interface getOnDutyFuturePlan {
   end_time: string;
 }
 
-export interface GetOnDutyListParams {
-  page: number;
-  size: number;
-  search: string;
-}
-
-export const getOnDutyListApi = (data: GetOnDutyListParams) => {
-  return requestClient.get(`/monitor/onDuty_groups/list`, { params: data });
+export const getMonitorOnDutyGroupListApi = (data: GetOnDutyListParams) => {
+  return requestClient.get('/monitor/onduty_groups/list', { params: data });
 };
 
-export const getAllOnDutyGroupApi = () => {
-  return requestClient.get('/monitor/onDuty_groups/all');
+export const createMonitorOnDutyGroupApi = (data: createOnDutyReq) => {
+  return requestClient.post('/monitor/onduty_groups/create', data);
 };
 
-export const getOnDutyTotalApi = () => {
-  return requestClient.get('/monitor/onDuty_groups/total');
+export const createMonitorOnDutyGroupChangeApi = (data: createOnDutychangeReq) => {
+  return requestClient.post('/monitor/onduty_groups/changes', data);
 };
 
-export const getOnDutyApi = (id: number) => {
-  return requestClient.get(`/monitor/onDuty_groups/${id}`);
+export const updateMonitorOnDutyGroupApi = (data: updateOnDutyReq) => {
+  return requestClient.put(`/monitor/onduty_groups/update/${data.id}`, data);
 };
 
-export const createOnDutyApi = (data: createOnDutyReq) => {
-  return requestClient.post('/monitor/onDuty_groups/create', data);
+export const deleteMonitorOnDutyGroupApi = (id: number) => {
+  return requestClient.delete(`/monitor/onduty_groups/delete/${id}`);
 };
 
-export const updateOnDutyApi = (data: any) => {
-  return requestClient.post('/monitor/onDuty_groups/update', data);
+export const getMonitorOnDutyGroupDetailApi = (id: number) => {
+  return requestClient.get(`/monitor/onduty_groups/detail/${id}`);
 };
 
-export const deleteOnDutyApi = (id: number) => {
-  return requestClient.delete(`/monitor/onDuty_groups/${id}`);
-};
-
-export const getOnDutyFuturePlanApi = (data: getOnDutyFuturePlan) => {
-  return requestClient.get(
-    `/monitor/onDuty_groups/future_plan?id=${data.id}&start_time=${data.start_time}&end_time=${data.end_time}`,
-  );
-};
-
-export const createOnDutyChangeApi = (data: createOnDutychangeReq) => {
-  return requestClient.post('/monitor/onDuty_groups/changes', data);
+export const getMonitorOnDutyGroupFuturePlanApi = (id: number) => {
+  return requestClient.get(`/monitor/onduty_groups/future_plan/${id}`);
 };

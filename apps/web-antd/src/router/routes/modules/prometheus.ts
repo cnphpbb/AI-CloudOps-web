@@ -31,9 +31,9 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: 'MonitorAlert',
-        path: '/monitor_alert',
-        component: () => import('#/views/promethues/MonitorAlert.vue'),
+        name: 'MonitorAlertPool',
+        path: '/monitor_alert_pool',
+        component: () => import('#/views/promethues/MonitorAlertPool.vue'),
         meta: {
           title: 'alert告警池',
           icon: 'lucide:alert-triangle',

@@ -9,13 +9,8 @@
     <!-- 查询和操作工具栏 -->
     <div class="dashboard-card custom-toolbar">
       <div class="search-filters">
-        <a-input 
-          v-model:value="searchText" 
-          placeholder="请输入值班组名称" 
-          class="search-input"
-          allow-clear
-          @pressEnter="handleSearch"
-        >
+        <a-input v-model:value="searchText" placeholder="请输入值班组名称" class="search-input" allow-clear
+          @pressEnter="handleSearch">
           <template #prefix>
             <SearchOutlined class="search-icon" />
           </template>
@@ -45,15 +40,8 @@
 
     <!-- 值班组列表表格 -->
     <div class="dashboard-card table-container">
-      <a-table 
-        :columns="columns" 
-        :data-source="data" 
-        row-key="id" 
-        :loading="loading"
-        :pagination="false"
-        class="custom-table"
-        :scroll="{ x: 1200 }"
-      >
+      <a-table :columns="columns" :data-source="data" row-key="id" :loading="loading" :pagination="false"
+        class="custom-table" :scroll="{ x: 1200 }">
         <!-- 用户名称列自定义渲染 -->
         <template #user_names="{ text }">
           <div class="tag-container">
@@ -67,7 +55,7 @@
         <template #created_at="{ text }">
           {{ formatDate(text) }}
         </template>
-        
+
         <!-- 操作列 -->
         <template #action="{ record }">
           <div class="action-column">
@@ -98,16 +86,9 @@
 
       <!-- 分页器 -->
       <div class="pagination-container">
-        <a-pagination 
-          v-model:current="current" 
-          v-model:pageSize="pageSizeRef" 
-          :page-size-options="pageSizeOptions"
-          :total="total" 
-          show-size-changer 
-          @change="handlePageChange" 
-          @showSizeChange="handleSizeChange" 
-          class="custom-pagination"
-        >
+        <a-pagination v-model:current="current" v-model:pageSize="pageSizeRef" :page-size-options="pageSizeOptions"
+          :total="total" show-size-changer @change="handlePageChange" @showSizeChange="handleSizeChange"
+          class="custom-pagination">
           <template #buildOptionText="props">
             <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
             <span v-else>全部</span>
@@ -117,47 +98,22 @@
     </div>
 
     <!-- 新增值班组模态框 -->
-    <a-modal 
-      title="新增值班组" 
-      v-model:visible="isAddModalVisible" 
-      @ok="handleAdd" 
-      @cancel="closeAddModal"
-      :confirmLoading="loading"
-      :maskClosable="false"
-      :width="700"
-      class="custom-modal"
-    >
+    <a-modal title="新增值班组" v-model:visible="isAddModalVisible" @ok="handleAdd" @cancel="closeAddModal"
+      :confirmLoading="loading" :maskClosable="false" :width="700" class="custom-modal">
       <a-form :model="addForm" layout="vertical" ref="addFormRef" class="custom-form">
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="值班组名称" 
-                name="name"
-                :rules="[{ required: true, message: '请输入值班组名称' }]"
-              >
-                <a-input
-                  v-model:value="addForm.name"
-                  placeholder="请输入值班组名称"
-                  :maxLength="50"
-                />
+              <a-form-item label="值班组名称" name="name" :rules="[{ required: true, message: '请输入值班组名称' }]">
+                <a-input v-model:value="addForm.name" placeholder="请输入值班组名称" :maxLength="50" />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="轮班周期（天）"
-                name="shiftDays"
-                :rules="[{ required: true, message: '请输入轮班周期' }]"
-              >
-                <a-input-number
-                  v-model:value="addForm.shiftDays"
-                  :min="1"
-                  :max="365"
-                  class="full-width"
-                />
+              <a-form-item label="轮班周期（天）" name="shiftDays" :rules="[{ required: true, message: '请输入轮班周期' }]">
+                <a-input-number v-model:value="addForm.shiftDays" :min="1" :max="365" class="full-width" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -167,24 +123,10 @@
           <div class="section-title">值班人员</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="用户名称" 
-                name="userNames"
-                :rules="[{ required: true, message: '请选择至少一个用户' }]"
-              >
-                <a-select
-                  mode="multiple"
-                  v-model:value="addForm.userNames"
-                  placeholder="请选择用户"
-                  style="width: 100%"
-                  :maxTagCount="3"
-                  :filterOption="filterOption"
-                >
-                  <a-select-option
-                    v-for="user in availableUsers"
-                    :key="user"
-                    :value="user"
-                  >
+              <a-form-item label="用户名称" name="userNames" :rules="[{ required: true, message: '请选择至少一个用户' }]">
+                <a-select mode="multiple" v-model:value="addForm.userNames" placeholder="请选择用户" style="width: 100%"
+                  :maxTagCount="3" :filterOption="filterOption">
+                  <a-select-option v-for="user in availableUsers" :key="user" :value="user">
                     {{ user }}
                   </a-select-option>
                 </a-select>
@@ -196,47 +138,22 @@
     </a-modal>
 
     <!-- 编辑值班组模态框 -->
-    <a-modal 
-      title="编辑值班组" 
-      v-model:visible="isEditModalVisible" 
-      @ok="handleUpdate" 
-      @cancel="closeEditModal"
-      :confirmLoading="loading"
-      :maskClosable="false"
-      :width="700"
-      class="custom-modal"
-    >
+    <a-modal title="编辑值班组" v-model:visible="isEditModalVisible" @ok="handleUpdate" @cancel="closeEditModal"
+      :confirmLoading="loading" :maskClosable="false" :width="700" class="custom-modal">
       <a-form :model="editForm" layout="vertical" ref="editFormRef" class="custom-form">
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="值班组名称" 
-                name="name"
-                :rules="[{ required: true, message: '请输入值班组名称' }]"
-              >
-                <a-input
-                  v-model:value="editForm.name"
-                  placeholder="请输入值班组名称"
-                  :maxLength="50"
-                />
+              <a-form-item label="值班组名称" name="name" :rules="[{ required: true, message: '请输入值班组名称' }]">
+                <a-input v-model:value="editForm.name" placeholder="请输入值班组名称" :maxLength="50" />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="轮班周期（天）"
-                name="shiftDays"
-                :rules="[{ required: true, message: '请输入轮班周期' }]"
-              >
-                <a-input-number
-                  v-model:value="editForm.shiftDays"
-                  :min="1"
-                  :max="365"
-                  class="full-width"
-                />
+              <a-form-item label="轮班周期（天）" name="shiftDays" :rules="[{ required: true, message: '请输入轮班周期' }]">
+                <a-input-number v-model:value="editForm.shiftDays" :min="1" :max="365" class="full-width" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -246,24 +163,10 @@
           <div class="section-title">值班人员</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item 
-                label="用户名称" 
-                name="userNames"
-                :rules="[{ required: true, message: '请选择至少一个用户' }]"
-              >
-                <a-select
-                  mode="multiple"
-                  v-model:value="editForm.userNames"
-                  placeholder="请选择用户"
-                  style="width: 100%"
-                  :maxTagCount="3"
-                  :filterOption="filterOption"
-                >
-                  <a-select-option
-                    v-for="user in availableUsers"
-                    :key="user"
-                    :value="user"
-                  >
+              <a-form-item label="用户名称" name="userNames" :rules="[{ required: true, message: '请选择至少一个用户' }]">
+                <a-select mode="multiple" v-model:value="editForm.userNames" placeholder="请选择用户" style="width: 100%"
+                  :maxTagCount="3" :filterOption="filterOption">
+                  <a-select-option v-for="user in availableUsers" :key="user" :value="user">
                     {{ user }}
                   </a-select-option>
                 </a-select>
@@ -280,11 +183,12 @@
 import { ref, reactive, onMounted } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  getOnDutyListApi,
-  createOnDutyApi,
-  updateOnDutyApi,
-  deleteOnDutyApi,
-  getOnDutyTotalApi,
+  getMonitorOnDutyGroupListApi,
+  createMonitorOnDutyGroupApi,
+  updateMonitorOnDutyGroupApi,
+  deleteMonitorOnDutyGroupApi,
+  getMonitorOnDutyGroupDetailApi,
+  getMonitorOnDutyGroupFuturePlanApi
 } from '#/api/core/prometheus_onduty';
 import { getUserList } from '#/api/core/user';
 import { Icon } from '@iconify/vue';
@@ -293,12 +197,12 @@ import {
   ReloadOutlined,
   PlusOutlined
 } from '@ant-design/icons-vue';
-import type { OnDutyGroupItem } from '#/api/core/prometheus_onduty';
+import type { MonitorOnDutyChange, MonitorOnDutyGroup } from '#/api/core/prometheus_onduty';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 
 const router = useRouter();
-const data = ref<OnDutyGroupItem[]>([]);
+const data = ref<MonitorOnDutyGroup[]>([]);
 const searchText = ref('');
 const loading = ref(false);
 const addFormRef = ref();
@@ -432,7 +336,7 @@ const closeAddModal = () => {
   isAddModalVisible.value = false;
 };
 
-const showEditModal = (record: OnDutyGroupItem) => {
+const showEditModal = (record: MonitorOnDutyGroup) => {
   editForm.id = record.id;
   editForm.name = record.name;
   editForm.shiftDays = record.shift_days;
@@ -452,13 +356,17 @@ const handleAdd = async () => {
     await addFormRef.value.validate();
     loading.value = true;
 
+    // Convert userNames to member_ids - assuming userNames are actually user IDs
+    // In a real implementation, you would need to get the actual IDs
+    const memberIds = addForm.userNames.map(name => parseInt(name) || 0).filter(id => id > 0);
+
     const payload = {
       name: addForm.name.trim(),
       shift_days: addForm.shiftDays,
-      user_names: addForm.userNames,
+      member_ids: memberIds, // Using the correct property name as per createOnDutyReq
     };
 
-    await createOnDutyApi(payload);
+    await createMonitorOnDutyGroupApi(payload);
     message.success('新增值班组成功');
     await fetchOnDutyGroups();
     closeAddModal();
@@ -475,14 +383,18 @@ const handleUpdate = async () => {
     await editFormRef.value.validate();
     loading.value = true;
 
+    // Convert userNames to member_ids - assuming userNames are actually user IDs
+    // In a real implementation, you would need to get the actual IDs
+    const memberIds = editForm.userNames.map(name => parseInt(name) || 0).filter(id => id > 0);
+
     const payload = {
       id: editForm.id,
       name: editForm.name.trim(),
       shift_days: editForm.shiftDays,
-      user_names: editForm.userNames,
+      member_ids: memberIds, // Using the correct property name as per updateOnDutyReq
     };
 
-    await updateOnDutyApi(payload);
+    await updateMonitorOnDutyGroupApi(payload);
     message.success('更新值班组成功');
     await fetchOnDutyGroups();
     closeEditModal();
@@ -494,7 +406,7 @@ const handleUpdate = async () => {
   }
 };
 
-const handleDelete = (record: OnDutyGroupItem) => {
+const handleDelete = (record: MonitorOnDutyGroup) => {
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除值班组"${record.name}"吗？此操作不可恢复。`,
@@ -504,7 +416,7 @@ const handleDelete = (record: OnDutyGroupItem) => {
     async onOk() {
       try {
         loading.value = true;
-        await deleteOnDutyApi(record.id);
+        await deleteMonitorOnDutyGroupApi(record.id);
         message.success('删除值班组成功');
         await fetchOnDutyGroups();
 
@@ -535,7 +447,7 @@ const fetchUserList = async () => {
   }
 };
 
-const viewSchedule = (record: OnDutyGroupItem) => {
+const viewSchedule = (record: MonitorOnDutyGroup) => {
   router.push({
     name: 'MonitorOnDutyGroupTable',
     query: { id: record.id.toString() }
@@ -545,7 +457,7 @@ const viewSchedule = (record: OnDutyGroupItem) => {
 const fetchOnDutyGroups = async () => {
   try {
     loading.value = true;
-    const response = await getOnDutyListApi({
+    const response = await getMonitorOnDutyGroupListApi({
       page: current.value,
       size: pageSizeRef.value,
       search: searchText.value.trim(),

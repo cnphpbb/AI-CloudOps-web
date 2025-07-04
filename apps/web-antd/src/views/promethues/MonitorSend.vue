@@ -187,13 +187,13 @@ import {
   createMonitorSendGroupApi,
   updateMonitorSendGroupApi,
   deleteMonitorSendGroupApi,
+  type MonitorSendGroup
 } from '#/api/core/prometheus_send_group';
 import { getUserList } from '#/api/core/user';
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus_scrape_pool';
-import { getAllOnDutyGroupApi } from '#/api/core/prometheus_onduty';
-import type { SendGroupItem } from '#/api/core/prometheus_send_group';
+import { getMonitorOnDutyGroupListApi } from '#/api/core/prometheus_onduty';
+import type { MonitorOnDutyGroup } from '#/api/core/prometheus_onduty';
 import type { ScrapePoolItem } from '#/api/core/prometheus_scrape_pool';
-import type { OnDutyGroupItem } from '#/api/core/prometheus_onduty';
 import type { FormInstance } from 'ant-design-vue';
 
 // 分页相关
@@ -240,7 +240,7 @@ const columns = [
     dataIndex: 'enable',
     key: 'enable',
     width: 100,
-    customRender: ({ record }: { record: SendGroupItem }) =>
+    customRender: ({ record }: { record: MonitorSendGroup }) =>
       record.enable ? '启用' : '禁用',
   },
   {
@@ -254,7 +254,7 @@ const columns = [
     dataIndex: 'send_resolved',
     key: 'send_resolved',
     width: 150,
-    customRender: ({ record }: { record: SendGroupItem }) =>
+    customRender: ({ record }: { record: MonitorSendGroup }) =>
       record.send_resolved ? '是' : '否',
   },
   {
@@ -262,7 +262,7 @@ const columns = [
     dataIndex: 'need_upgrade',
     key: 'need_upgrade',
     width: 100,
-    customRender: ({ record }: { record: SendGroupItem }) =>
+    customRender: ({ record }: { record: MonitorSendGroup }) =>
       record.need_upgrade ? '需要' : '不需要',
   },
   {
@@ -274,10 +274,10 @@ const columns = [
   },
 ];
 
-const data = reactive<SendGroupItem[]>([]);
+const data = reactive<MonitorSendGroup[]>([]);
 const searchText = ref('');
 const scrapePools = ref<ScrapePoolItem[]>([]);
-const onDutyGroups = ref<OnDutyGroupItem[]>([]);
+const onDutyGroups = ref<MonitorOnDutyGroup[]>([]);
 const isModalVisible = ref(false);
 const form = reactive({
   id: 0,
@@ -347,7 +347,7 @@ const showAddModal = () => {
   isModalVisible.value = true;
 };
 
-const showEditModal = (record: SendGroupItem) => {
+const showEditModal = (record: MonitorSendGroup) => {
   Object.assign(form, {
     ...record,
     enable: record.enable,
@@ -355,7 +355,7 @@ const showEditModal = (record: SendGroupItem) => {
     need_upgrade: record.need_upgrade,
     static_receive_users: record.static_receive_users || [],
     notify_methods: record.notify_methods || [],
-    first_upgrade_users: record.first_upgrade_users || [],
+    first_upgrade_users: record.monitor_send_group_first_upgrade_users || [],
     second_upgrade_users: record.second_upgrade_users || [],
   });
 
@@ -420,7 +420,7 @@ const handleSubmit = async () => {
   }
 };
 
-const handleDelete = (record: SendGroupItem) => {
+const handleDelete = (record: MonitorSendGroup) => {
   Modal.confirm({
     title: '确认删除',
     content: `您确定要删除发送组 "${record.name_zh}" 吗？`,
@@ -475,7 +475,11 @@ const fetchScrapePools = async () => {
 // 获取值班组列表 
 const fetchOnDutyGroups = async () => {
   try {
-    const response = await getAllOnDutyGroupApi();
+    const response = await getMonitorOnDutyGroupListApi({
+      page: 1,
+      size: 100,
+      search: ''
+    });
     onDutyGroups.value = response.items;
   } catch (error: any) {
     message.error(error.message || '获取值班组列表失败');

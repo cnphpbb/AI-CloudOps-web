@@ -21,14 +21,11 @@
     <!-- 查询和操作工具栏 -->
     <div class="control-panel">
       <div class="search-filters">
-        <a-select
-          v-model:value="selectedCluster"
-          placeholder="选择集群"
-          class="control-item cluster-selector"
-          :loading="clustersLoading"
-          @change="handleClusterChange"
-        >
-          <template #suffixIcon><ClusterOutlined /></template>
+        <a-select v-model:value="selectedCluster" placeholder="选择集群" class="control-item cluster-selector"
+          :loading="clustersLoading" @change="handleClusterChange">
+          <template #suffixIcon>
+            <ClusterOutlined />
+          </template>
           <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
             <span class="cluster-option">
               <CloudServerOutlined />
@@ -36,15 +33,12 @@
             </span>
           </a-select-option>
         </a-select>
-        
-        <a-select
-          v-model:value="selectedNamespace"
-          placeholder="选择命名空间"
-          class="control-item namespace-selector"
-          :loading="namespacesLoading"
-          @change="handleNamespaceChange"
-        >
-          <template #suffixIcon><PartitionOutlined /></template>
+
+        <a-select v-model:value="selectedNamespace" placeholder="选择命名空间" class="control-item namespace-selector"
+          :loading="namespacesLoading" @change="handleNamespaceChange">
+          <template #suffixIcon>
+            <PartitionOutlined />
+          </template>
           <a-select-option v-for="ns in namespaces" :key="ns" :value="ns">
             <span class="namespace-option">
               <AppstoreOutlined />
@@ -52,33 +46,28 @@
             </span>
           </a-select-option>
         </a-select>
-        
-        <a-input-search
-          v-model:value="searchText"
-          placeholder="搜索 Pod 名称"
-          class="control-item search-input"
-          @search="onSearch"
-          allow-clear
-        >
-          <template #prefix><SearchOutlined /></template>
+
+        <a-input-search v-model:value="searchText" placeholder="搜索 Pod 名称" class="control-item search-input"
+          @search="onSearch" allow-clear>
+          <template #prefix>
+            <SearchOutlined />
+          </template>
         </a-input-search>
       </div>
-      
+
       <div class="action-buttons">
         <a-tooltip title="刷新数据">
           <a-button type="primary" class="refresh-btn" @click="getPods" :loading="loading">
-            <template #icon><ReloadOutlined /></template>
+            <template #icon>
+              <ReloadOutlined />
+            </template>
           </a-button>
         </a-tooltip>
-        
-        <a-button 
-          type="primary" 
-          danger 
-          class="delete-btn" 
-          @click="handleBatchDelete" 
-          :disabled="!selectedRows.length"
-        >
-          <template #icon><DeleteOutlined /></template>
+
+        <a-button type="primary" danger class="delete-btn" @click="handleBatchDelete" :disabled="!selectedRows.length">
+          <template #icon>
+            <DeleteOutlined />
+          </template>
           批量删除 {{ selectedRows.length ? `(${selectedRows.length})` : '' }}
         </a-button>
       </div>
@@ -98,7 +87,7 @@
           <div class="footer-text">{{ selectedNamespace }} 命名空间</div>
         </div>
       </div>
-      
+
       <div class="summary-card running-card">
         <div class="card-content">
           <div class="card-metric">
@@ -108,16 +97,12 @@
           <div class="card-title">运行中 Pods</div>
         </div>
         <div class="card-footer">
-          <a-progress 
-            :percent="runningPodsPercentage" 
-            :stroke-color="{ from: '#1890ff', to: '#52c41a' }" 
-            size="small" 
-            :show-info="false" 
-          />
+          <a-progress :percent="runningPodsPercentage" :stroke-color="{ from: '#1890ff', to: '#52c41a' }" size="small"
+            :show-info="false" />
           <div class="footer-text">{{ runningPodsPercentage }}% 运行正常</div>
         </div>
       </div>
-      
+
       <div class="summary-card problem-card">
         <div class="card-content">
           <div class="card-metric">
@@ -127,16 +112,11 @@
           <div class="card-title">问题 Pods</div>
         </div>
         <div class="card-footer">
-          <a-progress 
-            :percent="problemPodsPercentage" 
-            status="exception" 
-            size="small" 
-            :show-info="false"
-          />
+          <a-progress :percent="problemPodsPercentage" status="exception" size="small" :show-info="false" />
           <div class="footer-text">{{ problemPodsPercentage }}% 需要关注</div>
         </div>
       </div>
-      
+
       <div class="summary-card cluster-card">
         <div class="card-content">
           <div class="card-metric">
@@ -169,21 +149,13 @@
     </div>
 
     <!-- 表格视图 -->
-    <a-table
-      v-if="viewMode === 'table'"
-      :columns="columns"
-      :data-source="filteredPods"
-      :row-selection="rowSelection"
-      :loading="loading"
-      row-key="name"
-      :pagination="{ 
-        pageSize: 10, 
-        showSizeChanger: true, 
+    <a-table v-if="viewMode === 'table'" :columns="columns" :data-source="filteredPods" :row-selection="rowSelection"
+      :loading="loading" row-key="name" :pagination="{
+        pageSize: 10,
+        showSizeChanger: true,
         showQuickJumper: true,
         showTotal: (total: number) => `共 ${total} 条数据`
-      }"
-      class="services-table pod-table"
-    >
+      }" class="services-table pod-table">
       <!-- Pod名称列 -->
       <template #name="{ text }">
         <div class="pod-name">
@@ -191,14 +163,14 @@
           <span>{{ text }}</span>
         </div>
       </template>
-      
+
       <!-- 命名空间列 -->
       <template #namespace="{ text }">
         <a-tag class="namespace-tag">
           <AppstoreOutlined /> {{ text }}
         </a-tag>
       </template>
-      
+
       <!-- 状态列 -->
       <template #status="{ text }">
         <a-tag :color="getPodStatusColor(text)" class="status-tag">
@@ -228,26 +200,27 @@
         <div class="action-column">
           <a-tooltip title="查看 YAML">
             <a-button type="primary" ghost shape="circle" @click="viewPodYaml(record)">
-              <template #icon><CodeOutlined /></template>
+              <template #icon>
+                <CodeOutlined />
+              </template>
             </a-button>
           </a-tooltip>
-          
+
           <a-tooltip title="查看日志">
             <a-button type="primary" ghost shape="circle" @click="viewPodLogs(record)">
-              <template #icon><FileTextOutlined /></template>
+              <template #icon>
+                <FileTextOutlined />
+              </template>
             </a-button>
           </a-tooltip>
-          
+
           <a-tooltip title="删除 Pod">
-            <a-popconfirm
-              title="确定要删除该 Pod 吗?"
-              description="此操作不可撤销"
-              @confirm="handleDelete(record)"
-              ok-text="确定"
-              cancel-text="取消"
-            >
+            <a-popconfirm title="确定要删除该 Pod 吗?" description="此操作不可撤销" @confirm="handleDelete(record)" ok-text="确定"
+              cancel-text="取消">
               <a-button type="primary" danger ghost shape="circle">
-                <template #icon><DeleteOutlined /></template>
+                <template #icon>
+                  <DeleteOutlined />
+                </template>
               </a-button>
             </a-popconfirm>
           </a-tooltip>
@@ -273,7 +246,7 @@
                   {{ pod.status }}
                 </a-tag>
               </div>
-              
+
               <div class="card-content">
                 <div class="card-detail namespace-detail">
                   <span class="detail-label">命名空间:</span>
@@ -301,24 +274,25 @@
                   <span class="detail-value">{{ pod.containers?.length || 0 }}</span>
                 </div>
               </div>
-              
+
               <div class="card-footer card-action-footer">
                 <a-button type="primary" ghost size="small" @click="viewPodYaml(pod)">
-                  <template #icon><CodeOutlined /></template>
+                  <template #icon>
+                    <CodeOutlined />
+                  </template>
                   YAML
                 </a-button>
                 <a-button type="primary" ghost size="small" @click="viewPodLogs(pod)">
-                  <template #icon><FileTextOutlined /></template>
+                  <template #icon>
+                    <FileTextOutlined />
+                  </template>
                   日志
                 </a-button>
-                <a-popconfirm
-                  title="确定要删除该 Pod 吗?"
-                  @confirm="handleDelete(pod)"
-                  ok-text="确定"
-                  cancel-text="取消"
-                >
+                <a-popconfirm title="确定要删除该 Pod 吗?" @confirm="handleDelete(pod)" ok-text="确定" cancel-text="取消">
                   <a-button type="primary" danger ghost size="small">
-                    <template #icon><DeleteOutlined /></template>
+                    <template #icon>
+                      <DeleteOutlined />
+                    </template>
                     删除
                   </a-button>
                 </a-popconfirm>
@@ -330,13 +304,7 @@
     </div>
 
     <!-- Pod YAML 模态框 -->
-    <a-modal
-      v-model:visible="yamlModalVisible"
-      title="Pod YAML 配置"
-      width="800px"
-      class="yaml-modal"
-      :footer="null"
-    >
+    <a-modal v-model:open="yamlModalVisible" title="Pod YAML 配置" width="800px" class="yaml-modal" :footer="null">
       <a-alert v-if="selectedPod" class="yaml-info" type="info" show-icon>
         <template #message>
           <span>{{ selectedPod.name }} ({{ selectedPod.namespace }})</span>
@@ -347,7 +315,9 @@
       </a-alert>
       <div class="yaml-actions">
         <a-button type="primary" size="small" @click="copyYaml">
-          <template #icon><CopyOutlined /></template>
+          <template #icon>
+            <CopyOutlined />
+          </template>
           复制
         </a-button>
       </div>
@@ -355,13 +325,7 @@
     </a-modal>
 
     <!-- Pod 日志查看模态框 -->
-    <a-modal
-      v-model:visible="logModalVisible" 
-      title="Pod 日志查看"
-      width="800px"
-      :footer="null"
-      class="yaml-modal logs-modal"
-    >
+    <a-modal v-model:open="logModalVisible" title="Pod 日志查看" width="800px" :footer="null" class="yaml-modal logs-modal">
       <a-alert v-if="selectedPod" class="yaml-info" type="info" show-icon>
         <template #message>
           <span>{{ selectedPod.name }} ({{ selectedPod.namespace }})</span>
@@ -370,15 +334,13 @@
           <div>状态: {{ selectedPod.status }}</div>
         </template>
       </a-alert>
-      
+
       <div class="logs-toolbar">
-        <a-select
-          v-model:value="selectedContainer"
-          class="container-select"
-          placeholder="选择容器"
-          @change="handleContainerChange"
-        >
-          <template #suffixIcon><ContainerOutlined /></template>
+        <a-select v-model:value="selectedContainer" class="container-select" placeholder="选择容器"
+          @change="handleContainerChange">
+          <template #suffixIcon>
+            <ContainerOutlined />
+          </template>
           <a-select-option v-for="container in containers" :key="container" :value="container">
             <span class="container-option">
               <ContainerOutlined />
@@ -386,18 +348,22 @@
             </span>
           </a-select-option>
         </a-select>
-        
+
         <a-button type="primary" @click="fetchPodLogs" :disabled="!selectedContainer" class="logs-refresh-btn">
-          <template #icon><SyncOutlined /></template>
+          <template #icon>
+            <SyncOutlined />
+          </template>
           刷新日志
         </a-button>
-        
+
         <a-button type="primary" @click="copyLogs" :disabled="!podLogs">
-          <template #icon><CopyOutlined /></template>
+          <template #icon>
+            <CopyOutlined />
+          </template>
           复制
         </a-button>
       </div>
-      
+
       <a-spin :spinning="logsLoading">
         <div class="logs-container">
           <template v-if="podLogs">
@@ -427,19 +393,17 @@ import {
   getNamespacesByClusterIdApi,
   getAllClustersApi
 } from '#/api';
-import { 
+import {
   SyncOutlined,
   DeleteOutlined,
   SearchOutlined,
-  CloudServerOutlined, 
-  TableOutlined, 
-  AppstoreOutlined, 
+  CloudServerOutlined,
+  TableOutlined,
+  AppstoreOutlined,
   ReloadOutlined,
   CodepenOutlined,
-  EyeOutlined, 
   CodeOutlined,
   WarningOutlined,
-  ApiOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
   CopyOutlined,
@@ -469,7 +433,7 @@ const namespacesLoading = ref(false);
 const pods = ref<Pod[]>([]);
 const searchText = ref('');
 const selectedRows = ref<Pod[]>([]);
-const namespaces = ref<string[]>(['default']); 
+const namespaces = ref<string[]>(['default']);
 const selectedNamespace = ref('default');
 const yamlModalVisible = ref(false);
 const logModalVisible = ref(false);
@@ -478,7 +442,7 @@ const podLogs = ref('');
 const selectedPod = ref<Pod | null>(null);
 const selectedContainer = ref('');
 const containers = ref<string[]>([]);
-const clusters = ref<Array<{id: number, name: string}>>([]);
+const clusters = ref<Array<{ id: number, name: string }>>([]);
 const selectedCluster = ref<number>();
 const viewMode = ref<'table' | 'card'>('table');
 const selectedCardIds = ref<string[]>([]);
@@ -545,25 +509,25 @@ const selectedClusterName = computed(() => {
   return cluster ? cluster.name : '';
 });
 
-const runningPodsCount = computed(() => 
+const runningPodsCount = computed(() =>
   pods.value.filter(pod => pod.status === 'Running').length
 );
 
-const runningPodsPercentage = computed(() => 
+const runningPodsPercentage = computed(() =>
   pods.value.length > 0 ? Math.round((runningPodsCount.value / pods.value.length) * 100) : 0
 );
 
-const problemPodsCount = computed(() => 
+const problemPodsCount = computed(() =>
   pods.value.filter(pod => ['Failed', 'Unknown', 'Pending'].includes(pod.status)).length
 );
 
-const problemPodsPercentage = computed(() => 
+const problemPodsPercentage = computed(() =>
   pods.value.length > 0 ? Math.round((problemPodsCount.value / pods.value.length) * 100) : 0
 );
 
 // 根据卡片选择更新 selectedRows
 watch(selectedCardIds, (newValue) => {
-  selectedRows.value = pods.value.filter(pod => 
+  selectedRows.value = pods.value.filter(pod =>
     newValue.includes(pod.name)
   );
 });
@@ -644,7 +608,7 @@ const getClusters = async () => {
   try {
     const res = await getAllClustersApi();
     clusters.value = res || [];
-    
+
     // 如果有集群数据，默认选择第一个
     if (clusters.value.length > 0 && clusters.value[0]?.id) {
       selectedCluster.value = clusters.value[0].id;
@@ -690,7 +654,7 @@ const viewPodYaml = async (pod: Pod) => {
   selectedPod.value = pod;
   yamlModalVisible.value = true;
   podYaml.value = '加载中...';
-  
+
   try {
     const res = await getPodYamlApi(selectedCluster.value, pod.name, pod.namespace);
     podYaml.value = res;
@@ -708,13 +672,13 @@ const viewPodLogs = async (pod: Pod) => {
   podLogs.value = '';
   selectedContainer.value = '';
   logsLoading.value = true;
-  
+
   try {
     // 获取容器列表
     const res = await getContainersByPodNameApi(selectedCluster.value, pod.name, pod.namespace);
     if (res) {
       containers.value = res.map((container: { name: string }) => container.name);
-      
+
       // 如果有容器，自动选择第一个并获取日志
       if (containers.value.length > 0) {
         selectedContainer.value = containers.value[0] ?? '';
@@ -731,12 +695,12 @@ const viewPodLogs = async (pod: Pod) => {
 // 获取Pod日志
 const fetchPodLogs = async () => {
   if (!selectedPod.value || !selectedContainer.value || !selectedCluster.value) return;
-  
+
   logsLoading.value = true;
   try {
     const logs = await getContainerLogsApi(
       selectedCluster.value,
-      selectedPod.value.name, 
+      selectedPod.value.name,
       selectedContainer.value,
       selectedPod.value.namespace
     );
@@ -781,13 +745,13 @@ const handleDelete = async (pod: Pod) => {
 // 批量删除Pod
 const handleBatchDelete = async () => {
   if (!selectedRows.value.length || !selectedCluster.value) return;
-  
+
   try {
     loading.value = true;
-    const promises = selectedRows.value.map(pod => 
+    const promises = selectedRows.value.map(pod =>
       deletePodApi(selectedCluster.value!, pod.name, pod.namespace)
     );
-    
+
     await Promise.all(promises);
     message.success(`成功删除 ${selectedRows.value.length} 个Pod`);
     selectedRows.value = [];
@@ -930,13 +894,17 @@ onMounted(() => {
   font-weight: 500;
 }
 
-.cluster-option, .namespace-option, .container-option {
+.cluster-option,
+.namespace-option,
+.container-option {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.cluster-option :deep(svg), .namespace-option :deep(svg), .container-option :deep(svg) {
+.cluster-option :deep(svg),
+.namespace-option :deep(svg),
+.container-option :deep(svg) {
   margin-right: 4px;
 }
 
@@ -1166,7 +1134,8 @@ onMounted(() => {
 }
 
 /* 卡片样式优化 */
-.pod-card, .service-card {
+.pod-card,
+.service-card {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
@@ -1180,7 +1149,8 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.pod-card:hover, .service-card:hover {
+.pod-card:hover,
+.service-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
@@ -1193,14 +1163,16 @@ onMounted(() => {
   position: relative;
 }
 
-.pod-title, .service-title {
+.pod-title,
+.service-title {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-right: 45px;
 }
 
-.pod-title h3, .service-title h3 {
+.pod-title h3,
+.service-title h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
@@ -1379,8 +1351,9 @@ onMounted(() => {
   .card-checkbox-group {
     justify-content: space-around;
   }
-  
-  .pod-card, .service-card {
+
+  .pod-card,
+  .service-card {
     width: 320px;
   }
 }
@@ -1390,12 +1363,13 @@ onMounted(() => {
     flex-direction: column;
     align-items: center;
   }
-  
-  .pod-card, .service-card {
+
+  .pod-card,
+  .service-card {
     width: 100%;
     max-width: 450px;
   }
-  
+
   .card-action-footer {
     flex-wrap: wrap;
   }

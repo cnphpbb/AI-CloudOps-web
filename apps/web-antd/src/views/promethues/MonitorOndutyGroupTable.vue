@@ -23,39 +23,30 @@
     <!-- 日历展示区 -->
     <div class="dashboard-card calendar-container">
       <div class="calendar">
-        <div
-          class="calendar-day prev-month"
-          v-for="day in previousMonthDays"
-          :key="'prev-' + day.date"
-        >
+        <div class="calendar-day prev-month" v-for="day in previousMonthDays" :key="'prev-' + day.date">
           <div class="day-header">
             <div class="day-number">{{ day.date.split('-')[2] }}</div>
             <div class="day-weekday">{{ day.weekday }}</div>
           </div>
           <div class="day-content">
-            <div class="day-user" :class="{'no-user': !day.user_id}">
+            <div class="day-user" :class="{ 'no-user': !day.user_id }">
               {{ day.user_id ? `值班人: ${createUserName}` : '没有找到值班人' }}
             </div>
           </div>
         </div>
 
-        <div
-          class="calendar-day"
-          v-for="day in daysInMonth"
-          :key="day.date"
-          @click="isCurrentMonth(day.date) ? openSwapModal(day) : null"
-          :class="{
+        <div class="calendar-day" v-for="day in daysInMonth" :key="day.date"
+          @click="isCurrentMonth(day.date) ? openSwapModal(day) : null" :class="{
             'has-user': day.user_id,
             'no-user': !day.user_id,
             'disabled': !isCurrentMonth(day.date),
-          }"
-        >
+          }">
           <div class="day-header">
             <div class="day-number">{{ day.date.split('-')[2] }}</div>
             <div class="day-weekday">{{ day.weekday }}</div>
           </div>
           <div class="day-content">
-            <div class="day-user" :class="{'no-user': !day.user_id}">
+            <div class="day-user" :class="{ 'no-user': !day.user_id }">
               {{ day.user_id ? `值班人: ${createUserName}` : '没有找到值班人' }}
             </div>
           </div>
@@ -64,14 +55,8 @@
     </div>
 
     <!-- 换班模态框 -->
-    <a-modal 
-      title="换班记录" 
-      v-model:visible="isSwapModalVisible" 
-      @ok="handleSwap" 
-      @cancel="closeSwapModal"
-      :width="500"
-      class="custom-modal"
-    >
+    <a-modal title="换班记录" v-model:visible="isSwapModalVisible" @ok="handleSwap" @cancel="closeSwapModal" :width="500"
+      class="custom-modal">
       <a-form ref="swapFormRef" :model="swapForm" layout="vertical" class="custom-form">
         <div class="form-section">
           <div class="section-title">换班信息</div>
@@ -99,7 +84,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { message } from 'ant-design-vue';
-import { getOnDutyApi, getOnDutyFuturePlanApi, createOnDutyChangeApi } from '#/api/core/prometheus_onduty'; 
+import { getMonitorOnDutyGroupDetailApi, getMonitorOnDutyGroupFuturePlanApi, createMonitorOnDutyGroupChangeApi } from '#/api/core/prometheus_onduty';
 
 const dutyGroupName = ref('');
 const createUserName = ref('');
@@ -147,11 +132,11 @@ const isCurrentMonth = (dateStr: string | number | Date) => {
 const fetchDutyGroups = async () => {
   try {
     const id = parseInt(route.query.id as string) || 0;
-    const response = await getOnDutyApi(id);
+    const response = await getMonitorOnDutyGroupDetailApi(id);
     if (response) {
       dutyGroupName.value = response.name || '未知值班组';
       totalOnDutyUsers.value = response.members ? response.members.length : 0;
-      createUserName.value = response.create_user_name || '';
+      createUserName.value = response.creator_name || '';
     } else {
       message.error('返回数据格式不正确');
     }
@@ -174,17 +159,9 @@ const fetchDutySchedule = async () => {
   const id = parseInt(route.query.id as string) || 0;
 
   try {
-    const currentMonthResponse = await getOnDutyFuturePlanApi({
-      id: id,
-      start_time: startTime.toISOString().split('T')[0] as string,
-      end_time: endTime.toISOString().split('T')[0] as string,
-    });
+    const currentMonthResponse = await getMonitorOnDutyGroupFuturePlanApi(id);
 
-    const previousMonthResponse = await getOnDutyFuturePlanApi({
-      id: id,
-      start_time: previousMonthStartTime.toISOString().split('T')[0] as string,
-      end_time: previousMonthEndTime.toISOString().split('T')[0] as string,
-    });
+    const previousMonthResponse = await getMonitorOnDutyGroupFuturePlanApi(id);
 
     const currentDutyDetails = currentMonthResponse.details || [];
     const previousDutyDetails = previousMonthResponse.details || [];
@@ -239,9 +216,9 @@ const handleSwap = async () => {
     origin_user_id: getOriginUserId(swapForm.date) as number, // 动态获取原值班人ID
     on_duty_user_id: swapForm.on_duty_user_id,
   };
-  
+
   try {
-    await createOnDutyChangeApi(payload);
+    await createMonitorOnDutyGroupChangeApi(payload);
     message.success('换班成功');
     closeSwapModal();
     fetchDutySchedule(); // 刷新值班表
