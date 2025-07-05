@@ -52,6 +52,39 @@ export interface MonitorOnDutyHistory {
   pool_name: string;
 }
 
+// 新增未来排班计划数据结构
+export interface UserInfo {
+  id: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: number;
+  username: string;
+  real_name: string;
+  domain: string;
+  desc: string;
+  avatar: string;
+  mobile: string;
+  email: string;
+  fei_shu_user_id: string;
+  account_type: number;
+  home_path: string;
+  enable: number;
+  apis: any;
+}
+
+export interface FuturePlanDetail {
+  date: string;
+  user: UserInfo;
+  origin_user: string;
+}
+
+export interface FuturePlanResponse {
+  details: FuturePlanDetail[];
+  map: Record<string, string>; // 日期到用户名的映射
+  user_name_map: Record<string, string>; // 日期到用户账号的映射
+  origin_user_map: Record<string, string>; // 日期到原始用户的映射
+}
+
 export interface GetOnDutyListParams {
   page: number;
   size: number;
@@ -94,7 +127,9 @@ export const createMonitorOnDutyGroupApi = (data: createOnDutyReq) => {
   return requestClient.post('/monitor/onduty_groups/create', data);
 };
 
-export const createMonitorOnDutyGroupChangeApi = (data: createOnDutychangeReq) => {
+export const createMonitorOnDutyGroupChangeApi = (
+  data: createOnDutychangeReq,
+) => {
   return requestClient.post('/monitor/onduty_groups/changes', data);
 };
 
@@ -110,6 +145,14 @@ export const getMonitorOnDutyGroupDetailApi = (id: number) => {
   return requestClient.get(`/monitor/onduty_groups/detail/${id}`);
 };
 
-export const getMonitorOnDutyGroupFuturePlanApi = (id: number) => {
-  return requestClient.get(`/monitor/onduty_groups/future_plan/${id}`);
+export const getMonitorOnDutyGroupFuturePlanApi = (
+  id: number,
+  params?: { start_time: string; end_time: string },
+) => {
+  return requestClient.get<FuturePlanResponse>(
+    `/monitor/onduty_groups/future_plan/${id}`,
+    {
+      params,
+    },
+  );
 };

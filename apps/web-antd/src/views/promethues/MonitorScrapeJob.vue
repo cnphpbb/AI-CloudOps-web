@@ -377,14 +377,14 @@
           <a-descriptions-item label="协议方案">{{ detailDialog.form.scheme }}</a-descriptions-item>
           <a-descriptions-item label="监控路径">{{ detailDialog.form.metrics_path }}</a-descriptions-item>
           <a-descriptions-item label="目标地址">{{ detailDialog.form.ip_address }}:{{ detailDialog.form.port
-            }}</a-descriptions-item>
+          }}</a-descriptions-item>
           <a-descriptions-item label="采集间隔">{{ detailDialog.form.scrape_interval }}秒</a-descriptions-item>
           <a-descriptions-item label="采集超时">{{ detailDialog.form.scrape_timeout }}秒</a-descriptions-item>
           <a-descriptions-item label="刷新间隔">{{ detailDialog.form.refresh_interval }}秒</a-descriptions-item>
           <a-descriptions-item label="关联采集池">{{ getPoolName(detailDialog.form.pool_id) }}</a-descriptions-item>
           <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
           <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '')
-            }}</a-descriptions-item>
+          }}</a-descriptions-item>
           <a-descriptions-item v-if="detailDialog.form.service_discovery_type === 'k8s'" label="Kubernetes角色">
             {{ detailDialog.form.kubernetes_sd_role || '未配置' }}
           </a-descriptions-item>
@@ -435,16 +435,6 @@ interface Pool {
 }
 
 // 响应式对话框宽度
-const dialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '80%';
-    return '600px';
-  }
-  return '600px';
-});
-
 const formDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
     const width = window.innerWidth;
