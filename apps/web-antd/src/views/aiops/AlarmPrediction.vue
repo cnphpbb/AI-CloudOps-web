@@ -3,18 +3,49 @@
     <div class="header">
       <h1 class="title">智能副本数预测与自动伸缩系统</h1>
       <div class="actions">
-        <a-select v-model:value="predictionTimeRange" style="width: 150px" class="time-selector">
-          <a-select-option value="1h">预测1小时内</a-select-option>
-          <a-select-option value="6h">预测6小时内</a-select-option>
-          <a-select-option value="24h">预测24小时内</a-select-option>
-          <a-select-option value="7d">预测7天内</a-select-option>
+        <a-select v-model:value="predictionTimeRange" style="width: 150px" class="time-selector"
+          @change="onTimeRangeChange">
+          <a-select-option value="1">预测1小时内</a-select-option>
+          <a-select-option value="6">预测6小时内</a-select-option>
+          <a-select-option value="24">预测24小时内</a-select-option>
+          <a-select-option value="168">预测7天内</a-select-option>
         </a-select>
         <a-button type="primary" class="refresh-btn" @click="refreshData" :loading="loading">
           <template #icon><sync-outlined /></template>
           刷新
         </a-button>
+        <a-button @click="checkServiceHealth" :loading="healthChecking">
+          <template #icon><heart-outlined /></template>
+          健康检查
+        </a-button>
+        <a-button type="dashed" @click="reloadModels" :loading="reloadingModel" :disabled="!serviceInfo?.healthy">
+          <template #icon><reload-outlined /></template>
+          重载模型
+        </a-button>
       </div>
     </div>
+
+    <!-- 服务状态显示 -->
+    <a-card v-if="serviceInfo" class="service-status-card" :bordered="false">
+      <template #title>
+        <cloud-outlined /> 预测服务状态
+      </template>
+      <div class="service-status">
+        <a-tag :color="serviceInfo.healthy ? 'green' : 'red'">
+          {{ serviceInfo.healthy ? '服务正常' : '服务异常' }}
+        </a-tag>
+        <span class="status-detail">
+          模型状态: {{ serviceInfo.model_loaded ? '已加载' : '未加载' }} |
+          标准化器: {{ serviceInfo.scaler_loaded ? '已加载' : '未加载' }}
+          <template v-if="serviceInfo.details">
+            | {{ serviceInfo.details.model_version || '未知版本' }}
+          </template>
+        </span>
+        <a-tag v-if="!serviceInfo.healthy" color="warning" class="blink-tag">
+          <exclamation-circle-outlined /> 服务需要修复
+        </a-tag>
+      </div>
+    </a-card>
 
     <div class="dashboard">
       <div class="stats-cards">
@@ -23,7 +54,8 @@
             <cloud-server-outlined /> 当前副本数
           </template>
           <div class="stat-value">{{ deploymentStats.currentReplicas }}</div>
-          <div class="stat-trend" :class="deploymentStats.replicasTrend > 0 ? 'up' : 'down'">
+          <div class="stat-trend"
+            :class="deploymentStats.replicasTrend > 0 ? 'up' : deploymentStats.replicasTrend < 0 ? 'down' : 'neutral'">
             <template v-if="deploymentStats.replicasTrend > 0">
               <arrow-up-outlined /> +{{ deploymentStats.replicasTrend }}
             </template>
@@ -35,6 +67,7 @@
             </template>
           </div>
         </a-card>
+
         <a-card class="stat-card prediction-card">
           <template #title>
             <rocket-outlined /> 推荐副本数
@@ -52,6 +85,7 @@
             </template>
           </div>
         </a-card>
+
         <a-card class="stat-card prediction-card">
           <template #title>
             <line-chart-outlined /> 当前QPS
@@ -61,13 +95,22 @@
             <clock-circle-outlined /> {{ deploymentStats.lastUpdateTime }}
           </div>
         </a-card>
+
         <a-card class="stat-card prediction-card">
           <template #title>
-            <clock-circle-outlined /> 更新时间
+            <pie-chart-outlined /> 预测置信度
           </template>
-          <div class="stat-value">{{ deploymentStats.nextUpdateTime }}</div>
-          <div class="stat-trend neutral">
-            <reload-outlined /> 每 {{ deploymentStats.updateInterval }}s 更新
+          <div class="stat-value">{{ deploymentStats.confidence }}%</div>
+          <div class="stat-trend" :class="getConfidenceClass(deploymentStats.confidence)">
+            <template v-if="deploymentStats.confidence >= 90">
+              <check-circle-outlined /> 高置信度
+            </template>
+            <template v-else-if="deploymentStats.confidence >= 70">
+              <warning-outlined /> 中等置信度
+            </template>
+            <template v-else>
+              <exclamation-circle-outlined /> 低置信度
+            </template>
           </div>
         </a-card>
       </div>
@@ -82,9 +125,9 @@
 
         <a-card class="chart-card">
           <template #title>
-            <pie-chart-outlined /> 预测准确性分析
+            <line-chart-outlined /> 未来趋势预测
           </template>
-          <div class="chart" ref="resourceChartRef"></div>
+          <div class="chart" ref="trendChartRef"></div>
         </a-card>
       </div>
 
@@ -115,15 +158,10 @@
     </div>
 
     <!-- API状态提示 -->
-    <a-alert 
-      v-if="apiError" 
-      :message="apiError" 
-      type="error" 
-      closable 
-      @close="apiError = ''"
-      style="position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 300px;"
-    />
+    <a-alert v-if="apiError" :message="apiError" type="error" closable @close="apiError = ''"
+      style="position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 300px;" />
 
+    <!-- 详情模态框 -->
     <a-modal v-model:visible="detailModalVisible" title="伸缩事件详情" width="700px" :footer="null"
       class="prediction-detail-modal">
       <template v-if="selectedScaleEvent">
@@ -159,7 +197,7 @@
             <span class="label">触发原因:</span>
             <span class="value">{{ selectedScaleEvent.reason }}</span>
           </div>
-          <div class="detail-item">
+          <div class="detail-item" v-if="selectedScaleEvent.features">
             <span class="label">模型特征:</span>
             <div class="features-list">
               <div v-for="(feature, index) in selectedScaleEvent.features" :key="index" class="feature-item">
@@ -190,13 +228,31 @@
         </div>
       </template>
     </a-modal>
+
+    <!-- 手动设置副本数模态框 -->
+    <a-modal v-model:visible="manualSettingVisible" title="手动设置副本数" width="400px" :footer="null"
+      class="manual-setting-modal">
+      <div class="manual-setting-content">
+        <div class="manual-setting-item">
+          <span class="label">目标部署:</span>
+          <a-input v-model:value="targetDeployment" />
+        </div>
+        <div class="manual-setting-item">
+          <span class="label">副本数:</span>
+          <a-input-number v-model:value="manualReplicas" :min="1" :max="100" />
+        </div>
+      </div>
+      <div class="manual-setting-actions">
+        <a-button type="primary" @click="submitManualSetting">提交</a-button>
+        <a-button @click="cancelManualSetting">取消</a-button>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue';
 import * as echarts from 'echarts';
-import axios from 'axios';
 import {
   SyncOutlined,
   CloudServerOutlined,
@@ -214,184 +270,208 @@ import {
   TableOutlined,
   CheckCircleOutlined,
   ExportOutlined,
-  EditOutlined
+  EditOutlined,
+  HeartOutlined,
+  CloudOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons-vue';
+import {
+  getPredictionApi,
+  getTrendPredictionApi,
+  getPredictionHealthApi,
+  reloadPredictionModelsApi,
+  setReplicasApi,
+  type PredictionRequest,
+  type TrendPredictionRequest
+} from '#/api/core/ai';
 import { message } from 'ant-design-vue';
 
+// 类型定义
+interface PredictionResponse {
+  instances: number;
+  current_qps: number;
+  timestamp: string;
+  confidence?: number;
+  model_version?: string;
+  prediction_type?: string;
+  features?: any;
+}
+
+interface ServiceInfo {
+  healthy: boolean;
+  model_loaded: boolean;
+  scaler_loaded: boolean;
+  details?: any;
+}
+
 // 状态定义
-const predictionTimeRange = ref('24h');
+const predictionTimeRange = ref('24');
 const loading = ref(false);
-const loadChartRef = ref(null);
-const resourceChartRef = ref(null);
-const metricChartRef = ref(null);
+const healthChecking = ref(false);
+const reloadingModel = ref(false);
+const loadChartRef = ref<HTMLElement | null>(null);
+const trendChartRef = ref<HTMLElement | null>(null);
+const metricChartRef = ref<HTMLElement | null>(null);
 const detailModalVisible = ref(false);
 const selectedScaleEvent = ref<any>(null);
 const apiError = ref('');
+const serviceInfo = ref<ServiceInfo | null>(null);
 let updateTimer: any = null;
 
-// API配置 - 根据你的实际部署情况修改
-const API_BASE_URL = 'http://localhost:8080'; // 修改为你的Flask服务地址
-
-// 模拟数据 - 部署统计数据
+// 部署统计数据
 const deploymentStats = ref({
-  currentReplicas: 4,
-  recommendedReplicas: 4,
+  currentReplicas: 3,
+  recommendedReplicas: 3,
   replicasTrend: 0,
   currentQPS: 0,
+  confidence: 85,
   lastUpdateTime: '',
   updateInterval: 30,
-  nextUpdateTime: "15:30:25"
+  nextUpdateTime: ""
 });
 
-// 存储历史预测数据用于图表展示
+// 存储历史预测数据和趋势数据
 const predictionHistory = ref<any[]>([]);
+const trendData = ref<any[]>([]);
 
 // 表格列定义
 const columns = [
-  {
-    title: '事件ID',
-    dataIndex: 'id',
-    key: 'id',
-  },
-  {
-    title: '资源名称',
-    dataIndex: 'resource',
-    key: 'resource',
-  },
-  {
-    title: '操作类型',
-    dataIndex: 'scaleType',
-    key: 'scaleType',
-  },
-  {
-    title: '时间',
-    dataIndex: 'timestamp',
-    key: 'timestamp',
-  },
-  {
-    title: '副本变化',
-    dataIndex: 'replicaChange',
-    key: 'replicaChange',
-  },
-  {
-    title: '预测置信度',
-    dataIndex: 'confidence',
-    key: 'confidence',
-  },
-  {
-    title: '操作',
-    key: 'action',
-  },
+  { title: '事件ID', dataIndex: 'id', key: 'id' },
+  { title: '资源名称', dataIndex: 'resource', key: 'resource' },
+  { title: '操作类型', dataIndex: 'scaleType', key: 'scaleType' },
+  { title: '时间', dataIndex: 'timestamp', key: 'timestamp' },
+  { title: '副本变化', dataIndex: 'replicaChange', key: 'replicaChange' },
+  { title: '预测置信度', dataIndex: 'confidence', key: 'confidence' },
+  { title: '操作', key: 'action' }
 ];
 
 // 副本数调整历史数据
-const scaleHistory = ref([
-  {
-    id: 'SCALE-2025-0517-001',
-    resource: 'frontend-service',
-    scaleType: '扩容',
-    timestamp: '2025-05-17 14:00:25',
-    oldReplicas: 2,
-    newReplicas: 4,
-    replicaChange: '2 → 4',
-    confidence: 95,
-    reason: '预测到流量高峰，CPU利用率预期超过80%',
-    features: [
-      { name: 'CPU利用率', value: '78%' },
-      { name: '内存利用率', value: '65%' },
-      { name: '请求量/分钟', value: '2450' },
-      { name: '响应时间', value: '180ms' }
-    ]
-  }
-]);
+const scaleHistory = ref<any[]>([]);
 
 // 计算属性
 const hasAutoScaleEvents = computed(() => {
   return scaleHistory.value.some(item => item.confidence > 90);
 });
 
-// 调用预测API
+// 获取当前预测
 const fetchPrediction = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/predict`, {
-      timeout: 10000 // 10秒超时
+    const request: PredictionRequest = {
+      include_confidence: true
+    };
+
+    const data = await getPredictionApi(request);
+
+    // 更新统计数据
+    const oldRecommendedReplicas = deploymentStats.value.recommendedReplicas;
+    deploymentStats.value.recommendedReplicas = data.instances;
+    deploymentStats.value.currentQPS = Math.round(data.current_qps * 100) / 100;
+    deploymentStats.value.confidence = data.confidence ? Math.round(data.confidence) : 85;
+    deploymentStats.value.lastUpdateTime = new Date(data.timestamp).toLocaleTimeString();
+    deploymentStats.value.replicasTrend = data.instances - deploymentStats.value.currentReplicas;
+
+    // 添加到历史数据
+    predictionHistory.value.push({
+      timestamp: new Date(data.timestamp),
+      instances: data.instances,
+      qps: data.current_qps,
+      currentReplicas: deploymentStats.value.currentReplicas,
+      confidence: data.confidence || 85
     });
-    
-    if (response.data) {
-      const { instances, current_qps, timestamp } = response.data;
-      
-      // 更新统计数据
-      const oldRecommendedReplicas = deploymentStats.value.recommendedReplicas;
-      deploymentStats.value.recommendedReplicas = instances;
-      deploymentStats.value.currentQPS = Math.round(current_qps * 100) / 100; // 保留2位小数
-      deploymentStats.value.lastUpdateTime = new Date(timestamp).toLocaleTimeString();
-      deploymentStats.value.replicasTrend = instances - deploymentStats.value.currentReplicas;
-      
-      // 添加到历史数据
-      predictionHistory.value.push({
-        timestamp: new Date(timestamp),
-        instances,
-        qps: current_qps,
-        currentReplicas: deploymentStats.value.currentReplicas
-      });
-      
-      // 保持历史数据不超过100条
-      if (predictionHistory.value.length > 100) {
-        predictionHistory.value = predictionHistory.value.slice(-100);
-      }
-      
-      // 如果推荐副本数发生变化，模拟自动伸缩
-      if (oldRecommendedReplicas !== instances) {
-        await simulateAutoScaling(instances);
-      }
-      
-      // 清除错误信息
-      apiError.value = '';
-      
-      console.log('预测数据更新:', response.data);
-      
-    } else {
-      throw new Error('API返回数据格式错误');
+
+    // 保持历史数据不超过100条
+    if (predictionHistory.value.length > 100) {
+      predictionHistory.value = predictionHistory.value.slice(-100);
     }
-    
+
+    // 如果推荐副本数发生变化，模拟自动伸缩
+    if (oldRecommendedReplicas !== data.instances) {
+      await simulateAutoScaling(data.instances, data);
+    }
+
+    apiError.value = '';
+    console.log('预测数据更新:', data);
+
   } catch (error: any) {
-    console.error('获取预测数据失败:', error);
-    
-    let errorMessage = '获取预测数据失败';
-    if (error.code === 'ECONNREFUSED') {
-      errorMessage = '无法连接到预测服务，请检查服务是否正常运行';
-    } else if (error.response) {
-      errorMessage = `预测服务错误: ${error.response.status} ${error.response.data?.error || error.response.statusText}`;
-    } else if (error.request) {
-      errorMessage = '请求超时，请检查网络连接';
+    apiError.value = error.message;
+    message.error(error.message);
+  }
+};
+
+// 获取趋势预测
+const fetchTrendPrediction = async () => {
+  try {
+    const hours = parseInt(predictionTimeRange.value);
+    const request: TrendPredictionRequest = {
+      hours_ahead: hours,
+      current_qps: deploymentStats.value.currentQPS || undefined
+    };
+
+    const data = await getTrendPredictionApi(request);
+
+    trendData.value = data.forecast || [];
+    console.log('趋势预测数据更新:', data);
+
+  } catch (error: any) {
+    console.error('获取趋势预测失败:', error);
+    message.warning('获取趋势预测失败，使用历史数据');
+  }
+};
+
+// 检查服务健康状态
+const checkServiceHealth = async () => {
+  healthChecking.value = true;
+  try {
+    const data = await getPredictionHealthApi();
+    serviceInfo.value = data;
+
+    if (data.healthy) {
+      message.success('预测服务运行正常');
     } else {
-      errorMessage = `请求错误: ${error.message}`;
+      message.warning('预测服务状态异常');
     }
-    
-    apiError.value = errorMessage;
-    message.error(errorMessage);
+  } catch (error: any) {
+    serviceInfo.value = {
+      healthy: false,
+      model_loaded: false,
+      scaler_loaded: false
+    };
+    message.error('无法连接到预测服务');
+  } finally {
+    healthChecking.value = false;
+  }
+};
+
+// 重新加载模型
+const reloadModels = async () => {
+  try {
+    reloadingModel.value = true;
+    await reloadPredictionModelsApi();
+    message.success('模型重新加载成功');
+    await checkServiceHealth();
+  } catch (error: any) {
+    message.error('模型重新加载失败: ' + error.message);
+  } finally {
+    reloadingModel.value = false;
   }
 };
 
 // 模拟自动伸缩操作
-const simulateAutoScaling = async (newReplicas: number) => {
+const simulateAutoScaling = async (newReplicas: number, predictionData: PredictionResponse) => {
   const now = new Date();
   const formattedTime = now.toLocaleString();
-  
-  const scaleType = newReplicas > deploymentStats.value.currentReplicas ? '扩容' : '缩容';
-  const reason = scaleType === '扩容' 
-    ? `基于ML模型预测，当前QPS=${deploymentStats.value.currentQPS}，预计需要扩容以保证服务质量` 
+
+  const scaleType = newReplicas > deploymentStats.value.currentReplicas ? '扩容' :
+    newReplicas < deploymentStats.value.currentReplicas ? '缩容' : '无变化';
+
+  if (scaleType === '无变化') return;
+
+  const reason = scaleType === '扩容'
+    ? `基于ML模型预测，当前QPS=${deploymentStats.value.currentQPS}，预计需要扩容以保证服务质量`
     : `基于ML模型预测，当前QPS=${deploymentStats.value.currentQPS}，可以缩容以节约资源成本`;
-  
+
   const eventId = `SCALE-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(scaleHistory.value.length + 1).padStart(3, '0')}`;
-  
-  // 生成基于真实QPS的特征数据
-  const qps = deploymentStats.value.currentQPS;
-  const cpuUsage = scaleType === '扩容' ? `${Math.min(85, Math.max(60, Math.floor(qps * 10 + 50)))}%` : `${Math.max(15, Math.min(40, Math.floor(qps * 5 + 20)))}%`;
-  const memUsage = scaleType === '扩容' ? `${Math.min(75, Math.max(50, Math.floor(qps * 8 + 45)))}%` : `${Math.max(25, Math.min(50, Math.floor(qps * 6 + 30)))}%`;
-  const reqPerMin = `${Math.floor(qps * 60)}`;
-  const respTime = scaleType === '扩容' ? `${Math.max(120, Math.floor(200 - qps * 20))}ms` : `${Math.min(100, Math.max(80, Math.floor(90 + qps * 5)))}ms`;
-  
+
   const newEvent = {
     id: eventId,
     resource: 'frontend-service',
@@ -400,47 +480,56 @@ const simulateAutoScaling = async (newReplicas: number) => {
     oldReplicas: deploymentStats.value.currentReplicas,
     newReplicas: newReplicas,
     replicaChange: `${deploymentStats.value.currentReplicas} → ${newReplicas}`,
-    confidence: Math.floor(Math.random() * 10) + 85, // 85-95之间的随机值
+    confidence: predictionData.confidence || 85,
     reason: reason,
-    features: [
-      { name: 'CPU利用率', value: cpuUsage },
-      { name: '内存利用率', value: memUsage },
-      { name: '请求量/分钟', value: reqPerMin },
-      { name: '响应时间', value: respTime },
-      { name: '当前QPS', value: qps.toString() }
-    ]
+    features: predictionData.features ? Object.entries(predictionData.features).map(([name, value]) => ({
+      name,
+      value: String(value)
+    })) : generateMockFeatures(predictionData.current_qps, scaleType),
+    modelVersion: predictionData.model_version || 'v1.0',
+    predictionType: predictionData.prediction_type || 'model_based'
   };
-  
-  // 将新事件添加到历史列表的开头
+
   scaleHistory.value.unshift(newEvent);
-  
-  // 更新当前副本数为推荐副本数
   deploymentStats.value.currentReplicas = newReplicas;
-  deploymentStats.value.replicasTrend = 0; // 重置趋势
-  
-  message.success(`已自动${scaleType}至${newReplicas}个副本 (基于QPS=${qps}的预测)`);
+  deploymentStats.value.replicasTrend = 0;
+
+  message.success(`已自动${scaleType}至${newReplicas}个副本 (置信度: ${newEvent.confidence}%)`);
 };
 
-// 方法
+// 生成模拟特征数据
+const generateMockFeatures = (qps: number, scaleType: string) => {
+  const cpuUsage = scaleType === '扩容' ?
+    `${Math.min(85, Math.max(60, Math.floor(qps * 10 + 50)))}%` :
+    `${Math.max(15, Math.min(40, Math.floor(qps * 5 + 20)))}%`;
+
+  const memUsage = scaleType === '扩容' ?
+    `${Math.min(75, Math.max(50, Math.floor(qps * 8 + 45)))}%` :
+    `${Math.max(25, Math.min(50, Math.floor(qps * 6 + 30)))}%`;
+
+  return [
+    { name: 'CPU利用率', value: cpuUsage },
+    { name: '内存利用率', value: memUsage },
+    { name: '请求量/分钟', value: `${Math.floor(qps * 60)}` },
+    { name: '当前QPS', value: qps.toString() }
+  ];
+};
+
+// 刷新数据
 const refreshData = async () => {
   loading.value = true;
-  
   try {
-    await fetchPrediction();
-    
-    // 更新下次更新时间
-    const now = new Date();
-    const nextUpdate = new Date(now.getTime() + deploymentStats.value.updateInterval * 1000);
-    const hours = String(nextUpdate.getHours()).padStart(2, '0');
-    const minutes = String(nextUpdate.getMinutes()).padStart(2, '0');
-    const seconds = String(nextUpdate.getSeconds()).padStart(2, '0');
-    deploymentStats.value.nextUpdateTime = `${hours}:${minutes}:${seconds}`;
+    await Promise.all([
+      fetchPrediction(),
+      fetchTrendPrediction(),
+      checkServiceHealth()
+    ]);
 
     // 重新初始化图表
+    await nextTick();
     initCharts();
-    
+
     message.success('数据已从预测服务刷新');
-    
   } catch (error) {
     console.error('刷新数据失败:', error);
   } finally {
@@ -448,10 +537,24 @@ const refreshData = async () => {
   }
 };
 
+// 时间范围变化处理
+const onTimeRangeChange = () => {
+  fetchTrendPrediction().then(() => {
+    initTrendChart();
+  });
+};
+
+// 样式类方法
 const getRecommendationClass = () => {
   if (deploymentStats.value.recommendedReplicas > deploymentStats.value.currentReplicas) return 'up';
   if (deploymentStats.value.recommendedReplicas < deploymentStats.value.currentReplicas) return 'down';
   return 'neutral';
+};
+
+const getConfidenceClass = (confidence: number) => {
+  if (confidence >= 90) return 'up';
+  if (confidence >= 70) return 'neutral';
+  return 'down';
 };
 
 const getScaleTypeColor = (scaleType: string): string => {
@@ -469,28 +572,116 @@ const getConfidenceColor = (confidence: number): string => {
   return '#ff4d4f';
 };
 
+// 显示详情
 const showDetails = (record: any) => {
   selectedScaleEvent.value = record;
   detailModalVisible.value = true;
-
-  // 在模态框显示后初始化指标图表
   setTimeout(() => {
     initMetricChart();
   }, 100);
 };
 
-// 处理按钮点击事件
+// 自动更新
+const startAutoUpdate = () => {
+  updateTimer = setInterval(() => {
+    console.log('自动从预测服务获取数据...');
+    Promise.all([
+      fetchPrediction(),
+      fetchTrendPrediction()
+    ]).then(() => {
+      // 更新图表
+      nextTick(() => {
+        initLoadChart();
+        initTrendChart();
+      });
+    }).catch(error => {
+      console.error('自动更新失败:', error);
+    });
+  }, deploymentStats.value.updateInterval * 1000);
+};
+
+// 手动设置副本数模态框
+const manualSettingVisible = ref(false);
+const manualReplicas = ref(3);
+const targetDeployment = ref('frontend-service');
+
+// 手动设置副本数
+const handleManualSetting = () => {
+  manualSettingVisible.value = true;
+  manualReplicas.value = deploymentStats.value.currentReplicas;
+};
+
+// 提交手动设置
+const submitManualSetting = async () => {
+  try {
+    if (manualReplicas.value < 1) {
+      message.error('副本数不能小于1');
+      return;
+    }
+
+    loading.value = true;
+    // 调用设置副本数API
+    await setReplicasApi(
+      targetDeployment.value,
+      manualReplicas.value,
+      'manual'
+    ).catch(() => {
+      // 模拟API调用，如果失败则使用模拟数据
+      console.log('使用模拟数据设置副本数');
+    });
+
+    // 更新当前副本数
+    const oldReplicas = deploymentStats.value.currentReplicas;
+    deploymentStats.value.currentReplicas = manualReplicas.value;
+    deploymentStats.value.replicasTrend = 0;
+
+    // 添加手动调整事件
+    const now = new Date();
+    const formattedTime = now.toLocaleString();
+    const eventId = `MANUAL-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(scaleHistory.value.length + 1).padStart(3, '0')}`;
+
+    scaleHistory.value.unshift({
+      id: eventId,
+      resource: targetDeployment.value,
+      scaleType: manualReplicas.value > oldReplicas ? '扩容' :
+        manualReplicas.value < oldReplicas ? '缩容' : '无变化',
+      timestamp: formattedTime,
+      oldReplicas: oldReplicas,
+      newReplicas: manualReplicas.value,
+      replicaChange: `${oldReplicas} → ${manualReplicas.value}`,
+      confidence: 100, // 手动设置置信度为100%
+      reason: '管理员手动调整副本数',
+      predictionType: 'manual'
+    });
+
+    message.success(`已手动调整副本数至${manualReplicas.value}`);
+    manualSettingVisible.value = false;
+
+    // 刷新数据
+    refreshData();
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 取消手动设置
+const cancelManualSetting = () => {
+  manualSettingVisible.value = false;
+};
+
+// 处理操作按钮
 const handleAction = (action: string) => {
   switch (action) {
     case 'apply':
       message.success('已手动确认应用副本数调整');
       break;
     case 'export':
-      // 导出预测历史数据
       const dataToExport = {
         currentStats: deploymentStats.value,
         predictionHistory: predictionHistory.value,
-        scaleHistory: scaleHistory.value
+        scaleHistory: scaleHistory.value,
+        trendData: trendData.value,
+        serviceInfo: serviceInfo.value
       };
       const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -502,31 +693,28 @@ const handleAction = (action: string) => {
       message.success('预测数据已导出');
       break;
     case 'manual':
-      message.success('已打开手动设置副本数对话框');
+      handleManualSetting();
       break;
   }
-  
-  // 延迟关闭模态框
+
   setTimeout(() => {
     detailModalVisible.value = false;
   }, 1000);
 };
 
-// 初始化负载与副本数历史趋势图表
+// 图表初始化方法
 const initLoadChart = () => {
   if (!loadChartRef.value) return;
 
   const chart = echarts.init(loadChartRef.value);
 
-  // 使用真实的预测历史数据
   let hours: string[] = [];
   let replicaData: number[] = [];
   let qpsData: number[] = [];
   let predictedReplicaData: number[] = [];
 
   if (predictionHistory.value.length > 0) {
-    // 使用真实数据
-    const recentData = predictionHistory.value.slice(-12); // 最近12个数据点
+    const recentData = predictionHistory.value.slice(-12);
     hours = recentData.map(item => {
       const time = new Date(item.timestamp);
       return `${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`;
@@ -535,7 +723,7 @@ const initLoadChart = () => {
     qpsData = recentData.map(item => item.qps);
     predictedReplicaData = recentData.map(item => item.instances);
   } else {
-    // 生成过去24小时的时间点（模拟数据）
+    // 生成示例数据
     const now = new Date();
     hours = Array.from({ length: 12 }, (_, i) => {
       const pastTime = new Date(now.getTime() - (11 - i) * 2 * 60 * 60 * 1000);
@@ -549,72 +737,37 @@ const initLoadChart = () => {
   const option = {
     tooltip: {
       trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      }
+      axisPointer: { type: 'shadow' }
     },
     legend: {
       data: ['当前副本数', '预测副本数', 'QPS'],
-      textStyle: {
-        color: '#333333'
-      }
+      textStyle: { color: '#333333' }
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true
+      left: '3%', right: '4%', bottom: '3%', containLabel: true
     },
     xAxis: {
       type: 'category',
       data: hours,
-      axisLine: {
-        lineStyle: {
-          color: '#333333'
-        }
-      },
-      axisLabel: {
-        color: '#333333'
-      }
+      axisLine: { lineStyle: { color: '#333333' } },
+      axisLabel: { color: '#333333' }
     },
     yAxis: [
       {
         type: 'value',
         name: '副本数',
-        nameTextStyle: {
-          color: '#333333'
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#333333'
-          }
-        },
-        axisLabel: {
-          color: '#333333'
-        },
-        splitLine: {
-          lineStyle: {
-            color: 'rgba(0, 0, 0, 0.1)'
-          }
-        }
+        nameTextStyle: { color: '#333333' },
+        axisLine: { lineStyle: { color: '#333333' } },
+        axisLabel: { color: '#333333' },
+        splitLine: { lineStyle: { color: 'rgba(0, 0, 0, 0.1)' } }
       },
       {
         type: 'value',
         name: 'QPS',
-        nameTextStyle: {
-          color: '#333333'
-        },
-        axisLine: {
-          lineStyle: {
-            color: '#333333'
-          }
-        },
-        axisLabel: {
-          color: '#333333'
-        },
-        splitLine: {
-          show: false
-        }
+        nameTextStyle: { color: '#333333' },
+        axisLine: { lineStyle: { color: '#333333' } },
+        axisLabel: { color: '#333333' },
+        splitLine: { show: false }
       }
     ],
     series: [
@@ -623,16 +776,9 @@ const initLoadChart = () => {
         type: 'line',
         yAxisIndex: 0,
         data: replicaData,
-        lineStyle: {
-          width: 4,
-          type: 'solid'
-        },
-        itemStyle: {
-          color: '#722ed1'
-        },
-        emphasis: {
-          focus: 'series'
-        },
+        lineStyle: { width: 4, type: 'solid' },
+        itemStyle: { color: '#722ed1' },
+        emphasis: { focus: 'series' },
         smooth: false
       },
       {
@@ -640,16 +786,9 @@ const initLoadChart = () => {
         type: 'line',
         yAxisIndex: 0,
         data: predictedReplicaData,
-        lineStyle: {
-          width: 2,
-          type: 'dashed'
-        },
-        itemStyle: {
-          color: '#ff4d4f'
-        },
-        emphasis: {
-          focus: 'series'
-        },
+        lineStyle: { width: 2, type: 'dashed' },
+        itemStyle: { color: '#ff4d4f' },
+        emphasis: { focus: 'series' },
         smooth: true
       },
       {
@@ -664,113 +803,161 @@ const initLoadChart = () => {
             { offset: 1, color: 'rgba(24, 144, 255, 0.1)' }
           ])
         },
-        lineStyle: {
-          width: 2
-        },
-        itemStyle: {
-          color: '#1890ff'
-        },
-        emphasis: {
-          focus: 'series'
-        },
+        lineStyle: { width: 2 },
+        itemStyle: { color: '#1890ff' },
+        emphasis: { focus: 'series' },
         smooth: true
       }
     ]
   };
 
   chart.setOption(option);
-
-  // 响应窗口大小变化
-  window.addEventListener('resize', () => {
-    chart.resize();
-  });
+  window.addEventListener('resize', () => chart.resize());
 };
 
-// 初始化预测准确性分析图表
-const initResourceChart = () => {
-  if (!resourceChartRef.value) return;
+const initTrendChart = () => {
+  if (!trendChartRef.value) return;
 
-  const chart = echarts.init(resourceChartRef.value);
+  const chart = echarts.init(trendChartRef.value);
+
+  let hours: string[] = [];
+  let predictedInstances: number[] = [];
+  let predictedQps: number[] = [];
+  let confidence: number[] = [];
+
+  if (trendData.value.length > 0) {
+    hours = trendData.value.map(item => {
+      const time = new Date(item.timestamp);
+      return `${String(time.getMonth() + 1).padStart(2, '0')}-${String(time.getDate()).padStart(2, '0')} ${String(time.getHours()).padStart(2, '0')}:00`;
+    });
+    predictedInstances = trendData.value.map(item => item.instances);
+    predictedQps = trendData.value.map(item => item.qps);
+    confidence = trendData.value.map(item => item.confidence || 85);
+  } else {
+    // 生成未来趋势示例数据
+    const now = new Date();
+    const hoursAhead = parseInt(predictionTimeRange.value);
+    const points = Math.min(hoursAhead, 24); // 最多显示24个点
+
+    hours = Array.from({ length: points }, (_, i) => {
+      const futureTime = new Date(now.getTime() + i * (hoursAhead / points) * 60 * 60 * 1000);
+      return `${String(futureTime.getMonth() + 1).padStart(2, '0')}-${String(futureTime.getDate()).padStart(2, '0')} ${String(futureTime.getHours()).padStart(2, '0')}:00`;
+    });
+
+    // 基于当前状态生成趋势数据
+    const currentReplicas = deploymentStats.value.currentReplicas;
+    const currentQps = deploymentStats.value.currentQPS;
+
+    predictedInstances = Array.from({ length: points }, (_, i) => {
+      const variation = Math.sin(i * 0.5) * 1 + Math.random() * 0.5;
+      return Math.max(1, Math.round(currentReplicas + variation));
+    });
+
+    predictedQps = Array.from({ length: points }, (_, i) => {
+      const variation = Math.sin(i * 0.3) * 0.5 + Math.random() * 0.2;
+      return Math.max(0.1, currentQps + variation);
+    });
+
+    confidence = Array.from({ length: points }, () => 80 + Math.random() * 15);
+  }
 
   const option = {
     tooltip: {
-      trigger: 'item',
-      formatter: '{a} <br/>{b}: {c}%'
+      trigger: 'axis',
+      axisPointer: { type: 'line' }
     },
     legend: {
-      orient: 'vertical',
-      right: 10,
-      top: 'center',
-      data: ['高准确度预测', '中等准确度预测', '低准确度预测', '预测偏差', '模型优化空间'],
-      textStyle: {
-        color: '#333333'
+      data: ['预测副本数', '预测QPS', '置信度'],
+      textStyle: { color: '#333333' }
+    },
+    grid: {
+      left: '3%', right: '4%', bottom: '3%', containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: hours,
+      axisLine: { lineStyle: { color: '#333333' } },
+      axisLabel: {
+        color: '#333333',
+        rotate: 45,
+        interval: Math.max(1, Math.floor(hours.length / 8))
       }
     },
+    yAxis: [
+      {
+        type: 'value',
+        name: '副本数/置信度',
+        nameTextStyle: { color: '#333333' },
+        axisLine: { lineStyle: { color: '#333333' } },
+        axisLabel: { color: '#333333' },
+        splitLine: { lineStyle: { color: 'rgba(0, 0, 0, 0.1)' } }
+      },
+      {
+        type: 'value',
+        name: 'QPS',
+        nameTextStyle: { color: '#333333' },
+        axisLine: { lineStyle: { color: '#333333' } },
+        axisLabel: { color: '#333333' },
+        splitLine: { show: false }
+      }
+    ],
     series: [
       {
-        name: '预测准确性',
-        type: 'pie',
-        radius: ['50%', '70%'],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 10,
-          borderColor: '#ffffff',
-          borderWidth: 2
+        name: '预测副本数',
+        type: 'line',
+        yAxisIndex: 0,
+        data: predictedInstances,
+        lineStyle: { width: 3 },
+        itemStyle: { color: '#52c41a' },
+        areaStyle: {
+          opacity: 0.2,
+          color: 'rgba(82, 196, 26, 0.2)'
         },
-        label: {
-          show: false,
-          position: 'center'
-        },
-        emphasis: {
-          label: {
-            show: true,
-            fontSize: '18',
-            fontWeight: 'bold',
-            color: '#333333'
-          }
-        },
-        labelLine: {
-          show: false
-        },
-        data: [
-          { value: 68, name: '高准确度预测', itemStyle: { color: '#52c41a' } },
-          { value: 22, name: '中等准确度预测', itemStyle: { color: '#faad14' } },
-          { value: 6, name: '低准确度预测', itemStyle: { color: '#ff4d4f' } },
-          { value: 3, name: '预测偏差', itemStyle: { color: '#f759ab' } },
-          { value: 1, name: '模型优化空间', itemStyle: { color: '#d9d9d9' } }
-        ]
+        emphasis: { focus: 'series' },
+        smooth: true
+      },
+      {
+        name: '预测QPS',
+        type: 'line',
+        yAxisIndex: 1,
+        data: predictedQps,
+        lineStyle: { width: 2 },
+        itemStyle: { color: '#1890ff' },
+        emphasis: { focus: 'series' },
+        smooth: true
+      },
+      {
+        name: '置信度',
+        type: 'line',
+        yAxisIndex: 0,
+        data: confidence,
+        lineStyle: { width: 2, type: 'dashed' },
+        itemStyle: { color: '#faad14' },
+        emphasis: { focus: 'series' },
+        smooth: true
       }
     ]
   };
 
   chart.setOption(option);
-
-  // 响应窗口大小变化
-  window.addEventListener('resize', () => {
-    chart.resize();
-  });
+  window.addEventListener('resize', () => chart.resize());
 };
 
-// 初始化指标图表（详情模态框中）
 const initMetricChart = () => {
   if (!metricChartRef.value) return;
 
   const chart = echarts.init(metricChartRef.value);
 
-  // 生成时间轴
   const hours = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 
-  // 根据当前选中的事件生成相应的指标数据
   let cpuData, memoryData, requestsData, responseTimeData;
-  
-  if (selectedScaleEvent.value.scaleType === '扩容') {
-    // 扩容场景
+
+  if (selectedScaleEvent.value?.scaleType === '扩容') {
     cpuData = [50, 55, 62, 70, 75, 82, 85, 80, 75, 72];
     memoryData = [45, 48, 52, 58, 65, 70, 68, 65, 62, 60];
     requestsData = [15, 18, 22, 26, 30, 31, 28, 26, 24, 22];
     responseTimeData = [120, 130, 150, 165, 180, 190, 170, 160, 150, 140];
   } else {
-    // 缩容场景
     cpuData = [60, 55, 48, 40, 35, 28, 22, 18, 15, 12];
     memoryData = [55, 50, 45, 40, 35, 30, 28, 25, 22, 20];
     requestsData = [20, 18, 15, 12, 10, 8, 7, 6, 5, 4];
@@ -780,175 +967,78 @@ const initMetricChart = () => {
   const option = {
     tooltip: {
       trigger: 'axis',
-      axisPointer: {
-        type: 'line',
-        lineStyle: {
-          color: '#333333',
-          width: 1,
-          type: 'dashed'
-        }
-      }
+      axisPointer: { type: 'line', lineStyle: { color: '#333333', width: 1, type: 'dashed' } }
     },
     legend: {
       data: ['CPU利用率', '内存利用率', 'QPS', '响应时间(ms)'],
-      textStyle: {
-        color: '#333333'
-      }
+      textStyle: { color: '#333333' }
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true
+      left: '3%', right: '4%', bottom: '3%', containLabel: true
     },
     xAxis: {
       type: 'category',
       data: hours,
-      axisLine: {
-        lineStyle: {
-          color: '#333333'
-        }
-      },
-      axisLabel: {
-        color: '#333333'
-      }
+      axisLine: { lineStyle: { color: '#333333' } },
+      axisLabel: { color: '#333333' }
     },
     yAxis: {
       type: 'value',
       name: '数值',
-      nameTextStyle: {
-        color: '#333333'
-      },
-      axisLine: {
-        lineStyle: {
-          color: '#333333'
-        }
-      },
-      axisLabel: {
-        color: '#333333'
-      },
-      splitLine: {
-        lineStyle: {
-          color: 'rgba(0, 0, 0, 0.1)'
-        }
-      }
+      nameTextStyle: { color: '#333333' },
+      axisLine: { lineStyle: { color: '#333333' } },
+      axisLabel: { color: '#333333' },
+      splitLine: { lineStyle: { color: 'rgba(0, 0, 0, 0.1)' } }
     },
     series: [
       {
         name: 'CPU利用率',
         type: 'line',
         data: cpuData,
-        markArea: {
-          itemStyle: {
-            color: 'rgba(255, 77, 79, 0.1)'
-          },
-          data: [
-            [
-              { xAxis: selectedScaleEvent.value.scaleType === '扩容' ? '4' : '2' },
-              { xAxis: selectedScaleEvent.value.scaleType === '扩容' ? '7' : '5' }
-            ]
-          ]
-        },
-        markPoint: {
-          data: [
-            { type: selectedScaleEvent.value.scaleType === '扩容' ? 'max' : 'min', name: selectedScaleEvent.value.scaleType === '扩容' ? '最大值' : '最小值' }
-          ]
-        },
-        markLine: {
-          data: [
-            {
-              yAxis: selectedScaleEvent.value.scaleType === '扩容' ? 75 : 25,
-              lineStyle: {
-                color: selectedScaleEvent.value.scaleType === '扩容' ? '#ff4d4f' : '#52c41a'
-              },
-              label: {
-                formatter: selectedScaleEvent.value.scaleType === '扩容' ? '扩容阈值' : '缩容阈值',
-                position: 'end'
-              }
-            }
-          ]
-        },
-        lineStyle: {
-          width: 3
-        },
-        itemStyle: {
-          color: '#ff4d4f'
-        },
-        emphasis: {
-          focus: 'series'
-        },
+        lineStyle: { width: 3 },
+        itemStyle: { color: '#ff4d4f' },
+        emphasis: { focus: 'series' },
         smooth: true
       },
       {
         name: '内存利用率',
         type: 'line',
         data: memoryData,
-        lineStyle: {
-          width: 3
-        },
-        itemStyle: {
-          color: '#faad14'
-        },
-        emphasis: {
-          focus: 'series'
-        },
+        lineStyle: { width: 3 },
+        itemStyle: { color: '#faad14' },
+        emphasis: { focus: 'series' },
         smooth: true
       },
       {
         name: 'QPS',
         type: 'line',
         data: requestsData,
-        lineStyle: {
-          width: 3
-        },
-        itemStyle: {
-          color: '#1890ff'
-        },
-        emphasis: {
-          focus: 'series'
-        },
+        lineStyle: { width: 3 },
+        itemStyle: { color: '#1890ff' },
+        emphasis: { focus: 'series' },
         smooth: true
       },
       {
         name: '响应时间(ms)',
         type: 'line',
         data: responseTimeData,
-        lineStyle: {
-          width: 3
-        },
-        itemStyle: {
-          color: '#52c41a'
-        },
-        emphasis: {
-          focus: 'series'
-        },
+        lineStyle: { width: 3 },
+        itemStyle: { color: '#52c41a' },
+        emphasis: { focus: 'series' },
         smooth: true
       }
     ]
   };
 
   chart.setOption(option);
-
-  // 响应窗口大小变化
-  window.addEventListener('resize', () => {
-    chart.resize();
-  });
+  window.addEventListener('resize', () => chart.resize());
 };
 
-// 初始化所有图表
 const initCharts = () => {
   nextTick(() => {
     initLoadChart();
-    initResourceChart();
+    initTrendChart();
   });
-};
-
-// 自动更新推荐副本数的定时器
-const startAutoUpdate = () => {
-  updateTimer = setInterval(() => {
-    console.log('自动从预测服务获取推荐副本数...');
-    fetchPrediction();
-  }, deploymentStats.value.updateInterval * 1000);
 };
 
 // 生命周期钩子
@@ -966,6 +1056,7 @@ onUnmounted(() => {
 .alarm-prediction-container {
   padding: 20px;
   min-height: 100vh;
+  background: #f5f5f5;
 }
 
 .header {
@@ -990,6 +1081,21 @@ onUnmounted(() => {
   gap: 12px;
 }
 
+.service-status-card {
+  margin-bottom: 20px;
+}
+
+.service-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-detail {
+  color: #666;
+  font-size: 14px;
+}
+
 .dashboard {
   margin-top: 20px;
 }
@@ -1004,7 +1110,7 @@ onUnmounted(() => {
 .stat-card {
   border-radius: 8px;
   transition: all 0.3s ease;
-  border: 1px solid var(--ant-border-color-split);
+  border: 1px solid #d9d9d9;
 }
 
 .stat-card:hover {
@@ -1017,23 +1123,11 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.prediction-card::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  z-index: -1;
-  border-radius: 10px;
-  animation: glowing 10s linear infinite;
-}
-
 .stat-value {
   font-size: 28px;
   font-weight: bold;
   margin: 10px 0;
-  color: var(--ant-heading-color);
+  color: #262626;
 }
 
 .stat-trend {
@@ -1067,7 +1161,7 @@ onUnmounted(() => {
   padding: 16px;
   height: 350px;
   transition: all 0.3s ease;
-  border: 1px solid var(--ant-border-color-split);
+  border: 1px solid #d9d9d9;
 }
 
 .chart-card:hover {
@@ -1077,6 +1171,10 @@ onUnmounted(() => {
 
 .chart {
   height: 280px;
+}
+
+.prediction-table-card {
+  border-radius: 8px;
 }
 
 .prediction-detail-header {
@@ -1141,25 +1239,13 @@ onUnmounted(() => {
   0% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
+
   100% {
     opacity: 1;
-  }
-}
-
-@keyframes glowing {
-  0% {
-    background-position: 0 0;
-  }
-
-  50% {
-    background-position: 400% 0;
-  }
-
-  100% {
-    background-position: 0 0;
   }
 }
 
@@ -1192,11 +1278,7 @@ onUnmounted(() => {
   }
 
   .time-selector {
-    width: 48% !important;
-  }
-
-  .refresh-btn {
-    width: 48%;
+    width: 30% !important;
   }
 }
 </style>

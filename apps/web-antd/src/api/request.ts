@@ -34,7 +34,10 @@ function createRequestClient(baseURL: string) {
     // 清除 accessToken
     accessStore.setAccessToken(null);
 
-    if (preferences.app.loginExpiredMode === 'modal' && accessStore.isAccessChecked) {
+    if (
+      preferences.app.loginExpiredMode === 'modal' &&
+      accessStore.isAccessChecked
+    ) {
       accessStore.setLoginExpired(true);
     } else {
       await authStore.logout(); // 执行登出
@@ -124,5 +127,6 @@ function createRequestClient(baseURL: string) {
 }
 
 export const requestClient = createRequestClient(apiURL);
+export const requestClientAIOps = createRequestClient('http://localhost:8080');
 
 export const baseRequestClient = new RequestClient({ baseURL: apiURL });

@@ -1,145 +1,277 @@
 <template>
-  <div class="monitor-page">
-    <!-- 页面标题区域 -->
+  <div class="scrape-pool-container">
+    <!-- 页面标题 -->
     <div class="page-header">
-      <h2 class="page-title">采集池管理</h2>
-      <div class="page-description">管理和监控Prometheus采集池及其相关配置</div>
-    </div>
-
-    <!-- 查询和操作工具栏 -->
-    <div class="dashboard-card custom-toolbar">
-      <div class="search-filters">
-        <a-input 
-          v-model:value="searchText" 
-          placeholder="请输入采集池名称" 
-          class="search-input"
-        >
-          <template #prefix>
-            <SearchOutlined class="search-icon" />
-          </template>
-        </a-input>
-        <a-button type="primary" class="action-button" @click="handleSearch">
-          <template #icon>
-            <SearchOutlined />
-          </template>
-          搜索
-        </a-button>
-        <a-button class="action-button reset-button" @click="handleReset">
-          <template #icon>
-            <ReloadOutlined />
-          </template>
-          重置
-        </a-button>
-      </div>
-      <div class="action-buttons">
-        <a-button type="primary" class="add-button" @click="showAddModal">
+      <div class="header-actions">
+        <a-button type="primary" @click="handleCreateScrapePool" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
-          新增采集池
+          <span class="btn-text">创建采集池</span>
         </a-button>
+        <div class="search-filters">
+          <a-input-search 
+            v-model:value="searchQuery" 
+            placeholder="搜索采集池名称..." 
+            class="search-input" 
+            @search="handleSearch"
+            @change="handleSearchChange" 
+            allow-clear 
+          />
+          <a-select 
+            v-model:value="supportAlertFilter" 
+            placeholder="告警支持" 
+            class="filter-select"
+            @change="handleSupportAlertChange" 
+            allow-clear
+          >
+            <a-select-option :value="undefined">全部</a-select-option>
+            <a-select-option :value="1">支持告警</a-select-option>
+            <a-select-option :value="2">不支持告警</a-select-option>
+          </a-select>
+          <a-select 
+            v-model:value="supportRecordFilter" 
+            placeholder="记录支持" 
+            class="filter-select"
+            @change="handleSupportRecordChange" 
+            allow-clear
+          >
+            <a-select-option :value="undefined">全部</a-select-option>
+            <a-select-option :value="1">支持记录</a-select-option>
+            <a-select-option :value="2">不支持记录</a-select-option>
+          </a-select>
+          <a-button @click="handleResetFilters" class="reset-btn">
+            重置
+          </a-button>
+        </div>
       </div>
     </div>
 
-    <!-- 采集池列表表格 -->
-    <div class="dashboard-card table-container">
-      <a-table 
-        :columns="columns" 
-        :data-source="data" 
-        row-key="id" 
-        :pagination="false"
-        class="custom-table"
-        :scroll="{ x: 1200 }"
-      >
-        <!-- Prometheus实例列 -->
-        <template #prometheus_instances="{ record }">
-          <div class="tag-container">
-            <a-tag v-for="instance in record.prometheus_instances" :key="instance" class="tech-tag prometheus-tag">
-              {{ instance }}
-            </a-tag>
-          </div>
-        </template>
-        
-        <!-- AlertManager实例列 -->
-        <template #alert_manager_instances="{ record }">
-          <div class="tag-container">
-            <a-tag v-for="instance in record.alert_manager_instances" :key="instance" class="tech-tag alert-tag">
-              {{ instance }}
-            </a-tag>
-          </div>
-        </template>
-        
-        <!-- IP标签列 -->
-        <template #external_labels="{ record }">
-          <div class="tag-container">
-            <template v-if="record.external_labels && record.external_labels.filter((label: string) => label.trim() !== '').length > 0">
-              <a-tag v-for="label in record.external_labels" :key="label" class="tech-tag label-tag">
-                <span class="label-key">{{ label.split(',')[0] }}</span>
-                <span class="label-separator">:</span>
-                <span class="label-value">{{ label.split(',')[1] }}</span>
+    <!-- 统计卡片 -->
+    <div class="stats-row">
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="总采集池" 
+              :value="stats.total" 
+              :value-style="{ color: '#3f8600' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:container-registry" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="支持告警" 
+              :value="stats.supportAlert" 
+              :value-style="{ color: '#52c41a' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:warning-alt" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="支持记录" 
+              :value="stats.supportRecord" 
+              :value-style="{ color: '#faad14' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:data-table" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="活跃实例" 
+              :value="stats.activeInstances" 
+              :value-style="{ color: '#cf1322' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:server" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+      </a-row>
+    </div>
+
+    <!-- 表格容器 -->
+    <div class="table-container">
+      <a-card>
+        <a-table 
+          :data-source="scrapePoolList" 
+          :columns="columns" 
+          :pagination="paginationConfig" 
+          :loading="loading"
+          row-key="id" 
+          bordered 
+          :scroll="{ x: 1400 }" 
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="pool-name-cell">
+                <div class="pool-badge" :class="getPoolStatusClass(record)"></div>
+                <span class="pool-name-text">{{ record.name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'prometheus_instances'">
+              <div class="tag-container">
+                <a-tag 
+                  v-for="instance in record.prometheus_instances" 
+                  :key="instance" 
+                  class="tech-tag prometheus-tag"
+                >
+                  {{ instance }}
+                </a-tag>
+                <span v-if="!record.prometheus_instances?.length" class="empty-text">无实例</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'alert_manager_instances'">
+              <div class="tag-container">
+                <a-tag 
+                  v-for="instance in record.alert_manager_instances" 
+                  :key="instance" 
+                  class="tech-tag alert-tag"
+                >
+                  {{ instance }}
+                </a-tag>
+                <span v-if="!record.alert_manager_instances?.length" class="empty-text">无实例</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'external_labels'">
+              <div class="tag-container">
+                <template v-if="record.external_labels?.length">
+                  <a-tag 
+                    v-for="label in record.external_labels" 
+                    :key="label" 
+                    class="tech-tag label-tag"
+                  >
+                    <span class="label-key">{{ label.split(',')[0] }}</span>
+                    <span class="label-separator">:</span>
+                    <span class="label-value">{{ label.split(',')[1] }}</span>
+                  </a-tag>
+                </template>
+                <span v-else class="empty-text">无标签</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'support_alert'">
+              <a-tag :color="record.support_alert ? 'success' : 'default'">
+                {{ record.support_alert ? '支持' : '不支持' }}
               </a-tag>
             </template>
-            <a-tag v-else class="tech-tag empty-tag">无标签</a-tag>
-          </div>
-        </template>
-        
-        <!-- 操作列 -->
-        <template #action="{ record }">
-          <div class="action-column">
-            <a-tooltip title="编辑资源信息">
-              <a-button type="primary" shape="circle" class="edit-button" @click="handleEdit(record)">
-                <template #icon>
-                  <Icon icon="clarity:note-edit-line" />
-                </template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="删除资源">
-              <a-button type="primary" danger shape="circle" class="delete-button" @click="handleDelete(record)">
-                <template #icon>
-                  <Icon icon="ant-design:delete-outlined" />
-                </template>
-              </a-button>
-            </a-tooltip>
-          </div>
-        </template>
-      </a-table>
 
-      <!-- 分页器 -->
-      <div class="pagination-container">
-        <a-pagination 
-          v-model:current="current" 
-          v-model:pageSize="pageSizeRef" 
-          :page-size-options="pageSizeOptions"
-          :total="total" 
-          show-size-changer 
-          @change="handlePageChange" 
-          @showSizeChange="handleSizeChange" 
-          class="custom-pagination"
-        >
-          <template #buildOptionText="props">
-            <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
-            <span v-else>全部</span>
+            <template v-if="column.key === 'support_record'">
+              <a-tag :color="record.support_record ? 'success' : 'default'">
+                {{ record.support_record ? '支持' : '不支持' }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'scrape_config'">
+              <div class="config-info">
+                <div class="config-item">
+                  <span class="config-label">间隔:</span>
+                  <span class="config-value">{{ record.scrape_interval }}s</span>
+                </div>
+                <div class="config-item">
+                  <span class="config-label">超时:</span>
+                  <span class="config-value">{{ record.scrape_timeout }}s</span>
+                </div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'creator'">
+              <div class="creator-info">
+                <a-avatar 
+                  size="small" 
+                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                >
+                  {{ getInitials(record.create_user_name) }}
+                </a-avatar>
+                <span class="creator-name">{{ record.create_user_name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'createdAt'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button type="primary" size="small" @click="handleViewScrapePool(record)">
+                  查看
+                </a-button>
+                <a-button type="default" size="small" @click="handleEditScrapePool(record)">
+                  编辑
+                </a-button>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
+                      <a-menu-item key="clone">
+                        <Icon icon="carbon:copy" /> 克隆
+                      </a-menu-item>
+                      <a-menu-divider />
+                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
           </template>
-        </a-pagination>
-      </div>
+        </a-table>
+      </a-card>
     </div>
 
-    <!-- 新增采集池模态框 -->
+    <!-- 创建/编辑采集池对话框 -->
     <a-modal 
-      title="新增采集池" 
-      v-model:visible="isAddModalVisible" 
-      @ok="handleAdd" 
-      @cancel="closeAddModal"
-      :width="700"
-      class="custom-modal"
+      :open="formDialogVisible" 
+      :title="formDialog.isEdit ? '编辑采集池' : '创建采集池'" 
+      :width="formDialogWidth"
+      @ok="saveScrapePool" 
+      @cancel="closeFormDialog" 
+      :destroy-on-close="true" 
+      class="responsive-modal scrape-pool-modal"
     >
-      <a-form ref="addFormRef" :model="addForm" layout="vertical" class="custom-form">
+      <a-form 
+        ref="formRef" 
+        :model="formDialog.form" 
+        :rules="formRules" 
+        layout="vertical"
+      >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="采集池名称" name="name" :rules="[{ required: true, message: '请输入采集池名称' }]">
-                <a-input v-model:value="addForm.name" placeholder="请输入采集池名称" />
+              <a-form-item 
+                label="采集池名称" 
+                name="name" 
+                :rules="[{ required: true, message: '请输入采集池名称' }]"
+              >
+                <a-input 
+                  v-model:value="formDialog.form.name" 
+                  placeholder="请输入采集池名称" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -147,35 +279,65 @@
 
         <div class="form-section">
           <div class="section-title">实例配置</div>
-          <!-- 动态Prometheus实例表单项 -->
-          <a-form-item v-for="(instance, index) in addForm.prometheus_instances" :key="instance.key"
-            :label="index === 0 ? 'Prometheus实例' : ''" :name="['prometheus_instances', index, 'value']"
-            :rules="{ required: true, message: '请输入Prometheus实例IP' }">
+          <!-- Prometheus实例 -->
+          <a-form-item 
+            v-for="(instance, index) in formDialog.form.prometheus_instances" 
+            :key="instance.key"
+            :label="index === 0 ? 'Prometheus实例' : ''" 
+            :name="['prometheus_instances', index, 'value']"
+            :rules="{ required: true, message: '请输入Prometheus实例地址' }"
+          >
             <div class="dynamic-input-container">
-              <a-input v-model:value="instance.value" placeholder="请输入Prometheus实例IP" class="dynamic-input" />
-              <MinusCircleOutlined v-if="addForm.prometheus_instances.length > 1" class="dynamic-delete-button"
-                @click="removePrometheusInstance(instance)" />
+              <a-input 
+                v-model:value="instance.value" 
+                placeholder="请输入Prometheus实例地址" 
+                class="dynamic-input" 
+              />
+              <MinusCircleOutlined 
+                v-if="formDialog.form.prometheus_instances.length > 1" 
+                class="dynamic-delete-button"
+                @click="removePrometheusInstance(instance)" 
+              />
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button" @click="addPrometheusInstance">
+            <a-button 
+              type="dashed" 
+              class="add-dynamic-button" 
+              @click="addPrometheusInstance"
+            >
               <PlusOutlined />
               添加Prometheus实例
             </a-button>
           </a-form-item>
 
-          <!-- 动态AlertManager实例表单项 -->
-          <a-form-item v-for="(instance, index) in addForm.alert_manager_instances" :key="instance.key"
-            :label="index === 0 ? 'AlertManager实例' : ''" :name="['alert_manager_instances', index, 'value']"
-            :rules="{ required: true, message: '请输入AlertManager实例IP' }">
+          <!-- AlertManager实例 -->
+          <a-form-item 
+            v-for="(instance, index) in formDialog.form.alert_manager_instances" 
+            :key="instance.key"
+            :label="index === 0 ? 'AlertManager实例' : ''" 
+            :name="['alert_manager_instances', index, 'value']"
+            :rules="{ required: true, message: '请输入AlertManager实例地址' }"
+          >
             <div class="dynamic-input-container">
-              <a-input v-model:value="instance.value" placeholder="请输入AlertManager实例IP" class="dynamic-input" />
-              <MinusCircleOutlined v-if="addForm.alert_manager_instances.length > 1" class="dynamic-delete-button"
-                @click="removeAlertManagerInstance(instance)" />
+              <a-input 
+                v-model:value="instance.value" 
+                placeholder="请输入AlertManager实例地址" 
+                class="dynamic-input" 
+              />
+              <MinusCircleOutlined 
+                v-if="formDialog.form.alert_manager_instances.length > 1" 
+                class="dynamic-delete-button"
+                @click="removeAlertManagerInstance(instance)" 
+              />
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button" @click="addAlertManagerInstance">
+            <a-button 
+              type="dashed" 
+              class="add-dynamic-button" 
+              @click="addAlertManagerInstance"
+            >
               <PlusOutlined />
               添加AlertManager实例
             </a-button>
@@ -186,25 +348,65 @@
           <div class="section-title">采集配置</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="采集间隔" name="scrape_interval">
-                <a-input-number v-model:value="addForm.scrape_interval" :min="1" placeholder="请输入采集间隔（秒）" class="full-width" />
+              <a-form-item 
+                label="采集间隔(秒)" 
+                name="scrape_interval"
+                :rules="[{ required: true, message: '请输入采集间隔' }]"
+              >
+                <a-input-number 
+                  v-model:value="formDialog.form.scrape_interval" 
+                  :min="1" 
+                  placeholder="请输入采集间隔（秒）"
+                  class="full-width" 
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="采集超时" name="scrape_timeout">
-                <a-input-number v-model:value="addForm.scrape_timeout" :min="1" placeholder="请输入采集超时时间（秒）" class="full-width" />
+              <a-form-item 
+                label="采集超时(秒)" 
+                name="scrape_timeout"
+                :rules="[{ required: true, message: '请输入采集超时时间' }]"
+              >
+                <a-input-number 
+                  v-model:value="formDialog.form.scrape_timeout" 
+                  :min="1" 
+                  placeholder="请输入采集超时时间（秒）"
+                  class="full-width" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="支持告警" name="support_alert">
-                <a-switch v-model:checked="addForm.support_alert" class="tech-switch" />
+                <a-switch 
+                  v-model:checked="formDialog.form.support_alert" 
+                  class="tech-switch" 
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="支持记录" name="support_record">
-                <a-switch v-model:checked="addForm.support_record" class="tech-switch" />
+                <a-switch 
+                  v-model:checked="formDialog.form.support_record" 
+                  class="tech-switch" 
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item 
+                label="远程超时(秒)" 
+                name="remote_timeout_seconds"
+                :rules="[{ required: true, message: '请输入远程超时时间' }]"
+              >
+                <a-input-number 
+                  v-model:value="formDialog.form.remote_timeout_seconds" 
+                  :min="1" 
+                  placeholder="请输入远程超时（秒）"
+                  class="full-width" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -215,26 +417,28 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="远程写入地址" name="remote_write_url">
-                <a-input v-model:value="addForm.remote_write_url" placeholder="请输入远程写入地址" />
+                <a-input 
+                  v-model:value="formDialog.form.remote_write_url" 
+                  placeholder="请输入远程写入地址" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="远程超时（秒）" name="remote_timeout_seconds">
-                <a-input-number v-model:value="addForm.remote_timeout_seconds" :min="1" placeholder="请输入远程超时（秒）" class="full-width" />
-              </a-form-item>
-            </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="远程读取地址" name="remote_read_url">
-                <a-input v-model:value="addForm.remote_read_url" placeholder="请输入远程读取地址" />
+                <a-input 
+                  v-model:value="formDialog.form.remote_read_url" 
+                  placeholder="请输入远程读取地址" 
+                />
               </a-form-item>
             </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :span="24">
+            <a-col :xs="24" :sm="12">
               <a-form-item label="AlertManager地址" name="alert_manager_url">
-                <a-input v-model:value="addForm.alert_manager_url" placeholder="请输入AlertManager地址" />
+                <a-input 
+                  v-model:value="formDialog.form.alert_manager_url" 
+                  placeholder="请输入AlertManager地址" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -245,12 +449,18 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="规则文件路径" name="rule_file_path">
-                <a-input v-model:value="addForm.rule_file_path" placeholder="请输入规则文件路径" />
+                <a-input 
+                  v-model:value="formDialog.form.rule_file_path" 
+                  placeholder="请输入规则文件路径" 
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="预聚合文件路径" name="record_file_path">
-                <a-input v-model:value="addForm.record_file_path" placeholder="请输入预聚合文件路径" />
+              <a-form-item label="记录文件路径" name="record_file_path">
+                <a-input 
+                  v-model:value="formDialog.form.record_file_path" 
+                  placeholder="请输入记录文件路径" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -258,197 +468,144 @@
 
         <div class="form-section">
           <div class="section-title">标签配置</div>
-          <!-- 动态IP标签表单项 -->
-          <a-form-item v-for="(label, index) in addForm.external_labels" :key="label.key"
-            :label="index === 0 ? '采集池IP标签' : ''">
+          <!-- 外部标签 -->
+          <a-form-item 
+            v-for="(label, index) in formDialog.form.external_labels" 
+            :key="label.key"
+            :label="index === 0 ? '外部标签' : ''"
+          >
             <div class="label-input-group">
-              <a-input v-model:value="label.labelKey" placeholder="请输入标签Key" class="label-key-input" />
+              <a-input 
+                v-model:value="label.labelKey" 
+                placeholder="请输入标签Key" 
+                class="label-key-input" 
+              />
               <div class="label-separator">:</div>
-              <a-input v-model:value="label.labelValue" placeholder="请输入标签Value" class="label-value-input" />
-              <MinusCircleOutlined v-if="addForm.external_labels.length > 1" class="dynamic-delete-button"
-                @click="removeExternalLabel(label)" />
+              <a-input 
+                v-model:value="label.labelValue" 
+                placeholder="请输入标签Value" 
+                class="label-value-input" 
+              />
+              <MinusCircleOutlined 
+                v-if="formDialog.form.external_labels.length > 1" 
+                class="dynamic-delete-button"
+                @click="removeExternalLabel(label)" 
+              />
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button" @click="addExternalLabel">
+            <a-button 
+              type="dashed" 
+              class="add-dynamic-button" 
+              @click="addExternalLabel"
+            >
               <PlusOutlined />
-              添加IP标签
+              添加外部标签
             </a-button>
           </a-form-item>
         </div>
       </a-form>
     </a-modal>
 
-    <!-- 编辑采集池模态框 -->
+    <!-- 克隆对话框 -->
     <a-modal 
-      title="编辑采集池" 
-      v-model:visible="isEditModalVisible" 
-      @ok="handleUpdate" 
-      @cancel="closeEditModal"
-      :width="700"
-      class="custom-modal"
+      :open="cloneDialogVisible" 
+      title="克隆采集池" 
+      :width="dialogWidth" 
+      @ok="confirmClone" 
+      @cancel="closeCloneDialog"
+      :destroy-on-close="true"
     >
-      <a-form ref="editFormRef" :model="editForm" layout="vertical" class="custom-form">
-        <div class="form-section">
-          <div class="section-title">基本信息</div>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="采集池名称" name="name" :rules="[{ required: true, message: '请输入采集池名称' }]">
-                <a-input v-model:value="editForm.name" placeholder="请输入采集池名称" />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">实例配置</div>
-          <!-- 动态Prometheus实例表单项 -->
-          <a-form-item v-for="(instance, index) in editForm.prometheus_instances" :key="instance.key"
-            :label="index === 0 ? 'Prometheus实例' : ''" :name="['prometheus_instances', index, 'value']"
-            :rules="{ required: true, message: '请输入Prometheus实例IP' }">
-            <div class="dynamic-input-container">
-              <a-input v-model:value="instance.value" placeholder="请输入Prometheus实例IP" class="dynamic-input" />
-              <MinusCircleOutlined v-if="editForm.prometheus_instances.length > 1" class="dynamic-delete-button"
-                @click="removePrometheusInstanceEdit(instance)" />
-            </div>
-          </a-form-item>
-          <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button" @click="addPrometheusInstanceEdit">
-              <PlusOutlined />
-              添加Prometheus实例
-            </a-button>
-          </a-form-item>
-
-          <!-- 动态AlertManager实例表单项 -->
-          <a-form-item v-for="(instance, index) in editForm.alert_manager_instances" :key="instance.key"
-            :label="index === 0 ? 'AlertManager实例' : ''" :name="['alert_manager_instances', index, 'value']"
-            :rules="{ required: true, message: '请输入AlertManager实例IP' }">
-            <div class="dynamic-input-container">
-              <a-input v-model:value="instance.value" placeholder="请输入AlertManager实例IP" class="dynamic-input" />
-              <MinusCircleOutlined v-if="editForm.alert_manager_instances.length > 1" class="dynamic-delete-button"
-                @click="removeAlertManagerInstanceEdit(instance)" />
-            </div>
-          </a-form-item>
-          <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button" @click="addAlertManagerInstanceEdit">
-              <PlusOutlined />
-              添加AlertManager实例
-            </a-button>
-          </a-form-item>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">采集配置</div>
-          <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="采集间隔" name="scrape_interval">
-                <a-input-number v-model:value="editForm.scrape_interval" :min="1" placeholder="请输入采集间隔（秒）" class="full-width" />
-              </a-form-item>
-            </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="采集超时" name="scrape_timeout">
-                <a-input-number v-model:value="editForm.scrape_timeout" :min="1" placeholder="请输入采集超时时间（秒）" class="full-width" />
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="支持告警" name="support_alert">
-                <a-switch v-model:checked="editForm.support_alert" class="tech-switch" />
-              </a-form-item>
-            </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="支持记录" name="support_record">
-                <a-switch v-model:checked="editForm.support_record" class="tech-switch" />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">远程配置</div>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="远程写入地址" name="remote_write_url">
-                <a-input v-model:value="editForm.remote_write_url" placeholder="请输入远程写入地址" />
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="远程超时（秒）" name="remote_timeout_seconds">
-                <a-input-number v-model:value="editForm.remote_timeout_seconds" :min="1" placeholder="请输入远程超时（秒）" class="full-width" />
-              </a-form-item>
-            </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="远程读取地址" name="remote_read_url">
-                <a-input v-model:value="editForm.remote_read_url" placeholder="请输入远程读取地址" />
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="AlertManager地址" name="alert_manager_url">
-                <a-input v-model:value="editForm.alert_manager_url" placeholder="请输入AlertManager地址" />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">文件路径配置</div>
-          <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="规则文件路径" name="rule_file_path">
-                <a-input v-model:value="editForm.rule_file_path" placeholder="请输入规则文件路径" />
-              </a-form-item>
-            </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="预聚合文件路径" name="record_file_path">
-                <a-input v-model:value="editForm.record_file_path" placeholder="请输入预聚合文件路径" />
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
-
-        <div class="form-section">
-          <div class="section-title">标签配置</div>
-          <!-- 动态IP标签表单项 -->
-          <a-form-item v-for="(label, index) in editForm.external_labels" :key="label.key"
-            :label="index === 0 ? '采集池IP标签' : ''">
-            <div class="label-input-group">
-              <a-input v-model:value="label.labelKey" placeholder="请输入标签Key" class="label-key-input" />
-              <div class="label-separator">:</div>
-              <a-input v-model:value="label.labelValue" placeholder="请输入标签Value" class="label-value-input" />
-              <MinusCircleOutlined v-if="editForm.external_labels.length > 1" class="dynamic-delete-button"
-                @click="removeExternalLabelEdit(label)" />
-            </div>
-          </a-form-item>
-          <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button" @click="addExternalLabelEdit">
-              <PlusOutlined />
-              添加IP标签
-            </a-button>
-          </a-form-item>
-        </div>
+      <a-form :model="cloneDialog.form" layout="vertical">
+        <a-form-item 
+          label="新采集池名称" 
+          name="name" 
+          :rules="[{ required: true, message: '请输入新采集池名称' }]"
+        >
+          <a-input 
+            v-model:value="cloneDialog.form.name" 
+            placeholder="请输入新采集池名称" 
+          />
+        </a-form-item>
       </a-form>
+    </a-modal>
+
+    <!-- 详情对话框 -->
+    <a-modal 
+      :open="detailDialogVisible" 
+      title="采集池详情" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="closeDetailDialog" 
+      class="detail-dialog"
+    >
+      <div v-if="detailDialog.form" class="pool-details">
+        <div class="detail-header">
+          <h2>{{ detailDialog.form.name }}</h2>
+          <div class="detail-badges">
+            <a-tag :color="detailDialog.form.support_alert ? 'success' : 'default'">
+              {{ detailDialog.form.support_alert ? '支持告警' : '不支持告警' }}
+            </a-tag>
+            <a-tag :color="detailDialog.form.support_record ? 'success' : 'default'">
+              {{ detailDialog.form.support_record ? '支持记录' : '不支持记录' }}
+            </a-tag>
+          </div>
+        </div>
+
+        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
+          <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
+          <a-descriptions-item label="采集间隔">{{ detailDialog.form.scrape_interval }}秒</a-descriptions-item>
+          <a-descriptions-item label="采集超时">{{ detailDialog.form.scrape_timeout }}秒</a-descriptions-item>
+          <a-descriptions-item label="远程超时">{{ detailDialog.form.remote_timeout_seconds }}秒</a-descriptions-item>
+          <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at) }}</a-descriptions-item>
+          <a-descriptions-item label="远程写入地址">
+            {{ detailDialog.form.remote_write_url || '未配置' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="远程读取地址">
+            {{ detailDialog.form.remote_read_url || '未配置' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="AlertManager地址">
+            {{ detailDialog.form.alert_manager_url || '未配置' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="规则文件路径">
+            {{ detailDialog.form.rule_file_path || '未配置' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="记录文件路径">
+            {{ detailDialog.form.record_file_path || '未配置' }}
+          </a-descriptions-item>
+        </a-descriptions>
+
+        <div class="detail-footer">
+          <a-button @click="closeDetailDialog">关闭</a-button>
+          <a-button type="primary" @click="handleEditScrapePool(detailDialog.form)">编辑</a-button>
+        </div>
+      </div>
     </a-modal>
   </div>
 </template>
 
-<script lang="ts" setup>
-import { ref, reactive, onMounted } from 'vue';
+<script setup lang="ts">
+import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  SearchOutlined,
-  ReloadOutlined,
   PlusOutlined,
+  DownOutlined,
   MinusCircleOutlined
 } from '@ant-design/icons-vue';
-import { getMonitorScrapePoolListApi, createMonitorScrapePoolApi, deleteMonitorScrapePoolApi, updateMonitorScrapePoolApi } from '#/api/core/prometheus_scrape_pool'
-import type { createMonitorScrapePoolReq, updateMonitorScrapePoolReq, MonitorScrapePoolItem } from '#/api/core/prometheus_scrape_pool'
 import { Icon } from '@iconify/vue';
-import type { FormInstance } from 'ant-design-vue';
+import {
+  getMonitorScrapePoolListApi,
+  createMonitorScrapePoolApi,
+  updateMonitorScrapePoolApi,
+  deleteMonitorScrapePoolApi,
+  type ScrapePoolItem,
+  type GetScrapePoolListParams,
+  type createMonitorScrapePoolReq,
+  type updateMonitorScrapePoolReq
+} from '#/api/core/prometheus_scrape_pool';
+
+// 动态表单项接口
 interface DynamicItem {
   value: string;
   key: number;
@@ -460,522 +617,601 @@ interface LabelItem {
   key: number;
 }
 
-// 从后端获取数据
-const data = ref<MonitorScrapePoolItem[]>([]);
+// 响应式对话框宽度
+const dialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '80%';
+    return '600px';
+  }
+  return '600px';
+});
 
-// 搜索文本
-const searchText = ref('');
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
 
-const handleReset = () => {
-  searchText.value = '';
-  fetchResources();
-};
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
 
-// 处理搜索
-const handleSearch = () => {
-  current.value = 1;
-  fetchResources();
-};
-
-const handleSizeChange = (page: number, size: number) => {
-  current.value = page;
-  pageSizeRef.value = size;
-  fetchResources();
-};
-
-// 处理分页变化
-const handlePageChange = (page: number) => {
-  current.value = page;
-  fetchResources();
-};
-
-// 分页相关
-const pageSizeOptions = ref<string[]>(['10', '20', '30', '40', '50']);
-const current = ref(1);
-const pageSizeRef = ref(10);
-const total = ref(0);
-
-// 表格列配置
+// 列定义
 const columns = [
-  {
-    title: 'id',
-    dataIndex: 'id',
-    key: 'id',
-    width: 80,
-  },
-  {
-    title: '采集池名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-  },
-  {
-    title: 'Prometheus实例',
-    dataIndex: 'prometheus_instances',
-    key: 'prometheus_instances',
-    slots: { customRender: 'prometheus_instances' },
-    width: 200,
-  },
-  {
-    title: 'AlertManager实例',
-    dataIndex: 'alert_manager_instances',
-    key: 'alert_manager_instances',
-    slots: { customRender: 'alert_manager_instances' },
-    width: 200,
-  },
-  {
-    title: '采集池IP标签',
-    dataIndex: 'external_labels',
-    key: 'external_labels',
-    slots: { customRender: 'external_labels' },
-    width: 200,
-  },
-  {
-    title: '创建者',
-    dataIndex: 'create_user_name',
-    key: 'create_user_name',
-    width: 120,
-  },
-  {
-    title: '创建时间',
-    dataIndex: 'created_at',
-    key: 'created_at',
-    width: 180,
-  },
-  {
-    title: '远程写入地址',
-    dataIndex: 'remote_write_url',
-    key: 'remote_write_url',
-    width: 200,
-  },
-  {
-    title: '操作',
-    key: 'action',
-    slots: { customRender: 'action' },
-    fixed: 'right',
-    width: 120,
-  },
+  { title: '采集池名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
+  { title: 'Prometheus实例', dataIndex: 'prometheus_instances', key: 'prometheus_instances', width: 200 },
+  { title: 'AlertManager实例', dataIndex: 'alert_manager_instances', key: 'alert_manager_instances', width: 200 },
+  { title: '外部标签', dataIndex: 'external_labels', key: 'external_labels', width: 180 },
+  { title: '告警支持', dataIndex: 'support_alert', key: 'support_alert', width: 100, align: 'center' as const },
+  { title: '记录支持', dataIndex: 'support_record', key: 'support_record', width: 100, align: 'center' as const },
+  { title: '采集配置', dataIndex: 'scrape_config', key: 'scrape_config', width: 120 },
+  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
+  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
 ];
 
-const addFormRef = ref<FormInstance>();
-const editFormRef = ref<FormInstance>();
+// 状态数据
+const loading = ref(false);
+const searchQuery = ref('');
+const supportAlertFilter = ref<1 | 2 | undefined>(undefined);
+const supportRecordFilter = ref<1 | 2 | undefined>(undefined);
+const scrapePoolList = ref<ScrapePoolItem[]>([]);
 
-const isAddModalVisible = ref(false);
-const addForm = reactive({
-  name: '',
-  prometheus_instances: [] as DynamicItem[],
-  alert_manager_instances: [] as DynamicItem[],
-  scrape_interval: 10,
-  scrape_timeout: 10,
-  remote_timeout_seconds: 10,
-  support_alert: false,
-  support_record: false,
-  external_labels: [] as LabelItem[],
-  remote_write_url: '',
-  remote_read_url: '',
-  alert_manager_url: '',
-  rule_file_path: '',
-  record_file_path: '',
+// 防抖处理
+let searchTimeout: any = null;
+
+// 分页配置
+const paginationConfig = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  size: 'default' as const
 });
 
-// 重置新增表单
-const resetAddForm = () => {
-  addForm.name = '';
-  addForm.scrape_interval = 10;
-  addForm.scrape_timeout = 10;
-  addForm.support_alert = false;
-  addForm.support_record = false;
-  addForm.remote_write_url = '';
-  addForm.record_file_path = '';
-  addForm.remote_timeout_seconds = 10;
-  addForm.remote_read_url = '';
-  addForm.alert_manager_url = '';
-  addForm.rule_file_path = '';
-  addForm.external_labels = [];
-  addForm.prometheus_instances = [];
-  addForm.alert_manager_instances = [];
-};
-
-// 编辑相关状态
-const isEditModalVisible = ref(false);
-const editForm = reactive({
-  id: 0,
-  name: '',
-  prometheus_instances: [] as DynamicItem[],
-  alert_manager_instances: [] as DynamicItem[],
-  scrape_interval: 10,
-  scrape_timeout: 10,
-  remote_timeout_seconds: 10,
-  support_alert: false,
-  support_record: false,
-  external_labels: [] as LabelItem[],
-  remote_write_url: '',
-  remote_read_url: '',
-  alert_manager_url: '',
-  rule_file_path: '',
-  record_file_path: '',
+// 统计数据
+const stats = reactive({
+  total: 0,
+  supportAlert: 0,
+  supportRecord: 0,
+  activeInstances: 0
 });
 
-// 动态表单项操作方法 - 新增表单
-const addPrometheusInstance = () => {
-  addForm.prometheus_instances.push({
-    value: '',
-    key: Date.now(),
-  });
-};
+// 对话框状态
+const formDialogVisible = ref(false);
+const cloneDialogVisible = ref(false);
+const detailDialogVisible = ref(false);
 
-const removePrometheusInstance = (item: DynamicItem) => {
-  const index = addForm.prometheus_instances.indexOf(item);
-  if (index !== -1) {
-    addForm.prometheus_instances.splice(index, 1);
+// 表单对话框数据
+const formDialog = reactive({
+  isEdit: false,
+  form: {
+    id: undefined as number | undefined,
+    name: '',
+    prometheus_instances: [] as DynamicItem[],
+    alert_manager_instances: [] as DynamicItem[],
+    scrape_interval: 15,
+    scrape_timeout: 10,
+    remote_timeout_seconds: 30,
+    support_alert: false,
+    support_record: false,
+    external_labels: [] as LabelItem[],
+    remote_write_url: '',
+    remote_read_url: '',
+    alert_manager_url: '',
+    rule_file_path: '',
+    record_file_path: '',
   }
-};
+});
 
-const addAlertManagerInstance = () => {
-  addForm.alert_manager_instances.push({
-    value: '',
-    key: Date.now(),
-  });
-};
-
-const removeAlertManagerInstance = (item: DynamicItem) => {
-  const index = addForm.alert_manager_instances.indexOf(item);
-  if (index !== -1) {
-    addForm.alert_manager_instances.splice(index, 1);
+// 克隆对话框数据
+const cloneDialog = reactive({
+  form: {
+    name: '',
+    originalData: null as ScrapePoolItem | null
   }
+});
+
+// 详情对话框数据
+const detailDialog = reactive({
+  form: null as ScrapePoolItem | null
+});
+
+// 表单验证规则
+const formRules = {
+  name: [
+    { required: true, message: '请输入采集池名称', trigger: 'blur' },
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
+  ],
+  scrape_interval: [
+    { required: true, message: '请输入采集间隔', trigger: 'blur' }
+  ],
+  scrape_timeout: [
+    { required: true, message: '请输入采集超时时间', trigger: 'blur' }
+  ],
+  remote_timeout_seconds: [
+    { required: true, message: '请输入远程超时时间', trigger: 'blur' }
+  ]
 };
 
-const addExternalLabel = () => {
-  addForm.external_labels.push({
-    labelKey: '',
-    labelValue: '',
-    key: Date.now(),
-  });
+// 辅助方法
+const getPoolStatusClass = (record: ScrapePoolItem): string => {
+  if (record.support_alert && record.support_record) return 'status-full';
+  if (record.support_alert || record.support_record) return 'status-partial';
+  return 'status-none';
 };
 
-const removeExternalLabel = (item: LabelItem) => {
-  const index = addForm.external_labels.indexOf(item);
-  if (index !== -1) {
-    addForm.external_labels.splice(index, 1);
+const getAvatarColor = (name: string): string => {
+  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
+  return colors[Math.abs(hash) % colors.length]!;
 };
 
-// 动态表单项操作方法 - 编辑表单
-const addPrometheusInstanceEdit = () => {
-  editForm.prometheus_instances.push({
-    value: '',
-    key: Date.now(),
-  });
+const getInitials = (name: string): string => {
+  if (!name) return '';
+  return name.slice(0, 2).toUpperCase();
 };
 
-const removePrometheusInstanceEdit = (item: DynamicItem) => {
-  const index = editForm.prometheus_instances.indexOf(item);
-  if (index !== -1) {
-    editForm.prometheus_instances.splice(index, 1);
-  }
+const formatDate = (timestamp: number): string => {
+  if (!timestamp) return '';
+  return new Date(timestamp * 1000).toLocaleDateString('zh-CN');
 };
 
-const addAlertManagerInstanceEdit = () => {
-  editForm.alert_manager_instances.push({
-    value: '',
-    key: Date.now(),
-  });
+const formatTime = (timestamp: number): string => {
+  if (!timestamp) return '';
+  return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 };
 
-const removeAlertManagerInstanceEdit = (item: DynamicItem) => {
-  const index = editForm.alert_manager_instances.indexOf(item);
-  if (index !== -1) {
-    editForm.alert_manager_instances.splice(index, 1);
-  }
+const formatFullDateTime = (timestamp: number): string => {
+  if (!timestamp) return '';
+  return new Date(timestamp * 1000).toLocaleString('zh-CN');
 };
 
-const addExternalLabelEdit = () => {
-  editForm.external_labels.push({
-    labelKey: '',
-    labelValue: '',
-    key: Date.now(),
-  });
+// 更新统计数据
+const updateStats = () => {
+  stats.total = scrapePoolList.value.length;
+  stats.supportAlert = scrapePoolList.value.filter(item => item.support_alert).length;
+  stats.supportRecord = scrapePoolList.value.filter(item => item.support_record).length;
+  stats.activeInstances = scrapePoolList.value.reduce((total, item) => {
+    return total + (item.prometheus_instances?.length || 0) + (item.alert_manager_instances?.length || 0);
+  }, 0);
 };
 
-const removeExternalLabelEdit = (item: LabelItem) => {
-  const index = editForm.external_labels.indexOf(item);
-  if (index !== -1) {
-    editForm.external_labels.splice(index, 1);
-  }
-};
-
-// 显示新增模态框
-const showAddModal = () => {
-  resetAddForm();
-  isAddModalVisible.value = true;
-};
-
-// 显示编辑模态框
-const handleEdit = (record: MonitorScrapePoolItem) => {
-  // 预填充表单数据
-  editForm.id = record.id;
-  editForm.name = record.name;
-  editForm.scrape_interval = record.scrape_interval;
-  editForm.scrape_timeout = record.scrape_timeout;
-  editForm.support_alert = record.support_alert;
-  editForm.support_record = record.support_record;
-  editForm.remote_write_url = record.remote_write_url;
-  editForm.remote_timeout_seconds = record.remote_timeout_seconds;
-  editForm.remote_read_url = record.remote_read_url;
-  editForm.alert_manager_url = record.alert_manager_url;
-  editForm.rule_file_path = record.rule_file_path;
-  editForm.record_file_path = record.record_file_path;
-  editForm.external_labels = record.external_labels
-    ? record.external_labels
-      .filter((value: string) => value.trim() !== '') // 过滤空字符串
-      .map((value: string) => {
-        const parts = value.split(',');
-        return {
-          labelKey: parts[0] || '',
-          labelValue: parts[1] || '',
-          key: Date.now()
-        };
-      })
-    : [];
-  editForm.prometheus_instances = record.prometheus_instances ?
-    record.prometheus_instances.map(value => ({ value, key: Date.now() })) : [];
-  editForm.alert_manager_instances = record.alert_manager_instances ?
-    record.alert_manager_instances.map(value => ({ value, key: Date.now() })) : [];
-
-  isEditModalVisible.value = true;
-};
-
-// 关闭新增模态框
-const closeAddModal = () => {
-  resetAddForm();
-  isAddModalVisible.value = false;
-};
-
-// 关闭编辑模态框
-const closeEditModal = () => {
-  isEditModalVisible.value = false;
-};
-
-// 提交新增采集池
-const handleAdd = async () => {
+// 数据加载
+const loadScrapePoolList = async (): Promise<void> => {
+  loading.value = true;
   try {
-    await addFormRef.value?.validate();
-
-    // 转换动态表单项数据为API所需格式
-    const formData: createMonitorScrapePoolReq = {
-      ...addForm,
-      prometheus_instances: addForm.prometheus_instances.map(item => item.value),
-      alert_manager_instances: addForm.alert_manager_instances.map(item => item.value),
-      external_labels: addForm.external_labels
-        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '') // 过滤空键值
-        .map(item => `${item.labelKey},${item.labelValue}`),
+    const params: GetScrapePoolListParams = {
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
+      search: searchQuery.value || undefined,
+      support_alert: supportAlertFilter.value,
+      support_record: supportRecordFilter.value
     };
 
-    await createMonitorScrapePoolApi(formData);
-    message.success('新增采集池成功');
-    fetchResources();
-    closeAddModal();
+    const response = await getMonitorScrapePoolListApi(params);
+    if (response) {
+      scrapePoolList.value = response.items || [];
+      paginationConfig.total = response.total || 0;
+      updateStats();
+    }
   } catch (error: any) {
-    message.error(error.message || '新增采集池失败');
-    console.error(error);
+    console.error('加载采集池列表失败:', error);
+    message.error(error.message || '加载采集池列表失败');
+  } finally {
+    loading.value = false;
   }
 };
 
-// 处理删除采集池
-const handleDelete = (record: MonitorScrapePoolItem) => {
+// 事件处理
+const handleTableChange = (pagination: any): void => {
+  paginationConfig.current = pagination.current;
+  paginationConfig.pageSize = pagination.pageSize;
+  loadScrapePoolList();
+};
+
+const handleSearch = (): void => {
+  paginationConfig.current = 1;
+  loadScrapePoolList();
+};
+
+const handleSearchChange = (): void => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  searchTimeout = setTimeout(() => {
+    paginationConfig.current = 1;
+    loadScrapePoolList();
+  }, 500);
+};
+
+const handleSupportAlertChange = (): void => {
+  paginationConfig.current = 1;
+  loadScrapePoolList();
+};
+
+const handleSupportRecordChange = (): void => {
+  paginationConfig.current = 1;
+  loadScrapePoolList();
+};
+
+const handleResetFilters = (): void => {
+  searchQuery.value = '';
+  supportAlertFilter.value = undefined;
+  supportRecordFilter.value = undefined;
+  paginationConfig.current = 1;
+  loadScrapePoolList();
+  message.success('过滤条件已重置');
+};
+
+const handleCreateScrapePool = (): void => {
+  formDialog.isEdit = false;
+  resetFormDialog();
+  formDialogVisible.value = true;
+};
+
+const handleEditScrapePool = (record: ScrapePoolItem): void => {
+  formDialog.isEdit = true;
+  formDialog.form = {
+    id: record.id,
+    name: record.name,
+    scrape_interval: record.scrape_interval,
+    scrape_timeout: record.scrape_timeout,
+    remote_timeout_seconds: record.remote_timeout_seconds,
+    support_alert: record.support_alert,
+    support_record: record.support_record,
+    remote_write_url: record.remote_write_url,
+    remote_read_url: record.remote_read_url,
+    alert_manager_url: record.alert_manager_url,
+    rule_file_path: record.rule_file_path,
+    record_file_path: record.record_file_path,
+    prometheus_instances: record.prometheus_instances?.map(value => ({ value, key: Date.now() + Math.random() })) || [{ value: '', key: Date.now() }],
+    alert_manager_instances: record.alert_manager_instances?.map(value => ({ value, key: Date.now() + Math.random() })) || [{ value: '', key: Date.now() }],
+    external_labels: record.external_labels?.filter(label => label.trim() !== '').map(value => {
+      const parts = value.split(',');
+      return {
+        labelKey: parts[0] || '',
+        labelValue: parts[1] || '',
+        key: Date.now() + Math.random()
+      };
+    }) || [{ labelKey: '', labelValue: '', key: Date.now() }]
+  };
+  formDialogVisible.value = true;
+  detailDialogVisible.value = false;
+};
+
+const handleViewScrapePool = (record: ScrapePoolItem): void => {
+  detailDialog.form = record;
+  detailDialogVisible.value = true;
+};
+
+const handleMenuClick = (command: string, record: ScrapePoolItem): void => {
+  switch (command) {
+    case 'clone':
+      showCloneDialog(record);
+      break;
+    case 'delete':
+      confirmDelete(record);
+      break;
+  }
+};
+
+const showCloneDialog = (record: ScrapePoolItem): void => {
+  // cloneDialog.form.name = `${record.name}_副本`;
+  // cloneDialog.form.originalData = record;
+  // cloneDialogVisible.value = true;
+  message.info('暂未实现');
+};
+
+const confirmDelete = (record: ScrapePoolItem): void => {
   Modal.confirm({
-    title: '确认删除',
-    content: `您确定要删除采集池 "${record.name}" 吗？`,
-    onOk: async () => {
+    title: '警告',
+    content: `确定要删除采集池 "${record.name}" 吗？`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    async onOk() {
       try {
         await deleteMonitorScrapePoolApi(record.id);
-        message.success('删除采集池成功');
-        fetchResources();
-
+        message.success(`采集池 "${record.name}" 已删除`);
+        loadScrapePoolList();
       } catch (error: any) {
+        console.error('删除采集池失败:', error);
         message.error(error.message || '删除采集池失败');
-        console.error(error);
       }
-    },
+    }
   });
 };
 
-// 提交更新采集池
-const handleUpdate = async () => {
-  try {
-    await editFormRef.value?.validate();
+// 表单保存
+const saveScrapePool = async (): Promise<void> => {
+  if (!formDialog.form.name.trim()) {
+    message.error('采集池名称不能为空');
+    return;
+  }
 
-    // 转换动态表单项数据为API所需格式
-    const formData: updateMonitorScrapePoolReq = {
-      ...editForm,
-      prometheus_instances: editForm.prometheus_instances.map(item => item.value),
-      alert_manager_instances: editForm.alert_manager_instances.map(item => item.value),
-      external_labels: editForm.external_labels
-        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '') // 过滤空键值
+  if (formDialog.form.prometheus_instances.length === 0 || !formDialog.form.prometheus_instances[0]?.value) {
+    message.error('请至少添加一个Prometheus实例');
+    return;
+  }
+
+  if (formDialog.form.alert_manager_instances.length === 0 || !formDialog.form.alert_manager_instances[0]?.value) {
+    message.error('请至少添加一个AlertManager实例');
+    return;
+  }
+
+  try {
+    const formData = {
+      ...formDialog.form,
+      user_id: 1, // 这里应该从用户上下文获取
+      prometheus_instances: formDialog.form.prometheus_instances.map(item => item.value).filter(v => v.trim() !== ''),
+      alert_manager_instances: formDialog.form.alert_manager_instances.map(item => item.value).filter(v => v.trim() !== ''),
+      external_labels: formDialog.form.external_labels
+        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '')
         .map(item => `${item.labelKey},${item.labelValue}`),
+      support_alert: formDialog.form.support_alert ? 1 : 2,
+      support_record: formDialog.form.support_record ? 1 : 2,
     };
 
-    await updateMonitorScrapePoolApi(formData);
-    message.success('更新采集池成功');
-    fetchResources();
-    closeEditModal();
+    if (formDialog.isEdit && formDialog.form.id) {
+      const updateData: updateMonitorScrapePoolReq = formData as updateMonitorScrapePoolReq;
+      await updateMonitorScrapePoolApi(formDialog.form.id, updateData);
+      message.success(`采集池 "${formDialog.form.name}" 已更新`);
+    } else {
+      const createData: createMonitorScrapePoolReq = formData as createMonitorScrapePoolReq;
+      await createMonitorScrapePoolApi(createData);
+      message.success(`采集池 "${formDialog.form.name}" 已创建`);
+    }
+
+    formDialogVisible.value = false;
+    loadScrapePoolList();
   } catch (error: any) {
-    message.error(error.message || '更新采集池失败');
-    console.error(error);
+    console.error('保存采集池失败:', error);
+    message.error(error.message || '保存采集池失败');
   }
 };
 
-const fetchResources = async () => {
+const confirmClone = async (): Promise<void> => {
+  if (!cloneDialog.form.name.trim()) {
+    message.error('请输入新采集池名称');
+    return;
+  }
+
+  if (!cloneDialog.form.originalData) {
+    message.error('原始数据不存在');
+    return;
+  }
+
   try {
-    const response = await getMonitorScrapePoolListApi({
-      page: current.value,
-      size: pageSizeRef.value,
-      search: searchText.value,
-    });
-    data.value = response.items;
-    total.value = response.total;
-  } catch (error: any) {
+    const originalData = cloneDialog.form.originalData;
+    const createData: createMonitorScrapePoolReq = {
+      name: cloneDialog.form.name,
+      prometheus_instances: originalData.prometheus_instances || [],
+      alert_manager_instances: originalData.alert_manager_instances || [],
+      user_id: 1, // 这里应该从用户上下文获取
+      scrape_interval: originalData.scrape_interval,
+      scrape_timeout: originalData.scrape_timeout,
+      remote_timeout_seconds: originalData.remote_timeout_seconds,
+      support_alert: originalData.support_alert ? 1 : 2,
+      support_record: originalData.support_record ? 1 : 2,
+      external_labels: originalData.external_labels || [],
+      remote_write_url: originalData.remote_write_url,
+      remote_read_url: originalData.remote_read_url,
+      alert_manager_url: originalData.alert_manager_url,
+      rule_file_path: originalData.rule_file_path,
+      record_file_path: originalData.record_file_path,
+    };
 
-    message.error(error.message || '获取采集池数据失败');
-    console.error(error);
+    await createMonitorScrapePoolApi(createData);
+    message.success(`采集池已克隆为 "${cloneDialog.form.name}"`);
+    cloneDialogVisible.value = false;
+    loadScrapePoolList();
+  } catch (error: any) {
+    console.error('克隆采集池失败:', error);
+    message.error(error.message || '克隆采集池失败');
   }
 };
 
-onMounted(() => {
-  fetchResources();
-});
+// 重置表单对话框
+const resetFormDialog = (): void => {
+  formDialog.form = {
+    id: undefined,
+    name: '',
+    scrape_interval: 15,
+    scrape_timeout: 10,
+    remote_timeout_seconds: 30,
+    support_alert: false,
+    support_record: false,
+    remote_write_url: '',
+    remote_read_url: '',
+    alert_manager_url: '',
+    rule_file_path: '',
+    record_file_path: '',
+    prometheus_instances: [{ value: '', key: Date.now() }],
+    alert_manager_instances: [{ value: '', key: Date.now() }],
+    external_labels: [{ labelKey: '', labelValue: '', key: Date.now() }]
+  };
+};
 
+// 动态表单项操作
+const addPrometheusInstance = (): void => {
+  formDialog.form.prometheus_instances.push({
+    value: '',
+    key: Date.now(),
+  });
+};
+
+const removePrometheusInstance = (item: DynamicItem): void => {
+  const index = formDialog.form.prometheus_instances.indexOf(item);
+  if (index !== -1) {
+    formDialog.form.prometheus_instances.splice(index, 1);
+  }
+};
+
+const addAlertManagerInstance = (): void => {
+  formDialog.form.alert_manager_instances.push({
+    value: '',
+    key: Date.now(),
+  });
+};
+
+const removeAlertManagerInstance = (item: DynamicItem): void => {
+  const index = formDialog.form.alert_manager_instances.indexOf(item);
+  if (index !== -1) {
+    formDialog.form.alert_manager_instances.splice(index, 1);
+  }
+};
+
+const addExternalLabel = (): void => {
+  formDialog.form.external_labels.push({
+    labelKey: '',
+    labelValue: '',
+    key: Date.now(),
+  });
+};
+
+const removeExternalLabel = (item: LabelItem): void => {
+  const index = formDialog.form.external_labels.indexOf(item);
+  if (index !== -1) {
+    formDialog.form.external_labels.splice(index, 1);
+  }
+};
+
+// 对话框关闭
+const closeFormDialog = (): void => {
+  formDialogVisible.value = false;
+};
+
+const closeCloneDialog = (): void => {
+  cloneDialogVisible.value = false;
+};
+
+const closeDetailDialog = (): void => {
+  detailDialogVisible.value = false;
+};
+
+// 生命周期钩子
+onMounted(() => {
+  loadScrapePoolList();
+});
 </script>
 
 <style scoped>
-.monitor-page {
-  padding: 20px;
-  background-color: #f0f2f5;
+.scrape-pool-container {
+  padding: 12px;
   min-height: 100vh;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 8px;
-}
-
-.page-description {
-  color: #666;
-  font-size: 14px;
-}
-
-.dashboard-card {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 20px;
-  margin-bottom: 24px;
-  transition: all 0.3s;
-}
-
-.custom-toolbar {
+.header-actions {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
+}
+
+.btn-create {
+  background: linear-gradient(135deg, #1890ff 0%);
+  border: none;
+  flex-shrink: 0;
 }
 
 .search-filters {
   display: flex;
-  gap: 16px;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .search-input {
   width: 250px;
-  border-radius: 4px;
-  transition: all 0.3s;
+  min-width: 200px;
 }
 
-.search-input:hover,
-.search-input:focus {
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+.filter-select {
+  width: 120px;
+  min-width: 100px;
 }
 
-.search-icon {
-  color: #bfbfbf;
+.reset-btn {
+  flex-shrink: 0;
 }
 
-.action-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  border-radius: 4px;
-  transition: all 0.3s;
+.stats-row {
+  margin-bottom: 20px;
 }
 
-.reset-button {
-  background-color: #f5f5f5;
-  color: #595959;
-  border-color: #d9d9d9;
-}
-
-.reset-button:hover {
-  background-color: #e6e6e6;
-  border-color: #b3b3b3;
-}
-
-.add-button {
-  background: linear-gradient(45deg, #1890ff, #36bdf4);
-  border: none;
-  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.4);
-}
-
-.add-button:hover {
-  background: linear-gradient(45deg, #096dd9, #1890ff);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.5);
+.stats-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  height: 100%;
 }
 
 .table-container {
-  overflow: hidden;
+  margin-bottom: 24px;
 }
 
-.custom-table {
-  margin-top: 8px;
+.pool-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-:deep(.ant-table) {
-  border-radius: 8px;
-  overflow: hidden;
+.pool-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-:deep(.ant-table-thead > tr > th) {
-  background-color: #f7f9fc;
-  font-weight: 600;
-  color: #1f1f1f;
-  padding: 16px 12px;
+.status-full {
+  background-color: #52c41a;
 }
 
-:deep(.ant-table-tbody > tr > td) {
-  padding: 12px;
+.status-partial {
+  background-color: #faad14;
 }
 
-:deep(.ant-table-tbody > tr:hover > td) {
-  background-color: #f0f7ff;
+.status-none {
+  background-color: #d9d9d9;
+}
+
+.pool-name-text {
+  font-weight: 500;
+  word-break: break-all;
 }
 
 .tag-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
 }
 
 .tech-tag {
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
+  padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
@@ -1001,9 +1237,10 @@ onMounted(() => {
   border-left: 3px solid #52c41a;
 }
 
-.empty-tag {
-  background-color: #f5f5f5;
-  color: #8c8c8c;
+.empty-text {
+  color: #999;
+  font-style: italic;
+  font-size: 12px;
 }
 
 .label-key {
@@ -1019,84 +1256,63 @@ onMounted(() => {
   color: #555;
 }
 
-.action-column {
+.config-info {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.edit-button {
-  background: #1890ff;
-  border: none;
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+.config-item {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
 }
 
-.edit-button:hover {
-  background: #096dd9;
-  transform: scale(1.05);
+.config-label {
+  font-size: 12px;
+  color: #666;
 }
 
-.delete-button {
-  background: #ff4d4f;
-  border: none;
-  box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+.config-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+}
+
+.creator-info {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
 }
 
-.delete-button:hover {
-  background: #cf1322;
-  transform: scale(1.05);
+.creator-name {
+  font-size: 14px;
+  word-break: break-all;
 }
 
-.pagination-container {
+.date-info {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
+  flex-direction: column;
 }
 
-.custom-pagination {
-  margin-right: 12px;
+.date {
+  font-weight: 500;
+  font-size: 14px;
 }
 
-/* 模态框样式 */
-:deep(.custom-modal .ant-modal-content) {
-  border-radius: 8px;
-  overflow: hidden;
+.time {
+  font-size: 12px;
+  color: #8c8c8c;
 }
 
-:deep(.custom-modal .ant-modal-header) {
-  padding: 20px 24px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
-}
-
-:deep(.custom-modal .ant-modal-title) {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-:deep(.custom-modal .ant-modal-body) {
-  padding: 24px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-:deep(.custom-modal .ant-modal-footer) {
-  padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 /* 表单样式 */
-.custom-form {
-  width: 100%;
-}
-
 .form-section {
   margin-bottom: 28px;
   padding: 0;
@@ -1112,20 +1328,15 @@ onMounted(() => {
   border-left: 4px solid #1890ff;
 }
 
-:deep(.custom-form .ant-form-item-label > label) {
-  font-weight: 500;
-  color: #333;
-}
-
 .full-width {
   width: 100%;
 }
 
-:deep(.tech-switch) {
+.tech-switch {
   background-color: rgba(0, 0, 0, 0.25);
 }
 
-:deep(.tech-switch.ant-switch-checked) {
+.tech-switch.ant-switch-checked {
   background: linear-gradient(45deg, #1890ff, #36cfc9);
 }
 
@@ -1183,5 +1394,159 @@ onMounted(() => {
 .label-separator {
   font-weight: bold;
   color: #8c8c8c;
+}
+
+/* 详情对话框样式 */
+.detail-dialog .pool-details {
+  margin-bottom: 20px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.detail-header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #1f2937;
+  word-break: break-all;
+}
+
+.detail-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detail-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .scrape-pool-container {
+    padding: 8px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-filters {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .filter-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .btn-text {
+    display: none;
+  }
+
+  .btn-create {
+    padding: 4px 8px;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .stats-card {
+    text-align: center;
+  }
+
+  .creator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .creator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+}
+
+/* 表格滚动优化 */
+.table-container :deep(.ant-table-wrapper) {
+  overflow: auto;
+}
+
+.table-container :deep(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.table-container :deep(.ant-table-tbody > tr > td) {
+  word-break: break-word;
+}
+
+/* 对话框响应式优化 */
+.responsive-modal :deep(.ant-modal) {
+  max-width: calc(100vw - 16px);
+  margin: 8px;
+}
+
+@media (max-width: 768px) {
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
 }
 </style>

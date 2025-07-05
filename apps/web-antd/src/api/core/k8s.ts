@@ -193,7 +193,9 @@ export async function deleteNamespaceApi(id: number, name: string) {
 }
 
 export async function getNamespaceDetails(id: number, name: string) {
-  return requestClient.get<getNamespaceDetailsRes>(`/k8s/namespaces/${id}?name=${name}`);
+  return requestClient.get<getNamespaceDetailsRes>(
+    `/k8s/namespaces/${id}?name=${name}`,
+  );
 }
 
 export async function updateNamespaceApi(data: updateNamespaceReq) {
@@ -234,68 +236,137 @@ export async function getPodsByNamespaceApi(id: number, namespace: string) {
   return requestClient.get(`/k8s/pods/${id}?namespace=${namespace}`);
 }
 
-export async function getContainersByPodNameApi(id: number, podName: string, namespace: string) {
-  return requestClient.get(`/k8s/pods/${id}/${podName}/containers?namespace=${namespace}`);
+export async function getContainersByPodNameApi(
+  id: number,
+  podName: string,
+  namespace: string,
+) {
+  return requestClient.get(
+    `/k8s/pods/${id}/${podName}/containers?namespace=${namespace}`,
+  );
 }
 
-export async function getContainerLogsApi(id: number, podName: string, container: string, namespace: string) {
-  return requestClient.get(`/k8s/pods/${id}/${podName}/${container}/logs?namespace=${namespace}`);
+export async function getContainerLogsApi(
+  id: number,
+  podName: string,
+  container: string,
+  namespace: string,
+) {
+  return requestClient.get(
+    `/k8s/pods/${id}/${podName}/${container}/logs?namespace=${namespace}`,
+  );
 }
 
-export async function getPodYamlApi(id: number, podName: string, namespace: string) {
-  return requestClient.get(`/k8s/pods//${id}/${podName}/yaml?namespace=${namespace}`);
+export async function getPodYamlApi(
+  id: number,
+  podName: string,
+  namespace: string,
+) {
+  return requestClient.get(
+    `/k8s/pods//${id}/${podName}/yaml?namespace=${namespace}`,
+  );
 }
 
-export async function deletePodApi(id: number, podName: string, namespace: string) {
-  return requestClient.delete(`/k8s/pods/delete/${id}?podName=${podName}&namespace=${namespace}`);
+export async function deletePodApi(
+  id: number,
+  podName: string,
+  namespace: string,
+) {
+  return requestClient.delete(
+    `/k8s/pods/delete/${id}?podName=${podName}&namespace=${namespace}`,
+  );
 }
 
 export async function getServiceListApi(id: number, namespace: string) {
   return requestClient.get(`/k8s/services/${id}?namespace=${namespace}`);
 }
 
-export async function getServiceYamlApi(id: number, svcName: string, namespace: string) {
-  return requestClient.get(`/k8s/services/${id}/${svcName}/yaml?namespace=${namespace}`);
+export async function getServiceYamlApi(
+  id: number,
+  svcName: string,
+  namespace: string,
+) {
+  return requestClient.get(
+    `/k8s/services/${id}/${svcName}/yaml?namespace=${namespace}`,
+  );
 }
 
 export async function updateServiceApi(data: any) {
   return requestClient.post('/k8s/services/update', data);
 }
 
-export async function deleteServiceApi(id: number, namespace: string, svcName: string) {
-  return requestClient.delete(`/k8s/services/delete/${id}?namespace=${namespace}&svcName=${svcName}`);
+export async function deleteServiceApi(
+  id: number,
+  namespace: string,
+  svcName: string,
+) {
+  return requestClient.delete(
+    `/k8s/services/delete/${id}?namespace=${namespace}&svcName=${svcName}`,
+  );
 }
 
 export async function getDeployListApi(id: number, namespace: string) {
   return requestClient.get(`/k8s/deployments/${id}?namespace=${namespace}`);
 }
 
-export async function getDeployYamlApi(id: number, deployment_name: string, namespace: string) {
-  return requestClient.get(`/k8s/deployments/${id}/yaml?namespace=${namespace}&deployment_name=${deployment_name}`);
+export async function getDeployYamlApi(
+  id: number,
+  deployment_name: string,
+  namespace: string,
+) {
+  return requestClient.get(
+    `/k8s/deployments/${id}/yaml?namespace=${namespace}&deployment_name=${deployment_name}`,
+  );
 }
 
-export async function deleteDeployApi(id: number, namespace: string, deployment_name: string) {
-  return requestClient.delete(`/k8s/deployments/delete/${id}?namespace=${namespace}&deployment_name=${deployment_name}`);
+export async function deleteDeployApi(
+  id: number,
+  namespace: string,
+  deployment_name: string,
+) {
+  return requestClient.delete(
+    `/k8s/deployments/delete/${id}?namespace=${namespace}&deployment_name=${deployment_name}`,
+  );
 }
 
-export async function restartDeployApi(id: number, namespace: string, deployment_name: string) {
-  return requestClient.post(`/k8s/deployments/restart/${id}?namespace=${namespace}&deployment_name=${deployment_name}`);
+export async function restartDeployApi(
+  id: number,
+  namespace: string,
+  deployment_name: string,
+) {
+  return requestClient.post(
+    `/k8s/deployments/restart/${id}?namespace=${namespace}&deployment_name=${deployment_name}`,
+  );
 }
 
 export async function getConfigMapListApi(id: number, namespace: string) {
   return requestClient.get(`/k8s/configmaps/${id}?namespace=${namespace}`);
 }
 
-export async function getConfigMapYamlApi(id: number, configmap_name: string, namespace: string) {
-  return requestClient.get(`/k8s/configmaps/${id}/yaml?namespace=${namespace}&configmap_name=${configmap_name}`);
+export async function getConfigMapYamlApi(
+  id: number,
+  configmap_name: string,
+  namespace: string,
+) {
+  return requestClient.get(
+    `/k8s/configmaps/${id}/yaml?namespace=${namespace}&configmap_name=${configmap_name}`,
+  );
 }
 
-export async function deleteConfigMapApi(id: number, namespace: string, configmap_name: string) {
-  return requestClient.delete(`/k8s/configmaps/delete/${id}?namespace=${namespace}&configmap_name=${configmap_name}`);
+export async function deleteConfigMapApi(
+  id: number,
+  namespace: string,
+  configmap_name: string,
+) {
+  return requestClient.delete(
+    `/k8s/configmaps/delete/${id}?namespace=${namespace}&configmap_name=${configmap_name}`,
+  );
 }
 
 export async function getYamlTemplateApi(cluster_id: number) {
-  return requestClient.get(`/k8s/yaml_templates/list/?cluster_id=${cluster_id}`);
+  return requestClient.get(
+    `/k8s/yaml_templates/list/?cluster_id=${cluster_id}`,
+  );
 }
 
 export async function createYamlTemplateApi(data: any) {
@@ -307,11 +378,15 @@ export async function updateYamlTemplateApi(data: any) {
 }
 
 export async function deleteYamlTemplateApi(id: number, cluster_id: number) {
-  return requestClient.delete(`/k8s/yaml_templates/delete/${id}?cluster_id=${cluster_id}`);
+  return requestClient.delete(
+    `/k8s/yaml_templates/delete/${id}?cluster_id=${cluster_id}`,
+  );
 }
 
 export async function getYamlTemplateDetailApi(id: number, cluster_id: number) {
-  return requestClient.get(`/k8s/yaml_templates/${id}/yaml?cluster_id=${cluster_id}`);
+  return requestClient.get(
+    `/k8s/yaml_templates/${id}/yaml?cluster_id=${cluster_id}`,
+  );
 }
 
 export async function checkYamlTemplateApi(data: any) {

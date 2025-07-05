@@ -7,7 +7,7 @@ export interface MonitorAlertEventItem {
   deleted_at: number;
   alert_name: string;
   fingerprint: string;
-  status: string;
+  status: 'firing' | 'silenced' | 'claimed' | 'resolved';
   rule_id: number;
   send_group_id: number;
   event_times: number;
@@ -16,6 +16,10 @@ export interface MonitorAlertEventItem {
   labels: string[];
   alert_rule_name: string;
   send_group_name: string;
+  ren_ling_user?: {
+    id: number;
+    username: string;
+  };
   labels_map: Record<string, string>;
   annotations_map: Record<string, string>;
 }
@@ -23,25 +27,43 @@ export interface MonitorAlertEventItem {
 export interface GetAlertEventsListParams {
   page: number;
   size: number;
-  search: string;
+  search?: string;
+  status?: 'firing' | 'silenced' | 'claimed' | 'resolved';
+  rule_id?: number;
+  send_group_id?: number;
+  start_time?: string;
+  end_time?: string;
+  alert_name?: string;
 }
 
+export interface EventAlertSilenceParams {
+  id: number;
+  use_name?: 1 | 2;
+  time?: string;
+}
+
+export interface EventAlertClaimParams {
+  id: number;
+}
+
+export interface EventAlertUnSilenceParams {
+  id: number;
+}
 export const getAlertEventsListApi = (data: GetAlertEventsListParams) => {
   return requestClient.get(`/monitor/alert_events/list`, { params: data });
 };
 
-export const silenceAlertApi = (id: number) => {
-  return requestClient.get(`/monitor/alert_events/silence/${id}`);
+export const silenceAlertApi = (data: EventAlertSilenceParams) => {
+  return requestClient.post(`/monitor/alert_events/silence/${data.id}`, {
+    use_name: data.use_name,
+    time: data.time,
+  });
 };
 
-export const claimAlertApi = (id: number) => {
-  return requestClient.get(`/monitor/alert_events/claim/${id}`);
+export const claimAlertApi = (data: EventAlertClaimParams) => {
+  return requestClient.post(`/monitor/alert_events/claim/${data.id}`);
 };
 
-export const cancelSilenceAlertApi = (id: number) => {
-  return requestClient.get(`/monitor/alert_events/cancel_silence/${id}`);
-};
-
-export const silenceBatchApi = (ids: number[]) => {
-  return requestClient.post('/monitor/alert_events/silence_batch', ids);
+export const cancelSilenceAlertApi = (data: EventAlertUnSilenceParams) => {
+  return requestClient.post(`/monitor/alert_events/unsilence/${data.id}`);
 };

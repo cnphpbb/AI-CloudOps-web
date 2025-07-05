@@ -1,150 +1,194 @@
 <template>
-  <div class="monitor-page">
-    <!-- 页面标题区域 -->
+  <div class="scrape-pool-container">
+    <!-- 页面标题 -->
     <div class="page-header">
-      <h2 class="page-title">记录规则管理</h2>
-      <div class="page-description">管理和监控Prometheus记录规则配置</div>
-    </div>
-
-    <!-- 查询和操作工具栏 -->
-    <div class="dashboard-card custom-toolbar">
-      <div class="search-filters">
-        <a-input 
-          v-model:value="searchText" 
-          placeholder="请输入记录名称" 
-          class="search-input"
-        >
-          <template #prefix>
-            <SearchOutlined class="search-icon" />
-          </template>
-        </a-input>
-        <a-button type="primary" class="action-button" @click="handleSearch">
-          <template #icon>
-            <SearchOutlined />
-          </template>
-          搜索
-        </a-button>
-        <a-button class="action-button reset-button" @click="handleReset">
-          <template #icon>
-            <ReloadOutlined />
-          </template>
-          重置
-        </a-button>
-      </div>
-      <div class="action-buttons">
-        <a-button type="primary" class="add-button" @click="showAddModal">
+      <div class="header-actions">
+        <a-button type="primary" @click="showAddModal" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
-          新增记录
+          <span class="btn-text">新增记录</span>
         </a-button>
+        <div class="search-filters">
+          <a-input-search 
+            v-model:value="searchText" 
+            placeholder="搜索记录名称..." 
+            class="search-input" 
+            @search="handleSearch"
+            @change="handleSearchChange" 
+            allow-clear 
+          />
+          <a-button @click="handleReset" class="reset-btn">
+            重置
+          </a-button>
+        </div>
       </div>
     </div>
 
-    <!-- 记录列表表格 -->
-    <div class="dashboard-card table-container">
-      <a-table 
-        :columns="columns" 
-        :data-source="data" 
-        row-key="id" 
-        :loading="loading"
-        :pagination="false"
-        class="custom-table"
-        :scroll="{ x: 1200 }"
-      >
-        <!-- 标签组列 -->
-        <template #labels="{ record }">
-          <div class="tag-container">
-            <a-tag v-for="label in record.labels" :key="label" class="tech-tag label-tag">
-              {{ label }}
-            </a-tag>
-          </div>
-        </template>
-        
-        <!-- 是否启用列 -->
-        <template #enable="{ text }">
-          <a-tag :class="text ? 'tech-tag status-enabled' : 'tech-tag status-disabled'">
-            {{ text ? '启用' : '禁用' }}
-          </a-tag>
-        </template>
-        
-        <!-- 操作列 -->
-        <template #action="{ record }">
-          <div class="action-column">
-            <a-tooltip title="编辑资源信息">
-              <a-button type="primary" shape="circle" class="edit-button" @click="showEditModal(record)">
-                <template #icon>
-                  <Icon icon="clarity:note-edit-line" />
-                </template>
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="删除资源">
-              <a-button type="primary" danger shape="circle" class="delete-button" @click="handleDelete(record)">
-                <template #icon>
-                  <Icon icon="ant-design:delete-outlined" />
-                </template>
-              </a-button>
-            </a-tooltip>
-          </div>
-        </template>
-      </a-table>
+    <!-- 统计卡片 -->
+    <div class="stats-row">
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="总记录" 
+              :value="stats.total" 
+              :value-style="{ color: '#3f8600' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:data-table" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="已启用" 
+              :value="stats.enabled" 
+              :value-style="{ color: '#52c41a' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:check-mark" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="已禁用" 
+              :value="stats.disabled" 
+              :value-style="{ color: '#faad14' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:close-filled" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="实例池" 
+              :value="stats.pools" 
+              :value-style="{ color: '#cf1322' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:server" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+      </a-row>
+    </div>
 
-      <!-- 分页器 -->
-      <div class="pagination-container">
-        <a-pagination 
-          v-model:current="current" 
-          v-model:pageSize="pageSizeRef" 
-          :page-size-options="pageSizeOptions"
-          :total="total" 
-          show-size-changer 
-          @change="handlePageChange" 
-          @showSizeChange="handleSizeChange" 
-          class="custom-pagination"
+    <!-- 表格容器 -->
+    <div class="table-container">
+      <a-card>
+        <a-table 
+          :data-source="data" 
+          :columns="columns" 
+          :pagination="paginationConfig" 
+          :loading="loading"
+          row-key="id" 
+          bordered 
+          :scroll="{ x: 1200 }" 
+          @change="handleTableChange"
         >
-          <template #buildOptionText="props">
-            <span v-if="props.value !== '50'">{{ props.value }}条/页</span>
-            <span v-else>全部</span>
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="pool-name-cell">
+                <div class="pool-badge" :class="getRecordStatusClass(record)"></div>
+                <span class="pool-name-text">{{ record.name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'enable'">
+              <a-tag :class="record.enable ? 'tech-tag status-enabled' : 'tech-tag status-disabled'">
+                {{ record.enable ? '启用' : '禁用' }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'creator'">
+              <div class="creator-info">
+                <a-avatar 
+                  size="small" 
+                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                >
+                  {{ getInitials(record.create_user_name) }}
+                </a-avatar>
+                <span class="creator-name">{{ record.create_user_name }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'created_at'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button type="primary" size="small" @click="showEditModal(record)">
+                  编辑
+                </a-button>
+                <a-button type="primary" danger size="small" @click="handleDelete(record)">
+                  删除
+                </a-button>
+              </div>
+            </template>
           </template>
-        </a-pagination>
-      </div>
+        </a-table>
+      </a-card>
     </div>
 
     <!-- 新增记录规则模态框 -->
     <a-modal 
+      :open="isAddModalVisible" 
       title="新增记录规则" 
-      v-model:visible="isAddModalVisible" 
+      :width="formDialogWidth"
       @ok="handleAdd" 
-      @cancel="closeAddModal"
-      :confirmLoading="loading"
-      :width="700"
-      class="custom-modal"
-      ok-text="提交"
-      cancel-text="取消"
+      @cancel="closeAddModal" 
+      :confirm-loading="loading" 
+      :destroy-on-close="true" 
+      class="responsive-modal scrape-pool-modal"
     >
-      <a-form ref="addFormRef" :model="addForm" layout="vertical" class="custom-form">
+      <a-form 
+        ref="addFormRef" 
+        :model="addForm" 
+        :rules="formRules" 
+        layout="vertical"
+      >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="记录名称" name="name" :rules="[{ required: true, message: '请输入记录名称' }]">
-                <a-input v-model:value="addForm.name" placeholder="请输入记录名称" />
+              <a-form-item 
+                label="记录名称" 
+                name="name"
+              >
+                <a-input 
+                  v-model:value="addForm.name" 
+                  placeholder="请输入记录名称" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
-          
+
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="Prometheus 实例池" name="poolId" :rules="[{ required: true, message: '请选择实例池' }]">
-                <a-select
-                  v-model:value="addForm.pool_id"
-                  placeholder="请选择实例池"
+              <a-form-item 
+                label="Prometheus 实例池" 
+                name="pool_id"
+              >
+                <a-select 
+                  v-model:value="addForm.pool_id" 
+                  placeholder="请选择实例池" 
                   class="full-width"
                 >
-                  <a-select-option
-                    v-for="pool in poolOptions"
-                    :key="pool.id"
-                    :value="pool.id"
-                  >
+                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -154,19 +198,25 @@
 
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="IP地址" name="ip_address" :rules="[
-                { required: true, message: '请输入IP地址' },
-                { pattern: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/, message: '请输入有效的IP地址' }
-              ]">
-                <a-input v-model:value="addForm.ip_address" placeholder="例如: 192.168.1.100" />
+              <a-form-item 
+                label="IP地址" 
+                name="ip_address"
+              >
+                <a-input 
+                  v-model:value="addForm.ip_address" 
+                  placeholder="例如: 192.168.1.100" 
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="端口" name="port" :rules="[
-                { required: true, message: '请输入端口号' },
-                { pattern: /^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$/, message: '请输入有效的端口号(1-65535)' }
-              ]">
-                <a-input v-model:value="addForm.port" placeholder="例如: 9090" />
+              <a-form-item 
+                label="端口" 
+                name="port"
+              >
+                <a-input 
+                  v-model:value="addForm.port" 
+                  placeholder="例如: 9090" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -176,24 +226,46 @@
           <div class="section-title">规则配置</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="是否启用" name="enable" :rules="[{ required: true, message: '请选择是否启用' }]">
-                <a-switch v-model:checked="addForm.enable" class="tech-switch" />
+              <a-form-item 
+                label="是否启用" 
+                name="enable"
+              >
+                <a-select v-model:value="addForm.enable" placeholder="请选择启用状态">
+                  <a-select-option :value="1">启用</a-select-option>
+                  <a-select-option :value="2">禁用</a-select-option>
+                </a-select>
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="持续时间" name="forTime">
-                <a-input v-model:value="addForm.for_time" placeholder="例如: 15s" />
+              <a-form-item 
+                label="持续时间" 
+                name="for_time"
+              >
+                <a-input 
+                  v-model:value="addForm.for_time" 
+                  placeholder="例如: 15s" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
-          
+
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="表达式" name="expr">
-                <a-input v-model:value="addForm.expr" placeholder="请输入表达式" />
+              <a-form-item 
+                label="表达式" 
+                name="expr"
+              >
+                <a-input 
+                  v-model:value="addForm.expr" 
+                  placeholder="请输入表达式" 
+                />
               </a-form-item>
               <a-form-item>
-                <a-button type="primary" class="validate-button" @click="validateAddExpression">
+                <a-button 
+                  type="primary" 
+                  class="validate-button" 
+                  @click="validateAddExpression"
+                >
                   <template #icon>
                     <Icon icon="mdi:check-circle-outline" />
                   </template>
@@ -208,40 +280,49 @@
 
     <!-- 编辑记录规则模态框 -->
     <a-modal 
+      :open="isEditModalVisible" 
       title="编辑记录规则" 
-      v-model:visible="isEditModalVisible" 
+      :width="formDialogWidth"
       @ok="handleUpdate" 
-      @cancel="closeEditModal"
-      :confirmLoading="loading"
-      :width="700"
-      class="custom-modal"
-      ok-text="提交"
-      cancel-text="取消"
+      @cancel="closeEditModal" 
+      :confirm-loading="loading" 
+      :destroy-on-close="true" 
+      class="responsive-modal scrape-pool-modal"
     >
-      <a-form ref="editFormRef" :model="editForm" layout="vertical" class="custom-form">
+      <a-form 
+        ref="editFormRef" 
+        :model="editForm" 
+        :rules="formRules" 
+        layout="vertical"
+      >
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="记录名称" name="name" :rules="[{ required: true, message: '请输入记录名称' }]">
-                <a-input v-model:value="editForm.name" placeholder="请输入记录名称" />
+              <a-form-item 
+                label="记录名称" 
+                name="name"
+              >
+                <a-input 
+                  v-model:value="editForm.name" 
+                  placeholder="请输入记录名称" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
-          
+
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="Prometheus 实例池" name="poolId" :rules="[{ required: true, message: '请选择实例池' }]">
-                <a-select
-                  v-model:value="editForm.pool_id"
-                  placeholder="请选择实例池"
+              <a-form-item 
+                label="Prometheus 实例池" 
+                name="pool_id"
+              >
+                <a-select 
+                  v-model:value="editForm.pool_id" 
+                  placeholder="请选择实例池" 
                   class="full-width"
                 >
-                  <a-select-option
-                    v-for="pool in poolOptions"
-                    :key="pool.id"
-                    :value="pool.id"
-                  >
+                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -251,19 +332,25 @@
 
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="IP地址" name="ip_address" :rules="[
-                { required: true, message: '请输入IP地址' },
-                { pattern: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/, message: '请输入有效的IP地址' }
-              ]">
-                <a-input v-model:value="editForm.ip_address" placeholder="例如: 192.168.1.100" />
+              <a-form-item 
+                label="IP地址" 
+                name="ip_address"
+              >
+                <a-input 
+                  v-model:value="editForm.ip_address" 
+                  placeholder="例如: 192.168.1.100" 
+                />
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="端口" name="port" :rules="[
-                { required: true, message: '请输入端口号' },
-                { pattern: /^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$/, message: '请输入有效的端口号(1-65535)' }
-              ]">
-                <a-input v-model:value="editForm.port" placeholder="例如: 9090" />
+              <a-form-item 
+                label="端口" 
+                name="port"
+              >
+                <a-input 
+                  v-model:value="editForm.port" 
+                  placeholder="例如: 9090" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
@@ -273,24 +360,46 @@
           <div class="section-title">规则配置</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="是否启用" name="enable" :rules="[{ required: true, message: '请选择是否启用' }]">
-                <a-switch v-model:checked="editForm.enable" class="tech-switch" />
+              <a-form-item 
+                label="是否启用" 
+                name="enable"
+              >
+                <a-select v-model:value="editForm.enable" placeholder="请选择启用状态">
+                  <a-select-option :value="1">启用</a-select-option>
+                  <a-select-option :value="2">禁用</a-select-option>
+                </a-select>
               </a-form-item>
             </a-col>
             <a-col :xs="24" :sm="12">
-              <a-form-item label="持续时间" name="forTime">
-                <a-input v-model:value="editForm.for_time" placeholder="例如: 15s" />
+              <a-form-item 
+                label="持续时间" 
+                name="for_time"
+              >
+                <a-input 
+                  v-model:value="editForm.for_time" 
+                  placeholder="例如: 15s" 
+                />
               </a-form-item>
             </a-col>
           </a-row>
-          
+
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="表达式" name="expr">
-                <a-input v-model:value="editForm.expr" placeholder="请输入表达式" />
+              <a-form-item 
+                label="表达式" 
+                name="expr"
+              >
+                <a-input 
+                  v-model:value="editForm.expr" 
+                  placeholder="请输入表达式" 
+                />
               </a-form-item>
               <a-form-item>
-                <a-button type="primary" class="validate-button" @click="validateEditExpression">
+                <a-button 
+                  type="primary" 
+                  class="validate-button" 
+                  @click="validateEditExpression"
+                >
                   <template #icon>
                     <Icon icon="mdi:check-circle-outline" />
                   </template>
@@ -305,25 +414,22 @@
   </div>
 </template>
 
-<script lang="ts" setup>
-import { ref, reactive, onMounted } from 'vue';
+<script setup lang="ts">
+import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  SearchOutlined,
-  ReloadOutlined,
   PlusOutlined,
 } from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
 import {
   getRecordRulesListApi,
   createRecordRuleApi,
   updateRecordRuleApi,
   deleteRecordRuleApi,
-  getRecordRulesTotalApi,
+  type AlertRecordItem,
 } from '#/api/core/prometheus_alert_record';
-import { getAllMonitorScrapePoolApi } from '#/api/core/prometheus_scrape_pool';
+import { getMonitorScrapePoolListApi } from '#/api/core/prometheus_scrape_pool';
 import { validateExprApi } from '#/api/core/prometheus_alert_rule';
-import { Icon } from '@iconify/vue';
-import type { AlertRecordItem } from '#/api/core/prometheus_alert_record';
 import type { FormInstance } from 'ant-design-vue';
 
 // 定义 Pool 类型
@@ -332,118 +438,70 @@ interface Pool {
   name: string;
 }
 
-// 数据源
-const data = ref<AlertRecordItem[]>([]);
+// 响应式对话框宽度
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
 
-// 下拉框数据源
-const poolOptions = ref<Pool[]>([]);
-
-// 搜索文本
-const searchText = ref('');
-
-const handleReset = () => {
-  searchText.value = '';
-  fetchRecordRules();
-};
-
-// 处理搜索
-const handleSearch = () => {
-  current.value = 1;
-  fetchRecordRules();
-};
-
-const handleSizeChange = (page: number, size: number) => {
-  current.value = page;
-  pageSizeRef.value = size;
-  fetchRecordRules();
-};
-
-// 处理分页变化
-const handlePageChange = (page: number) => {
-  current.value = page;
-  fetchRecordRules();
-};
-
-// 分页相关
-const pageSizeOptions = ref<string[]>(['10', '20', '30', '40', '50']);
-const current = ref(1);
-const pageSizeRef = ref(10);
-const total = ref(0);
-
-// 加载状态
-const loading = ref(false);
-
-// 表格列配置
+// 列定义
 const columns = [
-  {
-    title: 'id',
-    dataIndex: 'id',
-    key: 'id',
-    width: 80,
-  },
-  {
-    title: '记录名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 150,
-  },
-  {
-    title: '关联 Prometheus 实例池',
-    dataIndex: 'pool_name',
-    key: 'pool_name',
-    width: 180,
-  },
-  {
-    title: 'IP地址',
-    dataIndex: 'ip_address',
-    key: 'ip_address',
-    width: 120,
-  },
-  {
-    title: '是否启用',
-    dataIndex: 'enable',
-    key: 'enable',
-    slots: { customRender: 'enable' },
-    width: 100,
-  },
-  {
-    title: '持续时间',
-    dataIndex: 'for_time',
-    key: 'for_time',
-    width: 100,
-  },
-  {
-    title: '创建者',
-    dataIndex: 'create_user_name',
-    key: 'create_user_name',
-    width: 120,
-  },
-  {
-    title: '创建时间',
-    dataIndex: 'created_at',
-    key: 'created_at',
-    width: 180,
-  },
-  {
-    title: '操作',
-    key: 'action',
-    slots: { customRender: 'action' },
-    fixed: 'right',
-    width: 120,
-  },
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  { title: '记录名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
+  { title: '关联实例池', dataIndex: 'pool_name', key: 'pool_name', width: 180 },
+  { title: 'IP地址', dataIndex: 'ip_address', key: 'ip_address', width: 120 },
+  { title: '是否启用', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
+  { title: '持续时间', dataIndex: 'for_time', key: 'for_time', width: 100 },
+  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
+  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
 ];
 
-const addFormRef = ref<FormInstance>();
-const editFormRef = ref<FormInstance>();
+// 状态数据
+const loading = ref(false);
+const searchText = ref('');
+const data = ref<AlertRecordItem[]>([]);
+const poolOptions = ref<Pool[]>([]);
 
-// 模态框状态和表单
+// 防抖处理
+let searchTimeout: any = null;
+
+// 分页配置
+const paginationConfig = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  size: 'default' as const
+});
+
+// 统计数据
+const stats = reactive({
+  total: 0,
+  enabled: 0,
+  disabled: 0,
+  pools: 0
+});
+
+// 对话框状态
 const isAddModalVisible = ref(false);
 const isEditModalVisible = ref(false);
+
+// 表单引用
+const addFormRef = ref<FormInstance>();
+const editFormRef = ref<FormInstance>();
 
 // 新增表单
 const addForm = reactive({
   name: '',
-  pool_id: null,
+  pool_id: 0,
   ip_address: '',
   port: '',
   enable: false,
@@ -457,7 +515,7 @@ const addForm = reactive({
 const editForm = reactive({
   id: 0,
   name: '',
-  pool_id: null,
+  pool_id: 0,
   ip_address: '',
   port: '',
   enable: true,
@@ -467,32 +525,140 @@ const editForm = reactive({
   annotations: [],
 });
 
-// 显示新增模态框
-const showAddModal = () => {
+// 表单验证规则
+const formRules = {
+  name: [
+    { required: true, message: '请输入记录名称', trigger: 'blur' },
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
+  ],
+  pool_id: [
+    { required: true, message: '请选择实例池', trigger: 'change' }
+  ],
+  ip_address: [
+    { required: true, message: '请输入IP地址', trigger: 'blur' },
+    { pattern: /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/, message: '请输入有效的IP地址', trigger: 'blur' }
+  ],
+  port: [
+    { required: true, message: '请输入端口号', trigger: 'blur' },
+    { pattern: /^([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$/, message: '请输入有效的端口号(1-65535)', trigger: 'blur' }
+  ],
+  enable: [
+    { required: true, message: '请选择是否启用', trigger: 'change' }
+  ]
+};
+
+// 辅助方法
+const getRecordStatusClass = (record: AlertRecordItem): string => {
+  return record.enable ? 'status-full' : 'status-none';
+};
+
+const getAvatarColor = (name: string): string => {
+  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length]!;
+};
+
+const getInitials = (name: string): string => {
+  if (!name) return '';
+  return name.slice(0, 2).toUpperCase();
+};
+
+const formatDate = (timestamp: number): string => {
+  if (!timestamp) return '';
+  return new Date(timestamp * 1000).toLocaleDateString('zh-CN');
+};
+
+const formatTime = (timestamp: number): string => {
+  if (!timestamp) return '';
+  return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+};
+
+// 更新统计数据
+const updateStats = () => {
+  stats.total = data.value.length;
+  stats.enabled = data.value.filter(item => item.enable).length;
+  stats.disabled = data.value.filter(item => !item.enable).length;
+  stats.pools = new Set(data.value.map(item => item.pool_id)).size;
+};
+
+// 数据加载
+const fetchRecordRules = async (): Promise<void> => {
+  loading.value = true;
+  try {
+    const response = await getRecordRulesListApi({
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
+      search: searchText.value,
+    });
+    data.value = response.items;
+    paginationConfig.total = response.total;
+    updateStats();
+  } catch (error: any) {
+    console.error('加载记录规则列表失败:', error);
+    message.error(error.message || '加载记录规则列表失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 获取所有实例池数据
+const fetchPools = async () => {
+  try {
+    const response = await getMonitorScrapePoolListApi({
+      page: 1,
+      size: 100,
+      search: ''
+    });
+    poolOptions.value = response.items;
+  } catch (error: any) {
+    message.error(error.message || '获取实例池数据失败，请稍后重试');
+    console.error(error);
+  }
+};
+
+// 事件处理
+const handleTableChange = (pagination: any): void => {
+  paginationConfig.current = pagination.current;
+  paginationConfig.pageSize = pagination.pageSize;
+  fetchRecordRules();
+};
+
+const handleSearch = (): void => {
+  paginationConfig.current = 1;
+  fetchRecordRules();
+};
+
+const handleSearchChange = (): void => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  searchTimeout = setTimeout(() => {
+    paginationConfig.current = 1;
+    fetchRecordRules();
+  }, 500);
+};
+
+const handleReset = (): void => {
+  searchText.value = '';
+  paginationConfig.current = 1;
+  fetchRecordRules();
+  message.success('过滤条件已重置');
+};
+
+// 模态框操作
+const showAddModal = (): void => {
   resetAddForm();
   isAddModalVisible.value = true;
 };
 
-// 重置新增表单
-const resetAddForm = () => {
-  addForm.name = '';
-  addForm.pool_id = null;
-  addForm.ip_address = '';
-  addForm.port = '';
-  addForm.enable = false;
-  addForm.for_time = '15s';
-  addForm.expr = '';
-  addForm.labels = [];
-  addForm.annotations = [];
-};
-
-// 关闭新增模态框
-const closeAddModal = () => {
+const closeAddModal = (): void => {
   isAddModalVisible.value = false;
 };
 
-// 显示编辑模态框
-const showEditModal = (record: AlertRecordItem) => {
+const showEditModal = (record: AlertRecordItem): void => {
   Object.assign(editForm, {
     id: record.id,
     name: record.name,
@@ -508,16 +674,28 @@ const showEditModal = (record: AlertRecordItem) => {
   isEditModalVisible.value = true;
 };
 
-// 关闭编辑模态框
-const closeEditModal = () => {
+const closeEditModal = (): void => {
   isEditModalVisible.value = false;
 };
 
+// 重置新增表单
+const resetAddForm = (): void => {
+  addForm.name = '';
+  addForm.pool_id = 0;
+  addForm.ip_address = '';
+  addForm.port = '';
+  addForm.enable = false;
+  addForm.for_time = '15s';
+  addForm.expr = '';
+  addForm.labels = [];
+  addForm.annotations = [];
+};
+
 // 提交新增记录
-const handleAdd = async () => {
+const handleAdd = async (): Promise<void> => {
   try {
     await addFormRef.value?.validate();
-    
+
     const payload = {
       name: addForm.name,
       pool_id: addForm.pool_id,
@@ -530,24 +708,21 @@ const handleAdd = async () => {
       annotations: addForm.annotations,
     };
 
-    loading.value = true;
     await createRecordRuleApi(payload);
-    loading.value = false;
     message.success('新增记录成功');
     fetchRecordRules();
     closeAddModal();
   } catch (error: any) {
-    loading.value = false;
-    message.error(error.message || '新增记录失败，请稍后重试');
-    console.error(error);
+    console.error('新增记录失败:', error);
+    message.error(error.message || '新增记录失败');
   }
 };
 
 // 提交更新记录
-const handleUpdate = async () => {
+const handleUpdate = async (): Promise<void> => {
   try {
     await editFormRef.value?.validate();
-    
+
     const payload = {
       id: editForm.id,
       name: editForm.name,
@@ -561,16 +736,13 @@ const handleUpdate = async () => {
       annotations: editForm.annotations,
     };
 
-    loading.value = true;
     await updateRecordRuleApi(payload);
-    loading.value = false;
     message.success('更新记录规则成功');
     fetchRecordRules();
     closeEditModal();
   } catch (error: any) {
-    loading.value = false;
-    message.error(error.message || '更新记录规则失败，请稍后重试');
-    console.error(error);
+    console.error('更新记录规则失败:', error);
+    message.error(error.message || '更新记录规则失败');
   }
 };
 
@@ -583,48 +755,15 @@ const handleDelete = (record: AlertRecordItem) => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        loading.value = true;
         await deleteRecordRuleApi(record.id);
-        loading.value = false;
         message.success('记录规则已删除');
         fetchRecordRules();
       } catch (error: any) {
-        loading.value = false;
-        message.error(error.message || '删除记录规则失败，请稍后重试');
-        console.error(error);
+        console.error('删除记录规则失败:', error);
+        message.error(error.message || '删除记录规则失败');
       }
     },
   });
-};
-
-// 获取记录规则数据
-const fetchRecordRules = async () => {
-  try {
-    loading.value = true;
-    const response = await getRecordRulesListApi({
-      page: current.value,
-      size: pageSizeRef.value,
-      search: searchText.value,
-    });
-    data.value = response.items;
-    total.value = response.total;
-    loading.value = false;
-  } catch (error: any) {
-    loading.value = false;
-    message.error(error.message || '获取记录规则数据失败，请稍后重试');
-    console.error(error);
-  }
-};
-
-// 获取所有实例池数据
-const fetchPools = async () => {
-  try {
-    const response = await getAllMonitorScrapePoolApi();
-    poolOptions.value = response.items;
-  } catch (error: any) {
-    message.error(error.message || '获取实例池数据失败，请稍后重试');
-    console.error(error);
-  }
 };
 
 // 表达式验证（新增）
@@ -659,7 +798,7 @@ const validateEditExpression = async () => {
   }
 };
 
-// 在组件加载时获取数据
+// 生命周期钩子
 onMounted(() => {
   fetchRecordRules();
   fetchPools();
@@ -667,134 +806,89 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.monitor-page {
-  padding: 20px;
-  background-color: #f0f2f5;
+.scrape-pool-container {
+  padding: 12px;
   min-height: 100vh;
 }
 
 .page-header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 8px;
-}
-
-.page-description {
-  color: #666;
-  font-size: 14px;
-}
-
-.dashboard-card {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 20px;
-  margin-bottom: 24px;
-  transition: all 0.3s;
-}
-
-.custom-toolbar {
+.header-actions {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
+}
+
+.btn-create {
+  background: linear-gradient(135deg, #1890ff 0%);
+  border: none;
+  flex-shrink: 0;
 }
 
 .search-filters {
   display: flex;
-  gap: 16px;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .search-input {
   width: 250px;
-  border-radius: 4px;
-  transition: all 0.3s;
+  min-width: 200px;
 }
 
-.search-input:hover,
-.search-input:focus {
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+.reset-btn {
+  flex-shrink: 0;
 }
 
-.search-icon {
-  color: #bfbfbf;
+.stats-row {
+  margin-bottom: 20px;
 }
 
-.action-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 32px;
-  border-radius: 4px;
-  transition: all 0.3s;
-}
-
-.reset-button {
-  background-color: #f5f5f5;
-  color: #595959;
-  border-color: #d9d9d9;
-}
-
-.reset-button:hover {
-  background-color: #e6e6e6;
-  border-color: #b3b3b3;
-}
-
-.add-button {
-  background: linear-gradient(45deg, #1890ff, #36bdf4);
-  border: none;
-  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.4);
-}
-
-.add-button:hover {
-  background: linear-gradient(45deg, #096dd9, #1890ff);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(24, 144, 255, 0.5);
+.stats-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  height: 100%;
 }
 
 .table-container {
-  overflow: hidden;
+  margin-bottom: 24px;
 }
 
-.custom-table {
-  margin-top: 8px;
-}
-
-:deep(.ant-table) {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-:deep(.ant-table-thead > tr > th) {
-  background-color: #f7f9fc;
-  font-weight: 600;
-  color: #1f1f1f;
-  padding: 16px 12px;
-}
-
-:deep(.ant-table-tbody > tr > td) {
-  padding: 12px;
-}
-
-:deep(.ant-table-tbody > tr:hover > td) {
-  background-color: #f0f7ff;
-}
-
-.tag-container {
+.pool-name-cell {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+}
+
+.pool-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-full {
+  background-color: #52c41a;
+}
+
+.status-none {
+  background-color: #d9d9d9;
+}
+
+.pool-name-text {
+  font-weight: 500;
+  word-break: break-all;
 }
 
 .tech-tag {
   display: inline-flex;
   align-items: center;
-  padding: 2px 10px;
+  padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
@@ -814,90 +908,40 @@ onMounted(() => {
   border-left: 3px solid #ff4d4f;
 }
 
-.label-tag {
-  background-color: #f6ffed;
-  color: #389e0d;
-  border-left: 3px solid #52c41a;
-}
-
-.action-column {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.edit-button {
-  background: #1890ff;
-  border: none;
-  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3);
+.creator-info {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
 }
 
-.edit-button:hover {
-  background: #096dd9;
-  transform: scale(1.05);
+.creator-name {
+  font-size: 14px;
+  word-break: break-all;
 }
 
-.delete-button {
-  background: #ff4d4f;
-  border: none;
-  box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+.date-info {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
 }
 
-.delete-button:hover {
-  background: #cf1322;
-  transform: scale(1.05);
+.date {
+  font-weight: 500;
+  font-size: 14px;
 }
 
-.pagination-container {
+.time {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.action-buttons {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-
-.custom-pagination {
-  margin-right: 12px;
-}
-
-/* 模态框样式 */
-:deep(.custom-modal .ant-modal-content) {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-:deep(.custom-modal .ant-modal-header) {
-  padding: 20px 24px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
-}
-
-:deep(.custom-modal .ant-modal-title) {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-:deep(.custom-modal .ant-modal-body) {
-  padding: 24px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-:deep(.custom-modal .ant-modal-footer) {
-  padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 /* 表单样式 */
-.custom-form {
-  width: 100%;
-}
-
 .form-section {
   margin-bottom: 28px;
   padding: 0;
@@ -913,21 +957,8 @@ onMounted(() => {
   border-left: 4px solid #1890ff;
 }
 
-:deep(.custom-form .ant-form-item-label > label) {
-  font-weight: 500;
-  color: #333;
-}
-
 .full-width {
   width: 100%;
-}
-
-:deep(.tech-switch) {
-  background-color: rgba(0, 0, 0, 0.25);
-}
-
-:deep(.tech-switch.ant-switch-checked) {
-  background: linear-gradient(45deg, #1890ff, #36cfc9);
 }
 
 .validate-button {
@@ -944,5 +975,111 @@ onMounted(() => {
   background: #389e0d;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(82, 196, 26, 0.5);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .scrape-pool-container {
+    padding: 8px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-filters {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .btn-text {
+    display: none;
+  }
+
+  .btn-create {
+    padding: 4px 8px;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .creator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .creator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .stats-card {
+    text-align: center;
+  }
+}
+
+/* 表格滚动优化 */
+.table-container :deep(.ant-table-wrapper) {
+  overflow: auto;
+}
+
+.table-container :deep(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.table-container :deep(.ant-table-tbody > tr > td) {
+  word-break: break-word;
+}
+
+/* 对话框响应式优化 */
+.responsive-modal :deep(.ant-modal) {
+  max-width: calc(100vw - 16px);
+  margin: 8px;
+}
+
+@media (max-width: 768px) {
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
 }
 </style>
