@@ -14,6 +14,15 @@ const routes: RouteRecordRaw[] = [
     path: '/aiops',
     children: [
       {
+        name: 'AI小助手',
+        path: '/ai_assistant',
+        component: () => import('#/views/aiops/AssistantManager.vue'),
+        meta: {
+          icon: 'lucide:robot',
+          title: 'AI小助手',
+        },
+      },
+      {
         name: '根因分析',
         path: '/root_cause',
         component: () => import('#/views/aiops/RootCause.vue'),
