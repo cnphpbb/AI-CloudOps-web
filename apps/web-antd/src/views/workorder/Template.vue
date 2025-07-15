@@ -1,61 +1,75 @@
 <template>
-  <div class="template-manager-container">
+  <div class="template-management-container">
     <div class="page-header">
       <div class="header-actions">
         <a-button type="primary" @click="handleCreateTemplate" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
-          创建新模板
+          <span class="btn-text">创建新模板</span>
         </a-button>
-        <a-input-search v-model:value="searchQuery" placeholder="搜索模板..." style="width: 250px" @search="handleSearch"
-          allow-clear />
-        <a-select v-model:value="categoryFilter" placeholder="分类" style="width: 120px" @change="handleCategoryChange">
-          <a-select-option :value="null">全部分类</a-select-option>
-          <a-select-option v-for="cat in categories" :key="cat.id" :value="cat.id">
-            {{ cat.name }}
-          </a-select-option>
-        </a-select>
-        <a-select v-model:value="statusFilter" placeholder="状态" style="width: 120px" @change="handleStatusChange">
-          <a-select-option :value="null">全部状态</a-select-option>
-          <a-select-option :value="1">启用</a-select-option>
-          <a-select-option :value="0">禁用</a-select-option>
-        </a-select>
+        <div class="search-filters">
+          <a-input-search v-model:value="searchQuery" placeholder="搜索模板..." class="search-input" @search="handleSearch"
+            @change="handleSearchChange" allow-clear />
+          <a-select v-model:value="categoryFilter" placeholder="选择分类" class="category-filter"
+            @change="handleCategoryChange" allow-clear>
+            <a-select-option :value="undefined">全部分类</a-select-option>
+            <a-select-option v-for="category in categories" :key="category.id" :value="category.id">
+              {{ category.name }}
+            </a-select-option>
+          </a-select>
+          <a-select v-model:value="statusFilter" placeholder="状态" class="status-filter" @change="handleStatusChange"
+            allow-clear>
+            <a-select-option :value="undefined">全部状态</a-select-option>
+            <a-select-option :value="1">启用</a-select-option>
+            <a-select-option :value="0">禁用</a-select-option>
+          </a-select>
+          <a-select v-model:value="typeFilter" placeholder="类型" class="type-filter" @change="handleTypeChange"
+            allow-clear>
+            <a-select-option :value="undefined">全部类型</a-select-option>
+            <a-select-option :value="1">表单模板</a-select-option>
+            <a-select-option :value="2">流程模板</a-select-option>
+            <a-select-option :value="3">邮件模板</a-select-option>
+          </a-select>
+          <a-button @click="handleResetFilters" class="reset-btn">
+            重置
+          </a-button>
+        </div>
       </div>
     </div>
 
     <div class="stats-row">
-      <a-row :gutter="16">
-        <a-col :span="6">
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="12" :sm="12" :md="6" :lg="6">
           <a-card class="stats-card">
             <a-statistic title="模板总数" :value="stats.total" :value-style="{ color: '#3f8600' }">
-              <template #prefix>
-                <FileOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :span="6">
-          <a-card class="stats-card">
-            <a-statistic title="常规模板" :value="stats.regular" :value-style="{ color: '#1890ff' }">
               <template #prefix>
                 <FileTextOutlined />
               </template>
             </a-statistic>
           </a-card>
         </a-col>
-        <a-col :span="6">
+        <a-col :xs="12" :sm="12" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="系统模板" :value="stats.system" :value-style="{ color: '#722ed1' }">
+            <a-statistic title="启用模板" :value="stats.enabled" :value-style="{ color: '#52c41a' }">
               <template #prefix>
-                <SettingOutlined />
+                <CheckCircleOutlined />
               </template>
             </a-statistic>
           </a-card>
         </a-col>
-        <a-col :span="6">
+        <a-col :xs="12" :sm="12" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="近7天新增" :value="stats.recentAdded" :value-style="{ color: '#fa8c16' }">
+            <a-statistic title="禁用模板" :value="stats.disabled" :value-style="{ color: '#faad14' }">
+              <template #prefix>
+                <StopOutlined />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="12" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic title="本月新增" :value="stats.thisMonth" :value-style="{ color: '#1890ff' }">
               <template #prefix>
                 <PlusCircleOutlined />
               </template>
@@ -67,61 +81,83 @@
 
     <div class="table-container">
       <a-card>
-        <a-table :data-source="templates" :columns="columns" :pagination="false" :loading="loading"
-          row-key="id" bordered>
+        <a-table :data-source="templates" :columns="columns" :pagination="paginationConfig" :loading="loading"
+          row-key="id" bordered :scroll="{ x: 1200 }" @change="handleTableChange">
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="template-name-cell">
-                <div class="template-badge" :class="record.status ? 'status-enabled' : 'status-disabled'"></div>
+                <div class="template-badge" :class="getStatusClass(record.status)"></div>
                 <span class="template-name-text">{{ record.name }}</span>
-                <a-tag v-if="isSystemTemplate(record)" color="purple" size="small">系统</a-tag>
+                <a-tag v-if="record.icon" size="small" color="blue">
+                  {{ record.icon }}
+                </a-tag>
               </div>
+            </template>
+
+            <template v-if="column.key === 'category'">
+              <a-tag v-if="record.categoryName" color="blue">
+                {{ record.categoryName }}
+              </a-tag>
+              <span v-else class="text-gray">未分类</span>
+            </template>
+
+            <template v-if="column.key === 'process'">
+              <a-tag v-if="record.processName" color="geekblue">
+                {{ record.processName }}
+              </a-tag>
+              <span v-else class="text-gray">未关联</span>
             </template>
 
             <template v-if="column.key === 'description'">
               <span class="description-text">{{ record.description || '无描述' }}</span>
             </template>
 
-            <template v-if="column.key === 'category'">
-              <a-tag :color="getCategoryColor(record.category_id)">{{ getCategoryName(record.category_id) }}</a-tag>
+            <template v-if="column.key === 'status'">
+              <a-tag :color="getStatusColor(record.status)">
+                {{ getStatusText(record.status) }}
+              </a-tag>
             </template>
 
-            <template v-if="column.key === 'status'">
-              <a-switch :checked="record.status === 1" disabled />
+            <template v-if="column.key === 'sortOrder'">
+              <a-tag color="default">{{ record.sortOrder || 0 }}</a-tag>
             </template>
 
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.creator_name) }">
-                  {{ getInitials(record.creator_name) }}
+                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.creatorName || '') }">
+                  {{ getInitials(record.creatorName) }}
                 </a-avatar>
-                <span class="creator-name">{{ record.creator_name }}</span>
+                <span class="creator-name">{{ record.creatorName }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'createdAt'">
               <div class="date-info">
-                <span class="date">{{ formatDate(record.created_at) }}</span>
-                <span class="time">{{ formatTime(record.created_at) }}</span>
+                <span class="date">{{ formatDate(record.createdAt) }}</span>
+                <span class="time">{{ formatTime(record.createdAt) }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handlePreviewTemplate(record)">
-                  预览
+                <a-button type="primary" size="small" @click="handleViewTemplate(record)">
+                  查看
                 </a-button>
-                <a-button type="default" size="small" @click="handleEditTemplate(record)" :disabled="isSystemTemplate(record)">
+                <a-button type="default" size="small" @click="handleEditTemplate(record)">
                   编辑
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
-                    <a-menu @click="(e: any) => handleCommand(e.key, record)">
+                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
+                      <a-menu-item key="preview">
+                        <EyeOutlined /> 预览
+                      </a-menu-item>
+                      <a-menu-divider />
                       <a-menu-item key="enable" v-if="record.status === 0">启用</a-menu-item>
                       <a-menu-item key="disable" v-if="record.status === 1">禁用</a-menu-item>
                       <a-menu-item key="clone">克隆</a-menu-item>
                       <a-menu-divider />
-                      <a-menu-item key="delete" danger :disabled="isSystemTemplate(record)">删除</a-menu-item>
+                      <a-menu-item key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
                   <a-button size="small">
@@ -133,19 +169,13 @@
             </template>
           </template>
         </a-table>
-
-        <div class="pagination-container">
-          <a-pagination v-model:current="currentPage" :total="totalItems" :pageSize="pageSize"
-            :pageSizeOptions="['10', '20', '50', '100']" :showSizeChanger="true" @change="handlePageChange"
-            @showSizeChange="handleSizeChange" :showTotal="(total: number) => `共 ${total} 条`" />
-        </div>
       </a-card>
     </div>
 
-    <!-- 模板创建/编辑对话框 -->
-    <a-modal v-model:visible="templateDialog.visible" :title="templateDialog.isEdit ? '编辑模板' : '创建模板'" width="800px"
-      @ok="saveTemplate" :destroy-on-close="true" :confirm-loading="templateDialog.loading">
-      <a-form ref="formRef" :model="templateDialog.form" :rules="formRules" layout="vertical">
+    <!-- 模板创建/编辑对话框 - 包含自动分页选择器 -->
+    <a-modal :open="templateDialogVisible" :title="templateDialog.isEdit ? '编辑模板' : '创建模板'" :width="templateDialogWidth"
+      @ok="saveTemplate" @cancel="closeTemplateDialog" :destroy-on-close="true" class="responsive-modal template-modal">
+      <a-form ref="formRef" :model="templateDialog.form" :rules="templateRules" layout="vertical">
         <a-form-item label="模板名称" name="name">
           <a-input v-model:value="templateDialog.form.name" placeholder="请输入模板名称" />
         </a-form-item>
@@ -154,21 +184,107 @@
           <a-textarea v-model:value="templateDialog.form.description" :rows="3" placeholder="请输入模板描述" />
         </a-form-item>
 
-        <a-form-item label="分类" name="category_id">
-          <a-select v-model:value="templateDialog.form.category_id" placeholder="请选择分类" style="width: 100%">
-            <a-select-option v-for="cat in categories" :key="cat.id" :value="cat.id">
-              {{ cat.name }}
+        <!-- 分类选择器 - 支持自动分页加载 -->
+        <a-form-item label="分类" name="categoryId">
+          <a-select v-model:value="templateDialog.form.categoryId" placeholder="请选择分类" style="width: 100%" show-search
+            :filter-option="false" option-label-prop="children"
+            :not-found-content="categorySelectorLoading ? undefined : (categorySearchKeyword ? '无搜索结果' : '无数据')"
+            @search="handleCategorySearch" @dropdown-visible-change="handleCategoryDropdownChange"
+            @popup-scroll="handleCategoryScroll" allow-clear :loading="categorySelectorLoading">
+            <template #notFoundContent>
+              <div v-if="categorySelectorLoading" class="category-loading">
+                <a-spin size="small" />
+                <span style="margin-left: 8px;">加载中...</span>
+              </div>
+              <div v-else class="category-empty">
+                {{ categorySearchKeyword ? '无搜索结果' : '暂无分类数据' }}
+              </div>
+            </template>
+
+            <!-- 分类选项 -->
+            <a-select-option v-for="cat in templateDialogCategories" :key="cat.id" :value="cat.id">
+              <div class="category-option">
+                <span class="category-name">{{ cat.name }}</span>
+                <span v-if="cat.description" class="category-desc">{{ cat.description }}</span>
+              </div>
+            </a-select-option>
+
+            <!-- 加载更多指示器 -->
+            <a-select-option v-if="categoryPagination.hasMore" :value="'__load_more__'" disabled
+              class="load-more-option">
+              <div class="load-more-content" @click.stop="loadMoreCategories">
+                <a-button type="link" size="small" :loading="categorySelectorLoading"
+                  style="padding: 0; height: auto; font-size: 12px;">
+                  <template v-if="!categorySelectorLoading">
+                    <DownOutlined style="margin-right: 4px;" />
+                    加载更多 ({{ categoryPagination.current }}/{{ totalCategoryPages }})
+                  </template>
+                  <template v-else>
+                    正在加载...
+                  </template>
+                </a-button>
+              </div>
             </a-select-option>
           </a-select>
         </a-form-item>
 
-        <a-form-item label="关联流程" name="process_id">
-          <a-select v-model:value="templateDialog.form.process_id" placeholder="请选择流程" style="width: 100%">
-            <a-select-option v-for="process in processes" :key="process.id" :value="process.id">
-              {{ process.name }}
+        <!-- 流程选择器 - 支持自动分页加载 -->
+        <a-form-item label="关联流程" name="processId">
+          <a-select v-model:value="templateDialog.form.processId" placeholder="请选择流程" style="width: 100%" show-search
+            :filter-option="false" option-label-prop="children"
+            :not-found-content="processSelectorLoading ? undefined : (processSearchKeyword ? '无搜索结果' : '无数据')"
+            @search="handleProcessSearch" @dropdown-visible-change="handleProcessDropdownChange"
+            @popup-scroll="handleProcessScroll" allow-clear :loading="processSelectorLoading">
+            <template #notFoundContent>
+              <div v-if="processSelectorLoading" class="process-loading">
+                <a-spin size="small" />
+                <span style="margin-left: 8px;">加载中...</span>
+              </div>
+              <div v-else class="process-empty">
+                {{ processSearchKeyword ? '无搜索结果' : '暂无流程数据' }}
+              </div>
+            </template>
+
+            <!-- 流程选项 -->
+            <a-select-option v-for="process in templateDialogProcesses" :key="process.id" :value="process.id">
+              <div class="process-option">
+                <span class="process-name">{{ process.name }}</span>
+                <span v-if="process.description" class="process-desc">{{ process.description }}</span>
+              </div>
+            </a-select-option>
+
+            <!-- 加载更多指示器 -->
+            <a-select-option v-if="processPagination.hasMore" :value="'__load_more__'" disabled
+              class="load-more-option">
+              <div class="load-more-content" @click.stop="loadMoreProcesses">
+                <a-button type="link" size="small" :loading="processSelectorLoading"
+                  style="padding: 0; height: auto; font-size: 12px;">
+                  <template v-if="!processSelectorLoading">
+                    <DownOutlined style="margin-right: 4px;" />
+                    加载更多 ({{ processPagination.current }}/{{ totalProcessPages }})
+                  </template>
+                  <template v-else>
+                    正在加载...
+                  </template>
+                </a-button>
+              </div>
             </a-select-option>
           </a-select>
         </a-form-item>
+
+        <a-row :gutter="16">
+          <a-col :xs="24" :sm="12">
+            <a-form-item label="排序" name="sortOrder">
+              <a-input-number v-model:value="templateDialog.form.sortOrder" :min="0" style="width: 100%"
+                placeholder="排序值" />
+            </a-form-item>
+          </a-col>
+          <a-col :xs="24" :sm="12">
+            <a-form-item label="图标" name="icon">
+              <a-input v-model:value="templateDialog.form.icon" placeholder="请输入图标名称" />
+            </a-form-item>
+          </a-col>
+        </a-row>
 
         <a-form-item label="状态" name="status" v-if="templateDialog.isEdit">
           <a-radio-group v-model:value="templateDialog.form.status">
@@ -181,7 +297,6 @@
 
         <!-- 结构化默认值配置 -->
         <a-card title="默认值配置" size="small" class="default-values-card">
-          
           <!-- 优先级设置 -->
           <a-form-item label="默认优先级" style="margin-bottom: 16px;">
             <a-select v-model:value="templateDialog.defaultValues.priority" placeholder="请选择优先级" style="width: 100%">
@@ -194,45 +309,26 @@
 
           <!-- 审批人设置 -->
           <a-form-item label="默认审批人" style="margin-bottom: 16px;">
-            <a-select 
-              v-model:value="templateDialog.defaultValues.approvers" 
-              mode="multiple"
-              placeholder="请选择审批人" 
-              style="width: 100%"
-              :loading="loadingUsers"
-            >
+            <a-select v-model:value="templateDialog.defaultValues.approvers" mode="multiple" placeholder="请选择审批人"
+              style="width: 100%" :loading="usersLoading" @dropdown-visible-change="onUsersDropdownVisibleChange"
+              @popup-scroll="onUsersPopupScroll">
               <a-select-option v-for="user in users" :key="user.id" :value="user.id">
-                {{ user.name }}
+                {{ user.username }}
               </a-select-option>
+              <div v-if="usersLoading" class="loading-more">
+                <a-spin size="small" />
+                <span>加载中...</span>
+              </div>
             </a-select>
-          </a-form-item>
-
-          <!-- 处理时限设置 -->
-          <a-form-item label="默认处理时限（小时）" style="margin-bottom: 16px;">
-            <a-input-number 
-              v-model:value="templateDialog.defaultValues.due_hours" 
-              :min="1" 
-              :max="720"
-              placeholder="请输入小时数"
-              style="width: 100%" 
-            />
           </a-form-item>
 
           <!-- 自定义字段设置 -->
           <a-form-item label="自定义字段" style="margin-bottom: 16px;">
             <div class="custom-fields-section">
               <div v-for="(field, index) in templateDialog.defaultValues.customFields" :key="index" class="field-row">
-                <a-input 
-                  v-model:value="field.key" 
-                  placeholder="字段名"
-                  style="width: 200px; margin-right: 8px;"
-                />
-                <a-input 
-                  v-model:value="field.value" 
-                  placeholder="默认值"
-                  style="width: 200px; margin-right: 8px;"
-                />
-                <a-button type="text" danger @click="removeCustomField(index)">
+                <a-input v-model:value="field.key" placeholder="字段名" class="field-key" />
+                <a-input v-model:value="field.value" placeholder="默认值" class="field-value" />
+                <a-button type="text" danger @click="removeCustomField(index)" class="field-remove">
                   <template #icon>
                     <DeleteOutlined />
                   </template>
@@ -249,74 +345,71 @@
 
           <!-- JSON预览 -->
           <a-form-item label="JSON预览">
-            <a-textarea 
-              :value="generateDefaultValuesJSON()"
-              :rows="6" 
-              readonly
-              class="json-preview"
-            />
+            <a-textarea :value="generateDefaultValuesJSON()" :rows="6" readonly class="json-preview" />
           </a-form-item>
         </a-card>
-
-        <a-form-item label="排序" name="sort_order" style="margin-top: 16px;">
-          <a-input-number v-model:value="templateDialog.form.sort_order" :min="0" style="width: 100%" />
-        </a-form-item>
-
-        <a-form-item label="图标" name="icon">
-          <a-input v-model:value="templateDialog.form.icon" placeholder="请输入图标类名" />
-        </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- 克隆对话框 -->
-    <a-modal v-model:visible="cloneDialog.visible" title="克隆模板" @ok="confirmClone" :destroy-on-close="true" :confirm-loading="cloneDialog.loading">
+    <a-modal :open="cloneDialogVisible" title="克隆模板" :width="dialogWidth" @ok="confirmClone" @cancel="closeCloneDialog"
+      :destroy-on-close="true" :confirm-loading="cloneDialog.loading">
       <a-form :model="cloneDialog.form" layout="vertical">
-        <a-form-item label="新模板名称" name="name">
+        <a-form-item label="原模板名称">
+          <a-input :value="cloneDialog.originalName" disabled />
+        </a-form-item>
+        <a-form-item label="新模板名称" name="name" :rules="[{ required: true, message: '请输入新模板名称' }]">
           <a-input v-model:value="cloneDialog.form.name" placeholder="请输入新模板名称" />
         </a-form-item>
       </a-form>
     </a-modal>
 
-    <!-- 预览对话框 -->
-    <a-modal v-model:visible="previewDialog.visible" title="模板预览" width="80%" :footer="null" class="preview-dialog">
-      <div v-if="previewDialog.template" class="template-details">
+    <!-- 详情/预览对话框 -->
+    <a-modal :open="detailDialogVisible" title="模板详情" :width="previewDialogWidth" :footer="null"
+      @cancel="closeDetailDialog" class="detail-dialog">
+      <div v-if="detailDialog.template" class="template-details">
         <div class="detail-header">
-          <h2>{{ previewDialog.template.name }}</h2>
-          <a-tag :color="previewDialog.template.status ? 'green' : 'default'">
-            {{ previewDialog.template.status ? '启用' : '禁用' }}
+          <h3>{{ detailDialog.template.name }}</h3>
+          <a-tag :color="getStatusColor(detailDialog.template.status)">
+            {{ getStatusText(detailDialog.template.status) }}
           </a-tag>
-          <a-tag v-if="isSystemTemplate(previewDialog.template)" color="purple">系统</a-tag>
         </div>
 
-        <a-descriptions bordered :column="2">
-          <a-descriptions-item label="ID">{{ previewDialog.template.id }}</a-descriptions-item>
-          <a-descriptions-item label="分类">{{ getCategoryName(previewDialog.template.category_id) }}</a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ previewDialog.template.creator_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(previewDialog.template.created_at || '')
-          }}</a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">{{ previewDialog.template.description || '无描述'
+        <a-descriptions bordered :column="responsiveDescColumns" :labelStyle="{ width: '120px' }">
+          <a-descriptions-item label="ID">{{ detailDialog.template.id }}</a-descriptions-item>
+          <a-descriptions-item label="名称">{{ detailDialog.template.name }}</a-descriptions-item>
+          <a-descriptions-item label="分类">
+            <a-tag v-if="detailDialog.template.categoryName" color="blue">
+              {{ detailDialog.template.categoryName }}
+            </a-tag>
+            <span v-else class="text-gray">未分类</span>
+          </a-descriptions-item>
+          <a-descriptions-item label="关联流程">
+            <a-tag v-if="detailDialog.template.processName" color="geekblue">
+              {{ detailDialog.template.processName }}
+            </a-tag>
+            <span v-else class="text-gray">未关联</span>
+          </a-descriptions-item>
+          <a-descriptions-item label="创建人">{{ detailDialog.template.creatorName }}</a-descriptions-item>
+          <a-descriptions-item label="状态">{{ getStatusText(detailDialog.template.status) }}</a-descriptions-item>
+          <a-descriptions-item label="排序">{{ detailDialog.template.sortOrder || 0 }}</a-descriptions-item>
+          <a-descriptions-item label="图标">{{ detailDialog.template.icon || '无' }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间" :span="2">{{ formatFullDateTime(detailDialog.template.createdAt || '')
+            }}</a-descriptions-item>
+          <a-descriptions-item label="描述" :span="2">{{ detailDialog.template.description || '无描述'
           }}</a-descriptions-item>
         </a-descriptions>
 
-        <div class="template-content-preview">
-          <a-tabs>
-            <a-tab-pane key="details" tab="详细信息">
-              <a-descriptions bordered :column="1">
-                <a-descriptions-item label="流程ID">{{ previewDialog.template.process_id }}</a-descriptions-item>
-                <a-descriptions-item label="排序">{{ previewDialog.template.sort_order }}</a-descriptions-item>
-                <a-descriptions-item label="图标">{{ previewDialog.template.icon || '无' }}</a-descriptions-item>
-                <a-descriptions-item label="默认值">
-                  <pre>{{ formatDefaultValues(previewDialog.template.default_values) }}</pre>
-                </a-descriptions-item>
-              </a-descriptions>
-            </a-tab-pane>
-          </a-tabs>
+        <div class="content-preview">
+          <h4>默认值配置</h4>
+          <div class="content-display">
+            <pre class="content-text">{{ formatDefaultValues(detailDialog.template.defaultValues) }}</pre>
+          </div>
         </div>
 
         <div class="detail-footer">
-          <a-button @click="previewDialog.visible = false">关闭</a-button>
-          <a-button type="primary" @click="handleEditTemplate(previewDialog.template)"
-            :disabled="isSystemTemplate(previewDialog.template)">编辑</a-button>
+          <a-button @click="closeDetailDialog">关闭</a-button>
+          <a-button type="primary" @click="handleEditTemplate(detailDialog.template)">编辑</a-button>
         </div>
       </div>
     </a-modal>
@@ -324,23 +417,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
   PlusOutlined,
-  FileOutlined,
   FileTextOutlined,
-  SettingOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
   PlusCircleOutlined,
   DownOutlined,
+  EyeOutlined,
   DeleteOutlined
 } from '@ant-design/icons-vue';
 import {
-  type TemplateItem,
+  type Template,
   type CreateTemplateReq,
   type UpdateTemplateReq,
-  type CloneTemplateReq,
   type ListTemplateReq,
+  type TemplateDefaultValues,
   createTemplate,
   updateTemplate,
   deleteTemplate,
@@ -351,24 +445,25 @@ import {
   cloneTemplate
 } from '#/api/core/workorder_template';
 import { listProcess } from '#/api/core/workorder_process';
-import { listCategory, type CategoryResp } from '#/api/core/workorder_category';
+import { listCategory } from '#/api/core/workorder_category';
 import { getUserList } from '#/api/core/user';
 
 // 类型定义
 interface Category {
   id: number;
   name: string;
-  color: string;
+  description: string;
 }
 
 interface Process {
   id: number;
   name: string;
+  description: string;
 }
 
 interface User {
   id: number;
-  name: string;
+  username: string;
 }
 
 interface CustomField {
@@ -379,139 +474,500 @@ interface CustomField {
 interface DefaultValues {
   priority: number | null;
   approvers: number[];
-  due_hours: number | null;
   customFields: CustomField[];
 }
 
 // 表格列定义
 const columns = [
-  {
-    title: '模板名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 180,
-  },
-  {
-    title: '描述',
-    dataIndex: 'description',
-    key: 'description',
-    width: 200,
-    ellipsis: true,
-  },
-  {
-    title: '分类',
-    dataIndex: 'category_id',
-    key: 'category',
-    width: 120,
-    align: 'center',
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    width: 100,
-    align: 'center',
-  },
-  {
-    title: '创建人',
-    dataIndex: 'creator_name',
-    key: 'creator',
-    width: 150,
-  },
-  {
-    title: '创建时间',
-    dataIndex: 'created_at',
-    key: 'createdAt',
-    width: 180,
-  },
-  {
-    title: '操作',
-    key: 'action',
-    width: 200,
-    align: 'center',
-  },
+  { title: '模板名称', dataIndex: 'name', key: 'name', width: 180, fixed: 'left' },
+  { title: '分类', dataIndex: 'categoryName', key: 'category', width: 120, align: 'center' as const },
+  { title: '关联流程', dataIndex: 'processName', key: 'process', width: 120, align: 'center' as const },
+  { title: '描述', dataIndex: 'description', key: 'description', width: 200, ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
+  { title: '排序', dataIndex: 'sortOrder', key: 'sortOrder', width: 80, align: 'center' as const },
+  { title: '创建人', dataIndex: 'creatorName', key: 'creator', width: 150 },
+  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
 ];
 
 // 状态数据
 const loading = ref(false);
-const loadingUsers = ref(false);
 const searchQuery = ref('');
-const categoryFilter = ref<number | null>(null);
-const statusFilter = ref<0 | 1 | null>(null);
-const currentPage = ref(1);
-const pageSize = ref(10);
-const totalItems = ref(0);
-const templates = ref<TemplateItem[]>([]);
-const processes = ref<Process[]>([]);
+const categoryFilter = ref<number | undefined>(undefined);
+const statusFilter = ref<0 | 1 | undefined>(undefined);
+const typeFilter = ref<number | undefined>(undefined);
+const templates = ref<Template[]>([]);
+const categories = ref<Category[]>([]);
+
+// 模板对话框中的分页数据
+const templateDialogCategories = ref<Category[]>([]);
+const templateDialogProcesses = ref<Process[]>([]);
 const users = ref<User[]>([]);
+const categorySelectorLoading = ref(false);
+const processSelectorLoading = ref(false);
+const usersLoading = ref(false);
+const categorySearchKeyword = ref('');
+const processSearchKeyword = ref('');
+let categorySearchTimeout: any = null;
+let processSearchTimeout: any = null;
+
+// 分类分页状态
+const categoryPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: false
+});
+
+// 流程分页状态
+const processPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  hasMore: false
+});
+
+// 用户分页状态
+const userPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: false
+});
+
+// 防抖处理
+let searchTimeout: any = null;
+
+// 分页配置
+const paginationConfig = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  size: 'default' as const
+});
 
 // 统计数据
 const stats = reactive({
   total: 0,
-  regular: 0,
-  system: 0,
-  recentAdded: 0
+  enabled: 0,
+  disabled: 0,
+  thisMonth: 0
 });
 
-// 分类数据
-const categories = ref<Category[]>([]);
+// 对话框状态
+const templateDialogVisible = ref(false);
+const cloneDialogVisible = ref(false);
+const detailDialogVisible = ref(false);
 
-// 模板对话框
+// 模板对话框数据
 const templateDialog = reactive({
-  visible: false,
   isEdit: false,
-  loading: false,
   form: {
     id: undefined as number | undefined,
     name: '',
     description: '',
-    process_id: 0,
-    default_values: {} as any,
+    categoryId: undefined as number | undefined,
+    processId: undefined as number | undefined,
+    status: 1 as number,
     icon: '',
-    status: 1 as 0 | 1,
-    sort_order: 0,
-    category_id: undefined as number | undefined
+    sortOrder: 0,
+    defaultValues: {} as TemplateDefaultValues
   },
   defaultValues: {
     priority: null,
     approvers: [],
-    due_hours: null,
     customFields: []
   } as DefaultValues
 });
 
-// 克隆对话框
+// 克隆对话框数据
 const cloneDialog = reactive({
-  visible: false,
   loading: false,
+  originalName: '',
+  templateId: 0,
   form: {
-    id: 0,
     name: ''
   }
 });
 
-// 预览对话框
-const previewDialog = reactive({
-  visible: false,
-  template: null as TemplateItem | null
+// 详情对话框数据
+const detailDialog = reactive({
+  template: null as Template | null
 });
 
 // 表单验证规则
-const formRules = {
+const templateRules = {
   name: [
     { required: true, message: '请输入模板名称', trigger: 'blur' },
     { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
   ],
-  category_id: [
+  categoryId: [
     { required: true, message: '请选择分类', trigger: 'change' }
-  ],
-  process_id: [
-    { required: true, message: '请选择关联流程', trigger: 'change' }
   ]
 };
 
 // 表单引用
 const formRef = ref();
+
+// 响应式对话框宽度
+const dialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '80%';
+    return '600px';
+  }
+  return '600px';
+});
+
+const templateDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
+
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
+
+// 响应式描述列数
+const responsiveDescColumns = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return 1;
+    return 2;
+  }
+  return 2;
+});
+
+// 计算总页数
+const totalCategoryPages = computed(() => {
+  return Math.ceil(categoryPagination.total / categoryPagination.pageSize);
+});
+
+const totalProcessPages = computed(() => {
+  return Math.ceil(processPagination.total / processPagination.pageSize);
+});
+
+// 辅助方法
+const getStatusColor = (status: number): string => {
+  return status === 1 ? 'green' : 'default';
+};
+
+const getStatusText = (status: number): string => {
+  return status === 1 ? '启用' : '禁用';
+};
+
+const getStatusClass = (status: number): string => {
+  return status === 1 ? 'status-enabled' : 'status-disabled';
+};
+
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('zh-CN');
+};
+
+const formatTime = (dateStr: string): string => {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+};
+
+const formatFullDateTime = (dateStr: string): string => {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleString('zh-CN');
+};
+
+const getInitials = (name: string): string => {
+  if (!name) return '';
+  return name.slice(0, 2).toUpperCase();
+};
+
+const getAvatarColor = (name: string): string => {
+  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length]!;
+};
+
+const formatDefaultValues = (defaultValues: string | TemplateDefaultValues) => {
+  try {
+    if (!defaultValues) return '{}';
+    if (typeof defaultValues === 'string') {
+      const obj = JSON.parse(defaultValues);
+      return JSON.stringify(obj, null, 2);
+    } else {
+      return JSON.stringify(defaultValues, null, 2);
+    }
+  } catch (e) {
+    return typeof defaultValues === 'string' ? defaultValues : JSON.stringify(defaultValues);
+  }
+};
+
+// 分页分类加载方法
+const loadTemplateDialogCategories = async (reset: boolean = false, search?: string): Promise<void> => {
+  if (categorySelectorLoading.value && !reset) {
+    return;
+  }
+
+  categorySelectorLoading.value = true;
+
+  try {
+    const params = {
+      page: reset ? 1 : categoryPagination.current,
+      size: categoryPagination.pageSize,
+      search: search !== undefined ? search : categorySearchKeyword.value || undefined
+    };
+
+    const response = await listCategory(params);
+
+    if (response) {
+      if (reset) {
+        templateDialogCategories.value = response.items || [];
+        categoryPagination.current = 1;
+      } else {
+        const existingIds = new Set(templateDialogCategories.value.map(cat => cat.id));
+        const newItems = (response.items || []).filter((cat: any) => !existingIds.has(cat.id));
+        templateDialogCategories.value = [...templateDialogCategories.value, ...newItems];
+      }
+
+      categoryPagination.total = response.total || 0;
+      categoryPagination.hasMore = (response.items || []).length === categoryPagination.pageSize &&
+        templateDialogCategories.value.length < categoryPagination.total;
+    }
+  } catch (error: any) {
+    console.error('加载分类列表失败:', error);
+    if (reset) {
+      message.error(error.message || '加载分类列表失败');
+      templateDialogCategories.value = [];
+      categoryPagination.current = 1;
+      categoryPagination.total = 0;
+      categoryPagination.hasMore = false;
+    }
+  } finally {
+    categorySelectorLoading.value = false;
+  }
+};
+
+// 分页流程加载方法
+const loadTemplateDialogProcesses = async (reset: boolean = false, search?: string): Promise<void> => {
+  if (processSelectorLoading.value && !reset) {
+    return;
+  }
+
+  processSelectorLoading.value = true;
+
+  try {
+    const params = {
+      page: reset ? 1 : processPagination.current,
+      size: processPagination.pageSize,
+      search: search !== undefined ? search : processSearchKeyword.value || undefined
+    };
+
+    const response = await listProcess(params);
+
+    if (response) {
+      if (reset) {
+        templateDialogProcesses.value = response.items || [];
+        processPagination.current = 1;
+      } else {
+        const existingIds = new Set(templateDialogProcesses.value.map(process => process.id));
+        const newItems = (response.items || []).filter((process: any) => !existingIds.has(process.id));
+        templateDialogProcesses.value = [...templateDialogProcesses.value, ...newItems];
+      }
+
+      processPagination.total = response.total || 0;
+      processPagination.hasMore = (response.items || []).length === processPagination.pageSize &&
+        templateDialogProcesses.value.length < processPagination.total;
+    }
+  } catch (error: any) {
+    console.error('加载流程列表失败:', error);
+    if (reset) {
+      message.error(error.message || '加载流程列表失败');
+      templateDialogProcesses.value = [];
+      processPagination.current = 1;
+      processPagination.total = 0;
+      processPagination.hasMore = false;
+    }
+  } finally {
+    processSelectorLoading.value = false;
+  }
+};
+
+// 分页用户加载方法
+const loadUsers = async (reset: boolean = false): Promise<void> => {
+  if (usersLoading.value && !reset) {
+    return;
+  }
+
+  if (reset) {
+    userPagination.current = 1;
+    users.value = [];
+    userPagination.hasMore = true;
+  }
+
+  if (!userPagination.hasMore) return;
+
+  usersLoading.value = true;
+  try {
+    const response = await getUserList({
+      page: userPagination.current,
+      size: userPagination.pageSize,
+      search: ''
+    });
+
+    let userItems = [];
+    let total = 0;
+
+    if (response?.data?.items) {
+      userItems = response.data.items;
+      total = response.data.total || 0;
+    } else if (response?.items) {
+      userItems = response.items;
+      total = response.total || 0;
+    }
+
+    if (reset) {
+      users.value = userItems;
+    } else {
+      users.value = [...users.value, ...userItems];
+    }
+
+    userPagination.total = total;
+    userPagination.hasMore = users.value.length < total;
+
+    if (userPagination.hasMore) {
+      userPagination.current++;
+    }
+  } catch (error) {
+    console.error('加载用户列表失败:', error);
+    message.error('加载用户列表失败');
+  } finally {
+    usersLoading.value = false;
+  }
+};
+
+// 处理分类搜索
+const handleCategorySearch = (value: string): void => {
+  categorySearchKeyword.value = value;
+
+  if (categorySearchTimeout) {
+    clearTimeout(categorySearchTimeout);
+  }
+
+  categorySearchTimeout = setTimeout(() => {
+    categoryPagination.current = 1;
+    loadTemplateDialogCategories(true, value);
+  }, 300);
+};
+
+// 处理流程搜索
+const handleProcessSearch = (value: string): void => {
+  processSearchKeyword.value = value;
+
+  if (processSearchTimeout) {
+    clearTimeout(processSearchTimeout);
+  }
+
+  processSearchTimeout = setTimeout(() => {
+    processPagination.current = 1;
+    loadTemplateDialogProcesses(true, value);
+  }, 300);
+};
+
+// 处理下拉框显示/隐藏
+const handleCategoryDropdownChange = (open: boolean): void => {
+  if (open) {
+    if (templateDialogCategories.value.length === 0) {
+      loadTemplateDialogCategories(true);
+    }
+  }
+};
+
+const handleProcessDropdownChange = (open: boolean): void => {
+  if (open) {
+    if (templateDialogProcesses.value.length === 0) {
+      loadTemplateDialogProcesses(true);
+    }
+  }
+};
+
+const onUsersDropdownVisibleChange = (open: boolean) => {
+  if (open && users.value.length === 0) {
+    loadUsers(true);
+  }
+};
+
+// 处理滚动加载更多
+const handleCategoryScroll = (e: Event): void => {
+  const { target } = e;
+  if (!target) return;
+
+  const element = target as HTMLElement;
+  const { scrollTop, scrollHeight, clientHeight } = element;
+
+  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+    categoryPagination.hasMore &&
+    !categorySelectorLoading.value) {
+    loadMoreCategories();
+  }
+};
+
+const handleProcessScroll = (e: Event): void => {
+  const { target } = e;
+  if (!target) return;
+
+  const element = target as HTMLElement;
+  const { scrollTop, scrollHeight, clientHeight } = element;
+
+  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+    processPagination.hasMore &&
+    !processSelectorLoading.value) {
+    loadMoreProcesses();
+  }
+};
+
+const onUsersPopupScroll = (e: Event) => {
+  const target = e.target as HTMLElement;
+  if (target && target.scrollTop + target.offsetHeight === target.scrollHeight) {
+    if (userPagination.hasMore && !usersLoading.value) {
+      loadUsers();
+    }
+  }
+};
+
+// 加载更多方法
+const loadMoreCategories = async (): Promise<void> => {
+  if (!categoryPagination.hasMore || categorySelectorLoading.value) {
+    return;
+  }
+
+  categoryPagination.current += 1;
+  await loadTemplateDialogCategories(false);
+};
+
+const loadMoreProcesses = async (): Promise<void> => {
+  if (!processPagination.hasMore || processSelectorLoading.value) {
+    return;
+  }
+
+  processPagination.current += 1;
+  await loadTemplateDialogProcesses(false);
+};
 
 // 默认值配置相关方法
 const addCustomField = () => {
@@ -526,51 +982,36 @@ const removeCustomField = (index: number) => {
 };
 
 const generateDefaultValuesJSON = () => {
-  const defaultValues: any = {};
+  const defaultValues: TemplateDefaultValues = {
+    fields: {},
+    approvers: templateDialog.defaultValues.approvers,
+    priority: templateDialog.defaultValues.priority || 1
+  };
 
   // 构建 fields 对象
-  const fields: any = {};
   templateDialog.defaultValues.customFields.forEach(field => {
     if (field.key && field.value) {
-      fields[field.key] = field.value;
+      defaultValues.fields[field.key] = field.value;
     }
   });
-  
-  if (Object.keys(fields).length > 0) {
-    defaultValues.fields = fields;
-  }
-
-  // 添加其他字段
-  if (templateDialog.defaultValues.priority !== null) {
-    defaultValues.priority = templateDialog.defaultValues.priority;
-  }
-
-  if (templateDialog.defaultValues.approvers.length > 0) {
-    defaultValues.approvers = templateDialog.defaultValues.approvers;
-  }
-
-  if (templateDialog.defaultValues.due_hours !== null) {
-    defaultValues.due_hours = templateDialog.defaultValues.due_hours;
-  }
 
   return JSON.stringify(defaultValues, null, 2);
 };
 
-const parseDefaultValues = (jsonStr: string | object) => {
+const parseDefaultValues = (defaultValues: string | TemplateDefaultValues) => {
   try {
-    let parsed: any = {};
-    
-    if (typeof jsonStr === 'string') {
-      parsed = JSON.parse(jsonStr);
-    } else if (jsonStr && typeof jsonStr === 'object') {
-      parsed = jsonStr;
+    let parsed: TemplateDefaultValues;
+
+    if (typeof defaultValues === 'string') {
+      parsed = JSON.parse(defaultValues);
+    } else {
+      parsed = defaultValues;
     }
 
     // 重置默认值
     templateDialog.defaultValues = {
       priority: parsed.priority || null,
       approvers: parsed.approvers || [],
-      due_hours: parsed.due_hours || null,
       customFields: []
     };
 
@@ -587,85 +1028,27 @@ const parseDefaultValues = (jsonStr: string | object) => {
     templateDialog.defaultValues = {
       priority: null,
       approvers: [],
-      due_hours: null,
       customFields: []
     };
   }
 };
 
-// 加载用户列表
-const loadUsers = async () => {
-  loadingUsers.value = true;
-  try {
-    const response = await getUserList({
-      page: 1,
-      size: 100,
-      search: ''
-    });
-    users.value = response.items || [];
-  } catch (error) {
-    console.error('加载用户列表失败:', error);
-    message.error('加载用户列表失败');
-  } finally {
-    loadingUsers.value = false;
-  }
-};
-
-// 加载分类数据
-const loadCategories = async () => {
-  try {
-    const response = await listCategory({
-      page: 1,
-      size: 100, 
-      status: 1 
-    });
-    
-    if (response?.items) {
-      categories.value = response.items.map((item: CategoryResp, index: number) => ({
-        id: item.id,
-        name: item.name,
-        color: generateCategoryColor(index)
-      }));
-    }
-  } catch (error) {
-    console.error('加载分类列表失败:', error);
-    message.error('加载分类列表失败');
-  }
-};
-
-// 生成分类颜色
-const generateCategoryColor = (index: number) => {
-  const colors = [
-    'blue', 'green', 'orange', 'red', 
-    'purple', 'cyan', 'magenta', 'lime',
-    'pink', 'yellow', 'volcano', 'geekblue'
-  ];
-  return colors[index % colors.length];
-};
-
-// 加载模板列表
-const loadTemplates = async () => {
+// 数据加载
+const loadTemplates = async (): Promise<void> => {
   loading.value = true;
   try {
     const params: ListTemplateReq = {
-      page: currentPage.value,
-      size: pageSize.value
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
+      search: searchQuery.value || undefined,
+      status: statusFilter.value,
+      categoryId: categoryFilter.value
     };
-
-    if (searchQuery.value) {
-      params.name = searchQuery.value;
-    }
-    if (categoryFilter.value !== null) {
-      params.category_id = categoryFilter.value;
-    }
-    if (statusFilter.value !== null) {
-      params.status = statusFilter.value;
-    }
 
     const response = await listTemplate(params);
     if (response) {
       templates.value = response.items || [];
-      totalItems.value = response.total || 0;
+      paginationConfig.total = response.total || 0;
       updateStats();
     }
   } catch (error) {
@@ -676,186 +1059,214 @@ const loadTemplates = async () => {
   }
 };
 
-const loadProcesses = async () => {
+const loadCategories = async (): Promise<void> => {
   try {
-    const response = await listProcess({
-      page: 1,
-      size: 100
-    });
-    if (response) {
-      processes.value = response.items || [];
-    }
+    const response = await listCategory({ page: 1, size: 100 });
+    categories.value = response.items || [];
   } catch (error) {
-    console.error('加载流程列表失败:', error);
-    message.error('加载流程列表失败');
+    console.error('加载分类列表失败:', error);
+    message.error('加载分类列表失败');
   }
 };
 
-const updateStats = () => {
-  stats.total = totalItems.value;
-  stats.regular = templates.value.filter((t: TemplateItem) => !isSystemTemplate(t)).length;
-  stats.system = templates.value.filter((t: TemplateItem) => isSystemTemplate(t)).length;
-  
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  stats.recentAdded = templates.value.filter((t: TemplateItem) => {
-    const createdAt = new Date(t.created_at || '');
-    return createdAt >= sevenDaysAgo;
+const updateStats = (): void => {
+  stats.total = paginationConfig.total;
+  stats.enabled = templates.value.filter(t => t.status === 1).length;
+  stats.disabled = templates.value.filter(t => t.status === 0).length;
+
+  // 计算本月新增
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  stats.thisMonth = templates.value.filter(t => {
+    if (t.createdAt) {
+      const createdAt = new Date(t.createdAt);
+      return createdAt >= startOfMonth;
+    }
+    return false;
   }).length;
 };
 
-const handleSizeChange = (current: number, size: number) => {
-  pageSize.value = size;
-  currentPage.value = 1;
+// 事件处理
+const handleTableChange = (pagination: any): void => {
+  paginationConfig.current = pagination.current;
+  paginationConfig.pageSize = pagination.pageSize;
   loadTemplates();
 };
 
-const handlePageChange = (page: number) => {
-  currentPage.value = page;
+const handleSearch = (): void => {
+  paginationConfig.current = 1;
   loadTemplates();
 };
 
-const handleSearch = () => {
-  currentPage.value = 1;
+const handleSearchChange = (): void => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  searchTimeout = setTimeout(() => {
+    paginationConfig.current = 1;
+    loadTemplates();
+  }, 500);
+};
+
+const handleCategoryChange = (): void => {
+  paginationConfig.current = 1;
   loadTemplates();
 };
 
-const handleCategoryChange = () => {
-  currentPage.value = 1;
+const handleStatusChange = (): void => {
+  paginationConfig.current = 1;
   loadTemplates();
 };
 
-const handleStatusChange = () => {
-  currentPage.value = 1;
+const handleTypeChange = (): void => {
+  paginationConfig.current = 1;
   loadTemplates();
 };
 
-const handleCreateTemplate = () => {
+const handleResetFilters = (): void => {
+  searchQuery.value = '';
+  categoryFilter.value = undefined;
+  statusFilter.value = undefined;
+  typeFilter.value = undefined;
+  paginationConfig.current = 1;
+  loadTemplates();
+  message.success('过滤条件已重置');
+};
+
+const handleCreateTemplate = (): void => {
   templateDialog.isEdit = false;
   templateDialog.form = {
     id: undefined,
     name: '',
     description: '',
-    process_id: 0,
-    default_values: {},
-    icon: '',
+    categoryId: undefined,
+    processId: undefined,
     status: 1,
-    sort_order: 0,
-    category_id: undefined
+    icon: '',
+    sortOrder: 0,
+    defaultValues: {
+      fields: {},
+      approvers: [],
+      priority: 1
+    }
   };
-  
+
   // 重置默认值配置
   templateDialog.defaultValues = {
     priority: null,
     approvers: [],
-    due_hours: null,
     customFields: []
   };
-  
-  templateDialog.visible = true;
+
+  templateDialogVisible.value = true;
+  resetSelectors();
 };
 
-const handleEditTemplate = async (template: TemplateItem) => {
-  if (isSystemTemplate(template)) {
-    message.warning('系统模板不可编辑');
-    return;
-  }
-
-  loading.value = true;
+const handleEditTemplate = async (record: Template): Promise<void> => {
   try {
-    const response = await detailTemplate(template.id);
-    if (response) {
-      const templateData = response;
+    const response = await detailTemplate(record.id);
+
+    let templateData;
+    if (response?.data) {
+      templateData = response.data;
+    } else {
+      templateData = response;
+    }
+
+    if (templateData) {
       templateDialog.isEdit = true;
-      
       templateDialog.form = {
         id: templateData.id,
         name: templateData.name,
         description: templateData.description || '',
-        process_id: templateData.process_id,
-        default_values: templateData.default_values || {},
-        icon: templateData.icon || '',
+        categoryId: templateData.categoryId,
+        processId: templateData.processId,
         status: templateData.status,
-        sort_order: templateData.sort_order || 0,
-        category_id: templateData.category_id
+        icon: templateData.icon || '',
+        sortOrder: templateData.sortOrder || 0,
+        defaultValues: templateData.defaultValues
       };
 
       // 解析默认值到结构化表单
-      parseDefaultValues(templateData.default_values);
-      
-      templateDialog.visible = true;
-      previewDialog.visible = false;
+      parseDefaultValues(templateData.defaultValues);
+
+      templateDialogVisible.value = true;
+      detailDialogVisible.value = false;
+
+      await loadSelectorDataForEdit(templateData);
     }
   } catch (error) {
     console.error('获取模板详情失败:', error);
     message.error('获取模板详情失败');
-  } finally {
-    loading.value = false;
   }
 };
 
-const handlePreviewTemplate = async (template: TemplateItem) => {
-  loading.value = true;
+const handleViewTemplate = async (record: Template): Promise<void> => {
   try {
-    const response = await detailTemplate(template.id);
-    if (response) {
-      previewDialog.template = response;
-      previewDialog.visible = true;
+    const response = await detailTemplate(record.id);
+
+    let templateData;
+    if (response?.data) {
+      templateData = response.data;
+    } else {
+      templateData = response;
+    }
+
+    if (templateData) {
+      detailDialog.template = templateData;
+      detailDialogVisible.value = true;
     }
   } catch (error) {
     console.error('获取模板详情失败:', error);
     message.error('获取模板详情失败');
-  } finally {
-    loading.value = false;
   }
 };
 
-const handleCommand = (command: string, template: TemplateItem) => {
+const handleMenuClick = (command: string, record: Template): void => {
   switch (command) {
+    case 'preview':
+      handleViewTemplate(record);
+      break;
     case 'enable':
-      handleEnableTemplate(template);
+      toggleTemplateStatus(record, 1);
       break;
     case 'disable':
-      handleDisableTemplate(template);
+      toggleTemplateStatus(record, 0);
       break;
     case 'clone':
-      showCloneDialog(template);
+      showCloneDialog(record);
       break;
     case 'delete':
-      confirmDelete(template);
+      confirmDelete(record);
       break;
   }
 };
 
-const handleEnableTemplate = async (template: TemplateItem) => {
+const toggleTemplateStatus = async (record: Template, status: number): Promise<void> => {
   try {
-    await enableTemplate(template.id);
-    message.success(`模板 "${template.name}" 已启用`);
+    if (status === 1) {
+      await enableTemplate(record.id);
+    } else {
+      await disableTemplate(record.id);
+    }
+
+    const statusText = status === 1 ? '启用' : '禁用';
+    message.success(`模板 "${record.name}" 已${statusText}`);
     loadTemplates();
   } catch (error) {
-    console.error('启用模板失败:', error);
-    message.error('启用模板失败');
+    console.error('更新模板状态失败:', error);
+    message.error('更新模板状态失败');
   }
 };
 
-const handleDisableTemplate = async (template: TemplateItem) => {
-  try {
-    await disableTemplate(template.id);
-    message.success(`模板 "${template.name}" 已禁用`);
-    loadTemplates();
-  } catch (error) {
-    console.error('禁用模板失败:', error);
-    message.error('禁用模板失败');
-  }
+const showCloneDialog = (record: Template): void => {
+  cloneDialog.originalName = record.name;
+  cloneDialog.form.name = `${record.name} 的副本`;
+  cloneDialog.templateId = record.id;
+  cloneDialogVisible.value = true;
 };
 
-const showCloneDialog = (template: TemplateItem) => {
-  cloneDialog.form.id = template.id;
-  cloneDialog.form.name = `${template.name} 副本`;
-  cloneDialog.visible = true;
-};
-
-const confirmClone = async () => {
+const confirmClone = async (): Promise<void> => {
   if (!cloneDialog.form.name.trim()) {
     message.error('请输入新模板名称');
     return;
@@ -863,14 +1274,9 @@ const confirmClone = async () => {
 
   cloneDialog.loading = true;
   try {
-    const data: CloneTemplateReq = {
-      id: cloneDialog.form.id,
-      name: cloneDialog.form.name
-    };
-    
-    await cloneTemplate(data);
+    await cloneTemplate(cloneDialog.templateId);
     message.success(`模板已克隆为 "${cloneDialog.form.name}"`);
-    cloneDialog.visible = false;
+    cloneDialogVisible.value = false;
     loadTemplates();
   } catch (error) {
     console.error('克隆模板失败:', error);
@@ -880,22 +1286,23 @@ const confirmClone = async () => {
   }
 };
 
-const confirmDelete = (template: TemplateItem) => {
-  if (isSystemTemplate(template)) {
-    message.warning('系统模板不可删除');
-    return;
-  }
-
+const confirmDelete = (record: Template): void => {
   Modal.confirm({
     title: '警告',
-    content: `确定要删除模板 "${template.name}" 吗？`,
+    content: `确定要删除模板 "${record.name}" 吗？`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
     async onOk() {
       try {
-        await deleteTemplate(template.id);
-        message.success(`模板 "${template.name}" 已删除`);
+        await deleteTemplate(record.id);
+        message.success(`模板 "${record.name}" 已删除`);
+
+        // 检查当前页是否还有数据，如果删除后当前页没有数据且不是第一页，则回到上一页
+        if (templates.value.length === 1 && paginationConfig.current > 1) {
+          paginationConfig.current = paginationConfig.current - 1;
+        }
+
         loadTemplates();
       } catch (error) {
         console.error('删除模板失败:', error);
@@ -905,7 +1312,8 @@ const confirmDelete = (template: TemplateItem) => {
   });
 };
 
-const saveTemplate = async () => {
+// 表单保存
+const saveTemplate = async (): Promise<void> => {
   // 先验证表单
   try {
     await formRef.value?.validate();
@@ -920,56 +1328,36 @@ const saveTemplate = async () => {
     return;
   }
 
-  if (!templateDialog.form.category_id) {
+  if (!templateDialog.form.categoryId) {
     message.error('请选择分类');
-    return;
-  }
-  
-  if (!templateDialog.form.process_id) {
-    message.error('请选择关联流程');
     return;
   }
 
   // 构建默认值对象
-  let defaultValues: any = {};
+  const defaultValues: TemplateDefaultValues = {
+    fields: {},
+    approvers: templateDialog.defaultValues.approvers,
+    priority: templateDialog.defaultValues.priority || 1
+  };
 
   // 构建 fields 对象
-  const fields: any = {};
   templateDialog.defaultValues.customFields.forEach(field => {
     if (field.key && field.value) {
-      fields[field.key] = field.value;
+      defaultValues.fields[field.key] = field.value;
     }
   });
-  
-  if (Object.keys(fields).length > 0) {
-    defaultValues.fields = fields;
-  }
 
-  // 添加其他字段
-  if (templateDialog.defaultValues.priority !== null) {
-    defaultValues.priority = templateDialog.defaultValues.priority;
-  }
-
-  if (templateDialog.defaultValues.approvers.length > 0) {
-    defaultValues.approvers = templateDialog.defaultValues.approvers;
-  }
-
-  if (templateDialog.defaultValues.due_hours !== null) {
-    defaultValues.due_hours = templateDialog.defaultValues.due_hours;
-  }
-
-  templateDialog.loading = true;
   try {
     if (templateDialog.isEdit && templateDialog.form.id) {
       const data: UpdateTemplateReq = {
         id: templateDialog.form.id,
         name: templateDialog.form.name,
-        description: templateDialog.form.description || '',
-        process_id: templateDialog.form.process_id,
-        default_values: defaultValues,
-        icon: templateDialog.form.icon || '',
-        category_id: templateDialog.form.category_id,
-        sort_order: templateDialog.form.sort_order || 0,
+        description: templateDialog.form.description,
+        processId: templateDialog.form.processId,
+        defaultValues: defaultValues,
+        icon: templateDialog.form.icon,
+        categoryId: templateDialog.form.categoryId,
+        sortOrder: templateDialog.form.sortOrder,
         status: templateDialog.form.status
       };
       await updateTemplate(data);
@@ -977,138 +1365,161 @@ const saveTemplate = async () => {
     } else {
       const data: CreateTemplateReq = {
         name: templateDialog.form.name,
-        description: templateDialog.form.description || '',
-        process_id: templateDialog.form.process_id,
-        default_values: defaultValues,
-        icon: templateDialog.form.icon || '',
-        category_id: templateDialog.form.category_id,
-        sort_order: templateDialog.form.sort_order || 0
+        description: templateDialog.form.description,
+        processId: templateDialog.form.processId,
+        defaultValues: defaultValues,
+        icon: templateDialog.form.icon,
+        categoryId: templateDialog.form.categoryId,
+        sortOrder: templateDialog.form.sortOrder
       };
       await createTemplate(data);
       message.success(`模板 "${templateDialog.form.name}" 已创建`);
+
+      // 如果是创建新模板，跳转到第一页查看新创建的模板
+      paginationConfig.current = 1;
     }
-    templateDialog.visible = false;
+    templateDialogVisible.value = false;
     loadTemplates();
   } catch (error) {
     console.error('保存模板失败:', error);
     message.error('保存模板失败');
-  } finally {
-    templateDialog.loading = false;
   }
 };
 
-// 辅助方法
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
-};
+// 为编辑模式加载选择器数据
+const loadSelectorDataForEdit = async (template: Template): Promise<void> => {
+  resetSelectors();
 
-const formatTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-};
-
-const formatFullDateTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-
-const formatDefaultValues = (jsonStr: string | object) => {
   try {
-    if (!jsonStr) return '{}';
-    if (typeof jsonStr === 'string') {
-      const obj = JSON.parse(jsonStr);
-      return JSON.stringify(obj, null, 2);
-    } else {
-      return JSON.stringify(jsonStr, null, 2);
+    await loadTemplateDialogCategories(true);
+    await loadTemplateDialogProcesses(true);
+    await loadUsers(true);
+
+    // 确保当前选中的分类和流程在列表中
+    if (template.categoryId && !templateDialogCategories.value.find(cat => cat.id === template.categoryId)) {
+      templateDialogCategories.value = [
+        { id: template.categoryId, name: template.categoryName || `分类${template.categoryId}`, description: '' },
+        ...templateDialogCategories.value
+      ];
     }
-  } catch (e) {
-    return typeof jsonStr === 'string' ? jsonStr : JSON.stringify(jsonStr);
+
+    if (template.processId && !templateDialogProcesses.value.find(process => process.id === template.processId)) {
+      templateDialogProcesses.value = [
+        { id: template.processId, name: template.processName || `流程${template.processId}`, description: '' },
+        ...templateDialogProcesses.value
+      ];
+    }
+  } catch (error) {
+    console.error('加载编辑模式选择器数据失败:', error);
   }
 };
 
-const getInitials = (name: string) => {
-  if (!name) return '';
-  return name
-    .split('')
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-};
+// 重置选择器状态
+const resetSelectors = (): void => {
+  // 重置分类选择器
+  templateDialogCategories.value = [];
+  categoryPagination.current = 1;
+  categoryPagination.total = 0;
+  categoryPagination.hasMore = false;
+  categorySearchKeyword.value = '';
+  categorySelectorLoading.value = false;
 
-const getAvatarColor = (name: string) => {
-  const colors = [
-    '#1890ff', '#52c41a', '#faad14', '#f5222d',
-    '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
-  ];
+  // 重置流程选择器
+  templateDialogProcesses.value = [];
+  processPagination.current = 1;
+  processPagination.total = 0;
+  processPagination.hasMore = false;
+  processSearchKeyword.value = '';
+  processSelectorLoading.value = false;
 
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  // 重置用户选择器
+  users.value = [];
+  userPagination.current = 1;
+  userPagination.total = 0;
+  userPagination.hasMore = false;
+  usersLoading.value = false;
+
+  // 清除搜索定时器
+  if (categorySearchTimeout) {
+    clearTimeout(categorySearchTimeout);
+    categorySearchTimeout = null;
   }
-
-  return colors[Math.abs(hash) % colors.length];
+  if (processSearchTimeout) {
+    clearTimeout(processSearchTimeout);
+    processSearchTimeout = null;
+  }
 };
 
-const getCategoryName = (categoryId?: number) => {
-  if (!categoryId) return '未分类';
-  const category = categories.value.find(c => c.id === categoryId);
-  return category ? category.name : '未分类';
+// 对话框关闭
+const closeTemplateDialog = (): void => {
+  templateDialogVisible.value = false;
+  resetSelectors();
 };
 
-const getCategoryColor = (categoryId?: number) => {
-  if (!categoryId) return 'default';
-  const category = categories.value.find(c => c.id === categoryId);
-  return category ? category.color : 'default';
+const closeCloneDialog = (): void => {
+  cloneDialogVisible.value = false;
 };
 
-const isSystemTemplate = (template: TemplateItem) => {
-  return template.creator_id === 1;
+const closeDetailDialog = (): void => {
+  detailDialogVisible.value = false;
 };
 
-// 初始化
+// 生命周期钩子
 onMounted(() => {
   loadCategories();
   loadTemplates();
-  loadProcesses();
-  loadUsers();
 });
 </script>
 
 <style scoped>
-.template-manager-container {
-  padding: 24px;
+.template-management-container {
+  padding: 12px;
   min-height: 100vh;
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .header-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+  align-items: center;
 }
 
 .btn-create {
   background: linear-gradient(135deg, #1890ff 0%);
   border: none;
+  flex-shrink: 0;
+}
+
+.search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-input {
+  width: 250px;
+  min-width: 200px;
+}
+
+.category-filter,
+.status-filter,
+.type-filter {
+  width: 120px;
+  min-width: 100px;
+}
+
+.reset-btn {
+  flex-shrink: 0;
 }
 
 .stats-row {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .stats-card {
@@ -1131,6 +1542,7 @@ onMounted(() => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .status-enabled {
@@ -1143,14 +1555,20 @@ onMounted(() => {
 
 .template-name-text {
   font-weight: 500;
+  word-break: break-all;
 }
 
 .description-text {
   color: #606266;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-all;
+}
+
+.text-gray {
+  color: #999;
+  font-style: italic;
 }
 
 .creator-info {
@@ -1161,6 +1579,7 @@ onMounted(() => {
 
 .creator-name {
   font-size: 14px;
+  word-break: break-all;
 }
 
 .date-info {
@@ -1180,38 +1599,70 @@ onMounted(() => {
 
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
-.pagination-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.detail-header {
+/* 选择器样式 - 参考表单管理页面 */
+.category-loading,
+.category-empty,
+.process-loading,
+.process-empty {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  justify-content: center;
+  padding: 8px 12px;
+  color: #8c8c8c;
+  font-size: 14px;
 }
 
-.detail-header h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #1f2937;
-}
-
-.template-content-preview {
-  margin-top: 24px;
-}
-
-.detail-footer {
-  margin-top: 24px;
+.category-option,
+.process-option {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.category-name,
+.process-name {
+  font-weight: 500;
+  color: #262626;
+}
+
+.category-desc,
+.process-desc {
+  font-size: 12px;
+  color: #8c8c8c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.load-more-option {
+  text-align: center;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 4px;
+  background-color: #fafafa !important;
+}
+
+.load-more-option:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.load-more-content {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.load-more-content:hover {
+  background-color: #e6f7ff;
+  border-radius: 4px;
 }
 
 .default-values-card {
@@ -1228,6 +1679,7 @@ onMounted(() => {
 .field-row {
   display: flex;
   align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
@@ -1235,9 +1687,292 @@ onMounted(() => {
   margin-bottom: 0;
 }
 
+.field-key {
+  flex: 1;
+  min-width: 120px;
+}
+
+.field-value {
+  flex: 1;
+  min-width: 120px;
+}
+
+.field-remove {
+  flex-shrink: 0;
+}
+
 .json-preview {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   background-color: #f6f8fa;
   border: 1px solid #e1e4e8;
+}
+
+.loading-more {
+  padding: 8px 12px;
+  text-align: center;
+  color: #999;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* 详情对话框样式 */
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.detail-header h3 {
+  margin: 0;
+  font-size: 24px;
+  color: #1f2937;
+  word-break: break-all;
+}
+
+.content-preview {
+  margin-top: 24px;
+}
+
+.content-preview h4 {
+  margin-bottom: 16px;
+  color: #1f2937;
+  font-size: 18px;
+}
+
+.content-display {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fafafa;
+  padding: 16px;
+}
+
+.content-text {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  background: white;
+  border: 1px solid #e1e4e8;
+  padding: 12px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+.detail-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* 选择器下拉列表样式优化 */
+:deep(.ant-select-dropdown) {
+  .load-more-option.ant-select-item-option-disabled {
+    color: #1890ff !important;
+    cursor: pointer !important;
+    background-color: #fafafa !important;
+  }
+
+  .load-more-option.ant-select-item-option-disabled:hover {
+    background-color: #f0f0f0 !important;
+  }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .template-management-container {
+    padding: 8px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-filters {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .category-filter,
+  .status-filter,
+  .type-filter {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .btn-text {
+    display: none;
+  }
+
+  .btn-create {
+    padding: 4px 8px;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
+  }
+
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+
+  .category-desc,
+  .process-desc {
+    max-width: 150px;
+  }
+
+  .load-more-content {
+    padding: 6px 8px;
+  }
+
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+
+  .field-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .field-key,
+  .field-value {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .field-remove {
+    align-self: center;
+  }
+}
+
+/* 平板端适配 */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .template-management-container {
+    padding: 16px;
+  }
+
+  .search-input {
+    width: 200px;
+  }
+
+  .category-desc,
+  .process-desc {
+    max-width: 180px;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .stats-card {
+    text-align: center;
+  }
+
+  .creator-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .creator-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .category-desc,
+  .process-desc {
+    max-width: 120px;
+  }
+
+  .load-more-content {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+}
+
+/* 表格滚动优化 */
+.table-container :deep(.ant-table-wrapper) {
+  overflow: auto;
+}
+
+.table-container :deep(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.table-container :deep(.ant-table-tbody > tr > td) {
+  word-break: break-word;
+}
+
+/* 对话框响应式优化 */
+.responsive-modal :deep(.ant-modal) {
+  max-width: calc(100vw - 16px);
+  margin: 8px;
+}
+
+.template-modal :deep(.ant-modal-body) {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* 焦点状态优化 */
+.json-preview:focus-within {
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  border-radius: 6px;
 }
 </style>

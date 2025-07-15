@@ -38,21 +38,11 @@
           </template>
 
           <a-spin :spinning="loading">
-            <a-input-search 
-              v-model:value="searchValue" 
-              placeholder="搜索节点" 
-              style="margin-bottom: 16px"
-              @change="onSearchChange" 
-              allow-clear 
-            />
+            <a-input-search v-model:value="searchValue" placeholder="搜索节点" style="margin-bottom: 16px"
+              @change="onSearchChange" allow-clear />
 
-            <a-tree 
-              v-model:expanded-keys="expandedKeys" 
-              v-model:selected-keys="selectedKeys"
-              :tree-data="filteredTreeData" 
-              :show-line="{ showLeafIcon: false }" 
-              @select="onSelect"
-            >
+            <a-tree v-model:expanded-keys="expandedKeys" v-model:selected-keys="selectedKeys"
+              :tree-data="filteredTreeData" :show-line="{ showLeafIcon: false }" @select="onSelect">
               <template #title="{ title, key }">
                 <span class="tree-node-title">
                   {{ title }}
@@ -157,14 +147,9 @@
                     </a-button>
                   </a-space>
                 </div>
-                
-                <a-table 
-                  :data-source="nodeResources" 
-                  :columns="resourceColumns" 
-                  :pagination="{ pageSize: 10 }"
-                  size="middle"
-                  :loading="resourceLoading"
-                >
+
+                <a-table :data-source="nodeResources" :columns="resourceColumns" :pagination="{ pageSize: 10 }"
+                  size="middle" :loading="resourceLoading">
                   <template #bodyCell="{ column, record }">
                     <template v-if="column.key === 'resourceStatus'">
                       <a-tag :color="getResourceStatusColor(record.resourceStatus)">
@@ -204,14 +189,8 @@
                         </a-button>
                       </a-space>
                     </div>
-                    <a-table 
-                      :data-source="adminUsers" 
-                      :columns="adminColumns" 
-                      :pagination="{ pageSize: 10 }"
-                      size="middle"
-                      :loading="memberLoading"
-                      :locale="{ emptyText: '暂无管理员' }"
-                    >
+                    <a-table :data-source="adminUsers" :columns="adminColumns" :pagination="{ pageSize: 10 }"
+                      size="middle" :loading="memberLoading" :locale="{ emptyText: '暂无管理员' }">
                       <template #bodyCell="{ column, record }">
                         <template v-if="column.key === 'account_type'">
                           <a-tag :color="record.account_type === 2 ? 'blue' : 'green'">
@@ -251,14 +230,8 @@
                         </a-button>
                       </a-space>
                     </div>
-                    <a-table 
-                      :data-source="memberUsers" 
-                      :columns="memberColumns" 
-                      :pagination="{ pageSize: 10 }"
-                      size="middle"
-                      :loading="memberLoading"
-                      :locale="{ emptyText: '暂无普通成员' }"
-                    >
+                    <a-table :data-source="memberUsers" :columns="memberColumns" :pagination="{ pageSize: 10 }"
+                      size="middle" :loading="memberLoading" :locale="{ emptyText: '暂无普通成员' }">
                       <template #bodyCell="{ column, record }">
                         <template v-if="column.key === 'account_type'">
                           <a-tag :color="record.account_type === 2 ? 'blue' : 'green'">
@@ -290,23 +263,14 @@
     </a-row>
 
     <!-- 创建/编辑节点模态框 -->
-    <a-modal 
-      v-model:open="createNodeModalVisible"
-      :title="getNodeModalTitle" 
-      @ok="handleCreateOrUpdateNode"
-      :confirm-loading="confirmLoading" 
-      width="600px"
-    >
+    <a-modal v-model:open="createNodeModalVisible" :title="getNodeModalTitle" @ok="handleCreateOrUpdateNode"
+      :confirm-loading="confirmLoading" width="600px">
       <a-form :model="nodeForm" :rules="nodeFormRules" ref="nodeFormRef" layout="vertical">
         <a-form-item label="节点名称" name="name">
           <a-input v-model:value="nodeForm.name" placeholder="请输入节点名称" />
         </a-form-item>
         <a-form-item label="父节点" name="parentId">
-          <a-select 
-            v-model:value="nodeForm.parentId" 
-            placeholder="请选择父节点" 
-            :disabled="!!currentParentId && !isEditMode"
-          >
+          <a-select v-model:value="nodeForm.parentId" placeholder="请选择父节点" :disabled="!!currentParentId && !isEditMode">
             <a-select-option :value="0">无 (创建顶级节点)</a-select-option>
             <a-select-option v-for="option in parentNodeOptions" :key="option.value" :value="option.value">
               {{ option.label }}
@@ -335,13 +299,8 @@
     </a-modal>
 
     <!-- 移动节点模态框 -->
-    <a-modal 
-      v-model:open="moveNodeModalVisible"
-      title="移动节点" 
-      @ok="handleMoveNode"
-      :confirm-loading="confirmLoading" 
-      width="500px"
-    >
+    <a-modal v-model:open="moveNodeModalVisible" title="移动节点" @ok="handleMoveNode" :confirm-loading="confirmLoading"
+      width="500px">
       <a-form layout="vertical">
         <a-form-item label="当前节点">
           <a-input :value="selectedNode?.name" disabled />
@@ -358,20 +317,11 @@
     </a-modal>
 
     <!-- 绑定资源模态框 -->
-    <a-modal 
-      v-model:open="bindResourceModalVisible" 
-      title="绑定资源" 
-      @ok="handleBindResource"
-      :confirm-loading="confirmLoading" 
-      width="800px"
-    >
+    <a-modal v-model:open="bindResourceModalVisible" title="绑定资源" @ok="handleBindResource"
+      :confirm-loading="confirmLoading" width="800px">
       <a-form :model="bindResourceForm" layout="vertical">
         <a-form-item label="资源类型" name="resourceType">
-          <a-select 
-            v-model:value="bindResourceForm.resourceType" 
-            placeholder="请选择资源类型"
-            @change="onResourceTypeChange"
-          >
+          <a-select v-model:value="bindResourceForm.resourceType" placeholder="请选择资源类型" @change="onResourceTypeChange">
             <a-select-option value="ecs">云服务器</a-select-option>
             <a-select-option value="elb">负载均衡</a-select-option>
             <a-select-option value="rds">数据库</a-select-option>
@@ -379,47 +329,26 @@
           </a-select>
         </a-form-item>
         <a-form-item label="选择资源" name="resourceIds">
-          <a-table 
-            :data-source="availableResources"
-            :row-selection="{ 
-              selectedRowKeys: bindResourceForm.resourceIds, 
-              onChange: onSelectedResourcesChange,
-              type: 'checkbox'
-            }"
-            :columns="availableResourceColumns" 
-            size="middle" 
-            :pagination="{ pageSize: 5 }"
-            :loading="availableResourceLoading"
-          />
+          <a-table :data-source="availableResources" :row-selection="{
+            selectedRowKeys: bindResourceForm.resourceIds,
+            onChange: onSelectedResourcesChange,
+            type: 'checkbox'
+          }" :columns="availableResourceColumns" size="middle" :pagination="{ pageSize: 5 }"
+            :loading="availableResourceLoading" />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- 添加成员模态框 -->
-    <a-modal 
-      v-model:open="addMemberModalVisible" 
-      :title="getMemberModalTitle"
-      @ok="handleAddMember" 
-      :confirm-loading="confirmLoading" 
-      width="600px"
-    >
+    <a-modal v-model:open="addMemberModalVisible" :title="getMemberModalTitle" @ok="handleAddMember"
+      :confirm-loading="confirmLoading" width="600px">
       <a-form :model="memberForm" layout="vertical">
         <a-form-item label="选择用户" name="userId" :rules="[{ required: true, message: '请选择用户', trigger: 'change' }]">
-          <a-select 
-            v-model:value="memberForm.userId" 
-            placeholder="请选择用户" 
-            show-search
-            :filter-option="filterUserOption"
-            style="width: 100%"
-            :loading="userListLoading"
-            :not-found-content="userListLoading ? '加载中...' : availableUsers.length === 0 ? '暂无可添加的用户' : '无匹配结果'"
-          >
-            <a-select-option 
-              v-for="user in availableUsers" 
-              :key="user.id" 
-              :value="user.id"
-              :disabled="user.enable !== 1"
-            >
+          <a-select v-model:value="memberForm.userId" placeholder="请选择用户" show-search :filter-option="filterUserOption"
+            style="width: 100%" :loading="userListLoading"
+            :not-found-content="userListLoading ? '加载中...' : availableUsers.length === 0 ? '暂无可添加的用户' : '无匹配结果'">
+            <a-select-option v-for="user in availableUsers" :key="user.id" :value="user.id"
+              :disabled="user.enable !== 1">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                   <strong>{{ user.username }}</strong>
@@ -429,31 +358,22 @@
                 </div>
                 <div style="font-size: 12px; color: #999;">
                   <span v-if="user.mobile">{{ user.mobile }}</span>
-                  <a-tag 
-                    v-if="user.account_type === 2" 
-                    color="blue" 
-                    size="small" 
-                    style="margin-left: 4px;"
-                  >
+                  <a-tag v-if="user.account_type === 2" color="blue" size="small" style="margin-left: 4px;">
                     超管
                   </a-tag>
-                  <a-tag 
-                    v-if="user.enable !== 1" 
-                    color="red" 
-                    size="small" 
-                    style="margin-left: 4px;"
-                  >
+                  <a-tag v-if="user.enable !== 1" color="red" size="small" style="margin-left: 4px;">
                     已禁用
                   </a-tag>
                 </div>
               </div>
             </a-select-option>
           </a-select>
-          <div v-if="!userListLoading && availableUsers.length === 0" style="margin-top: 8px; color: #999; font-size: 12px;">
+          <div v-if="!userListLoading && availableUsers.length === 0"
+            style="margin-top: 8px; color: #999; font-size: 12px;">
             暂无可添加的用户
           </div>
         </a-form-item>
-        
+
         <!-- 显示当前节点已有成员信息 -->
         <a-form-item label="当前成员统计">
           <a-space>
@@ -485,12 +405,7 @@
     </a-modal>
 
     <!-- 资源详情模态框 -->
-    <a-modal 
-      v-model:open="resourceDetailModalVisible" 
-      title="资源详情" 
-      :footer="null" 
-      width="800px"
-    >
+    <a-modal v-model:open="resourceDetailModalVisible" title="资源详情" :footer="null" width="800px">
       <a-descriptions bordered :column="1" size="middle">
         <a-descriptions-item label="资源ID">{{ currentResourceDetail.resourceId }}</a-descriptions-item>
         <a-descriptions-item label="资源名称">{{ currentResourceDetail.resourceName }}</a-descriptions-item>
@@ -500,8 +415,10 @@
             {{ currentResourceDetail.resourceStatus }}
           </a-tag>
         </a-descriptions-item>
-        <a-descriptions-item label="创建时间">{{ formatDateTime(currentResourceDetail.resourceCreateTime) }}</a-descriptions-item>
-        <a-descriptions-item label="更新时间">{{ formatDateTime(currentResourceDetail.resourceUpdateTime) }}</a-descriptions-item>
+        <a-descriptions-item label="创建时间">{{ formatDateTime(currentResourceDetail.resourceCreateTime)
+          }}</a-descriptions-item>
+        <a-descriptions-item label="更新时间">{{ formatDateTime(currentResourceDetail.resourceUpdateTime)
+          }}</a-descriptions-item>
         <a-descriptions-item v-if="currentResourceDetail.resourceDeleteTime" label="删除时间">
           {{ formatDateTime(currentResourceDetail.resourceDeleteTime) }}
         </a-descriptions-item>
@@ -524,7 +441,7 @@ import {
   SwapOutlined,
 } from '@ant-design/icons-vue';
 import { message, Modal } from 'ant-design-vue';
-import { 
+import {
   getTreeList,
   getNodeDetail,
   getTreeStatistics,
@@ -674,17 +591,17 @@ const filteredTreeData = computed(() => {
   }
 
   const search = searchValue.value.toLowerCase();
-  
+
   const filterNode = (node: any): any => {
     if (node.title.toLowerCase().includes(search)) {
       return { ...node };
     }
-    
+
     if (node.children) {
       const filteredChildren = node.children
         .map((child: any) => filterNode(child))
         .filter(Boolean);
-      
+
       if (filteredChildren.length > 0) {
         return {
           ...node,
@@ -692,7 +609,7 @@ const filteredTreeData = computed(() => {
         };
       }
     }
-    
+
     return null;
   };
 
@@ -715,11 +632,11 @@ const getMemberModalTitle = computed(() => {
 // 移动节点选项（排除自身和子节点）
 const moveNodeOptions = computed(() => {
   if (!selectedNode.value) return parentNodeOptions.value;
-  
+
   // 排除自身和自身的子节点
   const excludeIds = [selectedNode.value.id];
-  
-  return parentNodeOptions.value.filter(option => 
+
+  return parentNodeOptions.value.filter(option =>
     !excludeIds.includes(option.value)
   );
 });
@@ -730,28 +647,28 @@ const resourceColumns = [
   { title: '资源名称', dataIndex: 'resourceName', key: 'resourceName' },
   { title: '资源类型', dataIndex: 'resourceType', key: 'resourceType' },
   { title: '状态', dataIndex: 'resourceStatus', key: 'resourceStatus' },
-  { 
-    title: '创建时间', 
-    dataIndex: 'resourceCreateTime', 
-    key: 'resourceCreateTime', 
-    customRender: ({ text }: { text: string }) => formatDateTime(text) 
+  {
+    title: '创建时间',
+    dataIndex: 'resourceCreateTime',
+    key: 'resourceCreateTime',
+    customRender: ({ text }: { text: string }) => formatDateTime(text)
   },
   { title: '操作', key: 'action', width: 120 },
 ];
 
 const adminColumns = [
   { title: '用户名', dataIndex: 'username', key: 'username' },
-  { 
-    title: '真实姓名', 
-    dataIndex: 'real_name', 
-    key: 'real_name', 
-    customRender: ({ text }: { text: string }) => text || '-' 
+  {
+    title: '真实姓名',
+    dataIndex: 'real_name',
+    key: 'real_name',
+    customRender: ({ text }: { text: string }) => text || '-'
   },
-  { 
-    title: '手机号', 
-    dataIndex: 'mobile', 
-    key: 'mobile', 
-    customRender: ({ text }: { text: string }) => text || '-' 
+  {
+    title: '手机号',
+    dataIndex: 'mobile',
+    key: 'mobile',
+    customRender: ({ text }: { text: string }) => text || '-'
   },
   { title: '账号类型', dataIndex: 'account_type', key: 'account_type' },
   { title: '状态', dataIndex: 'enable', key: 'enable' },
@@ -760,17 +677,17 @@ const adminColumns = [
 
 const memberColumns = [
   { title: '用户名', dataIndex: 'username', key: 'username' },
-  { 
-    title: '真实姓名', 
-    dataIndex: 'real_name', 
-    key: 'real_name', 
-    customRender: ({ text }: { text: string }) => text || '-' 
+  {
+    title: '真实姓名',
+    dataIndex: 'real_name',
+    key: 'real_name',
+    customRender: ({ text }: { text: string }) => text || '-'
   },
-  { 
-    title: '手机号', 
-    dataIndex: 'mobile', 
-    key: 'mobile', 
-    customRender: ({ text }: { text: string }) => text || '-' 
+  {
+    title: '手机号',
+    dataIndex: 'mobile',
+    key: 'mobile',
+    customRender: ({ text }: { text: string }) => text || '-'
   },
   { title: '账号类型', dataIndex: 'account_type', key: 'account_type' },
   { title: '状态', dataIndex: 'enable', key: 'enable' },
@@ -782,11 +699,11 @@ const availableResourceColumns = computed(() => {
     { title: '资源ID', dataIndex: 'id', key: 'id' },
     { title: '资源名称', dataIndex: 'name', key: 'name' },
     { title: '状态', dataIndex: 'status', key: 'status' },
-    { 
-      title: '创建时间', 
-      dataIndex: 'createTime', 
-      key: 'createTime', 
-      customRender: ({ text }: { text: string }) => formatDateTime(text) 
+    {
+      title: '创建时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      customRender: ({ text }: { text: string }) => formatDateTime(text)
     },
   ];
 });
@@ -794,7 +711,7 @@ const availableResourceColumns = computed(() => {
 // 工具函数
 const formatDateTime = (dateStr: string | number) => {
   if (!dateStr) return '-';
-  
+
   let date: Date;
   if (typeof dateStr === 'number') {
     // 如果是时间戳，需要转换为毫秒
@@ -802,7 +719,7 @@ const formatDateTime = (dateStr: string | number) => {
   } else {
     date = new Date(dateStr);
   }
-  
+
   return date.toLocaleString('zh-CN');
 };
 
@@ -833,7 +750,7 @@ const loadAllUsers = async () => {
       size: 100,
       search: ''
     });
-    
+
     if (response) {
       allUsers.value = response.items;
       console.log('用户列表加载成功:', allUsers.value.length, '个用户');
@@ -861,12 +778,12 @@ const loadAvailableUsers = () => {
   const currentAdminIds = adminUsers.value.map(user => user.id);
   const currentMemberIds = memberUsers.value.map(user => user.id);
   const existingUserIds = [...currentAdminIds, ...currentMemberIds];
-  
+
   // 过滤出未添加的用户，只显示启用的用户
-  availableUsers.value = allUsers.value.filter(user => 
+  availableUsers.value = allUsers.value.filter(user =>
     !existingUserIds.includes(user.id)
   );
-  
+
   console.log('可用用户列表更新:', availableUsers.value.length, '个用户');
 };
 
@@ -875,10 +792,10 @@ const loadTreeData = async () => {
   try {
     const params: GetTreeListParams = {};
     const response = await getTreeList(params);
-    
+
     // 更严格的数据验证
     console.log('原始API响应:', response);
-    
+
     // 检查响应数据结构
     const data = response?.data || response;
     if (!data) {
@@ -886,9 +803,9 @@ const loadTreeData = async () => {
       treeData.value = [];
       return;
     }
-    
+
     const items = data.items || data;
-    
+
     // 确保 items 是数组
     if (!Array.isArray(items)) {
       console.error('API返回的数据不是数组:', items);
@@ -897,7 +814,7 @@ const loadTreeData = async () => {
       message.error('数据格式错误：期望数组格式');
       return;
     }
-    
+
     // 验证数组中的元素
     const validItems = items.filter(item => {
       if (!item || typeof item !== 'object') {
@@ -910,13 +827,13 @@ const loadTreeData = async () => {
       }
       return true;
     });
-    
+
     if (validItems.length === 0) {
       console.warn('没有有效的节点数据');
       treeData.value = [];
       return;
     }
-    
+
     // 处理树节点数据
     const processNode = (node: TreeNodeListItem) => {
       try {
@@ -939,9 +856,9 @@ const loadTreeData = async () => {
           memberUsers: [],
           resourceCount: 0,
         };
-        
+
         nodeDetails.value[processedNode.id] = processedNode;
-        
+
         // 递归处理子节点
         if (Array.isArray(node.children) && node.children.length > 0) {
           node.children.forEach(child => {
@@ -954,10 +871,10 @@ const loadTreeData = async () => {
         console.error('处理节点时出错:', node, error);
       }
     };
-    
+
     // 处理所有有效节点
     validItems.forEach(processNode);
-    
+
     // 构建树形结构
     const transformNode = (node: TreeNodeListItem): any => {
       try {
@@ -967,18 +884,18 @@ const loadTreeData = async () => {
           isLeaf: Boolean(node.isLeaf),
           children: undefined as any
         };
-        
+
         // 处理子节点
         if (Array.isArray(node.children) && node.children.length > 0) {
-          const validChildren = node.children.filter(child => 
+          const validChildren = node.children.filter(child =>
             child && typeof child === 'object' && child.id && child.name
           );
-          
+
           if (validChildren.length > 0) {
             transformed.children = validChildren.map(transformNode);
           }
         }
-        
+
         return transformed;
       } catch (error) {
         console.error('转换节点时出错:', node, error);
@@ -989,22 +906,22 @@ const loadTreeData = async () => {
         };
       }
     };
-    
+
     // 转换为树形数据
     const transformedData = validItems.map(transformNode);
-    
+
     // 最终验证
     if (!Array.isArray(transformedData)) {
       console.error('转换后的数据不是数组:', transformedData);
       treeData.value = [];
       return;
     }
-    
+
     treeData.value = transformedData;
     updateParentNodeOptions(validItems);
-    
+
     console.log('树形数据加载成功:', treeData.value.length, '个根节点');
-    
+
   } catch (error) {
     console.error('加载树形数据失败:', error);
     message.error('加载树形数据失败');
@@ -1016,13 +933,13 @@ const loadTreeData = async () => {
 
 const loadNodeDetail = async (nodeId: number) => {
   if (!nodeId || nodeId <= 0) return null;
-  
+
   try {
     // 如果已经有缓存的节点详情，直接返回
     if (nodeDetails.value[nodeId]) {
       return nodeDetails.value[nodeId];
     }
-    
+
     const res = await getNodeDetail(nodeId);
     if (res) {
       nodeDetails.value[nodeId] = res;
@@ -1037,7 +954,7 @@ const loadNodeDetail = async (nodeId: number) => {
 
 const loadNodeResources = async (nodeId: number) => {
   if (!nodeId) return;
-  
+
   resourceLoading.value = true;
   try {
     const res = await getNodeResources(nodeId);
@@ -1053,18 +970,18 @@ const loadNodeResources = async (nodeId: number) => {
 
 const loadNodeMembers = async (nodeId: number) => {
   if (!nodeId) return;
-  
+
   memberLoading.value = true;
   try {
     const adminRes = await getNodeMembers(nodeId, { type: 'admin' });
     const memberRes = await getNodeMembers(nodeId, { type: 'member' });
-    
+
     adminUsers.value = adminRes || [];
     memberUsers.value = memberRes || [];
-    
+
     // 更新可用用户列表
     loadAvailableUsers();
-    
+
     console.log('节点成员加载成功 - 管理员:', adminUsers.value.length, '成员:', memberUsers.value.length);
   } catch (error) {
     console.error('获取节点成员失败:', error);
@@ -1093,14 +1010,14 @@ const updateParentNodeOptions = (nodes: TreeNodeListItem[]) => {
         value: node.id,
       });
     }
-    
+
     if (node.children && node.children.length > 0) {
       node.children.forEach((child: TreeNodeListItem) => collectNodes(child, result));
     }
-    
+
     return result;
   };
-  
+
   parentNodeOptions.value = [];
   nodes.forEach(node => {
     collectNodes(node, parentNodeOptions.value);
@@ -1118,7 +1035,7 @@ const refreshData = async () => {
     loadStatistics(),
     loadAllUsers(),
   ]);
-  
+
   if (selectedNode.value) {
     // 检查节点是否还存在于树中
     const nodeExists = treeData.value.some(node => {
@@ -1137,7 +1054,7 @@ const refreshData = async () => {
       };
       return findNode([node]);
     });
-    
+
     if (nodeExists) {
       await Promise.all([
         loadNodeDetail(selectedNode.value.id),
@@ -1209,10 +1126,10 @@ const showCreateChildNodeModal = (parentNodeKey: string) => {
 const showEditNodeModal = async (nodeKey: string) => {
   isEditMode.value = true;
   currentParentId.value = null;
-  
+
   const nodeId = parseInt(nodeKey);
   const nodeDetail = await loadNodeDetail(nodeId);
-  
+
   if (nodeDetail) {
     nodeForm.id = nodeDetail.id;
     nodeForm.name = nodeDetail.name;
@@ -1221,7 +1138,7 @@ const showEditNodeModal = async (nodeKey: string) => {
     nodeForm.isLeaf = nodeDetail.isLeaf;
     nodeForm.status = nodeDetail.status;
   }
-  
+
   createNodeModalVisible.value = true;
 };
 
@@ -1230,7 +1147,7 @@ const showMoveNodeModal = () => {
     message.warning('请先选择节点');
     return;
   }
-  
+
   moveForm.newParentId = selectedNode.value.parentId;
   moveNodeModalVisible.value = true;
 };
@@ -1274,7 +1191,7 @@ const confirmDeleteNode = (nodeKey: string) => {
 
 const handleCreateOrUpdateNode = async () => {
   if (!nodeFormRef.value) return;
-  
+
   try {
     await nodeFormRef.value.validate();
     confirmLoading.value = true;
@@ -1286,7 +1203,7 @@ const handleCreateOrUpdateNode = async () => {
         description: nodeForm.description,
         status: nodeForm.status,
       };
-      
+
       await updateNode(nodeForm.id, updateParams);
       message.success('节点更新成功！');
     } else {
@@ -1297,11 +1214,11 @@ const handleCreateOrUpdateNode = async () => {
         isLeaf: nodeForm.isLeaf,
         status: nodeForm.status,
       };
-      
+
       await createNode(createParams);
       message.success('节点创建成功！');
     }
-    
+
     await refreshData();
     createNodeModalVisible.value = false;
   } catch (error: any) {
@@ -1318,7 +1235,7 @@ const handleCreateOrUpdateNode = async () => {
 
 const handleMoveNode = async () => {
   if (!selectedNode.value) return;
-  
+
   confirmLoading.value = true;
   try {
     await moveNode(selectedNode.value.id, moveForm);
@@ -1339,7 +1256,7 @@ const showBindResourceModal = () => {
     message.warning('请先选择节点');
     return;
   }
-  
+
   bindResourceForm.resourceType = '';
   bindResourceForm.resourceIds = [];
   availableResources.value = [];
@@ -1358,7 +1275,7 @@ const onResourceTypeChange = (resourceType: string) => {
 // 获取可用资源
 const loadAvailableResources = async (resourceType: string) => {
   if (!resourceType) return;
-  
+
   availableResourceLoading.value = true;
   try {
     const params: ListEcsResourceReq = {
@@ -1396,10 +1313,10 @@ const handleBindResource = async () => {
       resourceType: bindResourceForm.resourceType,
       resourceIds: bindResourceForm.resourceIds,
     };
-    
+
     await bindResource(params);
     message.success(`成功绑定 ${bindResourceForm.resourceIds.length} 个资源`);
-    
+
     await loadNodeResources(selectedNode.value.id);
     bindResourceModalVisible.value = false;
   } catch (error) {
@@ -1424,10 +1341,10 @@ const confirmUnbindResource = (resource: TreeNodeResource) => {
           resourceId: resource.resourceId,
           resourceType: resource.resourceType,
         };
-        
+
         await unbindResource(params);
         message.success(`资源 "${resource.resourceName}" 已解绑`);
-        
+
         if (selectedNode.value) {
           await loadNodeResources(selectedNode.value.id);
         }
@@ -1450,14 +1367,14 @@ const showAddMemberModal = (type: 'admin' | 'member') => {
     message.warning('请先选择节点');
     return;
   }
-  
+
   memberForm.nodeId = selectedNode.value.id;
   memberForm.userId = 0;
   memberForm.memberType = type;
-  
+
   // 更新可用用户列表
   loadAvailableUsers();
-  
+
   addMemberModalVisible.value = true;
 };
 
@@ -1470,7 +1387,7 @@ const handleAddMember = async () => {
   // 检查用户是否已经是成员
   const allCurrentMembers = [...adminUsers.value, ...memberUsers.value];
   const isAlreadyMember = allCurrentMembers.some(member => member.id === memberForm.userId);
-  
+
   if (isAlreadyMember) {
     message.warning('该用户已经是当前节点的成员');
     return;
@@ -1479,17 +1396,17 @@ const handleAddMember = async () => {
   confirmLoading.value = true;
   try {
     await addNodeMember(memberForm);
-    
+
     const selectedUser = availableUsers.value.find(user => user.id === memberForm.userId);
     const userName = selectedUser ? selectedUser.username : '用户';
     const roleText = memberForm.memberType === 'admin' ? '管理员' : '成员';
-    
+
     message.success(`成功添加${roleText}: ${userName}`);
-    
+
     if (selectedNode.value) {
       await loadNodeMembers(selectedNode.value.id);
     }
-    
+
     addMemberModalVisible.value = false;
   } catch (error) {
     console.error('添加成员失败:', error);
@@ -1501,9 +1418,9 @@ const handleAddMember = async () => {
 
 const confirmRemoveMember = (record: UserInfo, type: 'admin' | 'member') => {
   if (!selectedNode.value) return;
-  
+
   const roleText = type === 'admin' ? '管理员' : '成员';
-  
+
   Modal.confirm({
     title: '确认移除',
     content: `确定要移除${roleText} "${record.username}" 吗？`,
@@ -1517,10 +1434,10 @@ const confirmRemoveMember = (record: UserInfo, type: 'admin' | 'member') => {
           userId: record.id,
           memberType: type,
         };
-        
+
         await removeNodeMember(params);
         message.success(`${roleText} "${record.username}" 已移除`);
-        
+
         if (selectedNode.value) {
           await loadNodeMembers(selectedNode.value.id);
         }
@@ -1571,11 +1488,11 @@ onMounted(async () => {
         visibility: hidden;
         display: flex;
         gap: 8px;
-        
+
         .anticon {
           padding: 2px;
           border-radius: 2px;
-          
+
           &:hover {
             background-color: #f0f0f0;
           }
