@@ -53,21 +53,21 @@ export interface TreeNodeListItem {
 
 // 树统计信息
 export interface TreeStatistics {
-  totalNodes: number;     // 节点总数
+  totalNodes: number; // 节点总数
   totalResources: number; // 资源总数
-  totalAdmins: number;    // 管理员总数
-  totalMembers: number;   // 成员总数
-  activeNodes: number;    // 活跃节点数
-  inactiveNodes: number;  // 非活跃节点数
+  totalAdmins: number; // 管理员总数
+  totalMembers: number; // 成员总数
+  activeNodes: number; // 活跃节点数
+  inactiveNodes: number; // 非活跃节点数
 }
 
 // 节点资源信息
 export interface TreeNodeResource {
-  id: number;                 // 关联ID
-  resourceId: string;         // 资源ID
-  resourceType: string;       // 资源类型
-  resourceName: string;       // 资源名称
-  resourceStatus: string;     // 资源状态
+  id: number; // 关联ID
+  resourceId: string; // 资源ID
+  resourceType: string; // 资源类型
+  resourceName: string; // 资源名称
+  resourceStatus: string; // 资源状态
   resourceCreateTime: string; // 资源创建时间
   resourceUpdateTime: string; // 资源更新时间
   resourceDeleteTime: string; // 资源删除时间
@@ -159,7 +159,7 @@ export const getTreeStatistics = () => {
 
 // 创建节点
 export const createNode = (data: CreateNodeParams) => {
-  return requestClient.post('/tree/node/create', data );
+  return requestClient.post('/tree/node/create', data);
 };
 
 // 更新节点
@@ -194,7 +194,9 @@ export const addNodeMember = (data: AddNodeMemberParams) => {
 
 // 移除节点成员
 export const removeNodeMember = (data: RemoveNodeMemberParams) => {
-  return requestClient.delete(`/tree/node/member/remove/${data.nodeId}`, { data: data });
+  return requestClient.delete(`/tree/node/member/remove/${data.nodeId}`, {
+    data: data,
+  });
 };
 
 // 获取节点资源
@@ -204,7 +206,7 @@ export const getNodeResources = (id: number) => {
 
 // 绑定资源
 export const bindResource = (data: BindResourceParams) => {
-  return requestClient.post('/tree/node/resource/bind', data );
+  return requestClient.post('/tree/node/resource/bind', data);
 };
 
 // 解绑资源

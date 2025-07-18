@@ -106,7 +106,7 @@
                 </div>
                 <div class="sources-list">
                   <div v-for="(source, idx) in msg.sources" :key="`source-${idx}`" class="source-item">
-                    <div class="source-title">{{ source.metadata.filename || '未知来源' }}</div>
+                    <div class="source-title">{{ source.file_name || '未知来源' }}</div>
                     <div v-if="source.url" class="source-url">{{ source.url }}</div>
                   </div>
                 </div>

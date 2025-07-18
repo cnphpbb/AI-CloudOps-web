@@ -147,22 +147,55 @@
         <a-tabs v-model:activeKey="activeResultTab">
           <a-tab-pane key="rca" tab="根因分析结果" v-if="analysisResult">
             <div class="rca-results">
+              <!-- 分析概览 -->
+              <div class="result-section">
+                <h3>分析概览</h3>
+                <a-row :gutter="16">
+                  <a-col :span="6">
+                    <a-statistic title="分析状态" :value="analysisResult.status" />
+                  </a-col>
+                  <a-col :span="6">
+                    <a-statistic title="总指标数" :value="analysisResult.statistics?.total_metrics || 0" />
+                  </a-col>
+                  <a-col :span="6">
+                    <a-statistic title="异常指标数" :value="analysisResult.statistics?.anomalous_metrics || 0" />
+                  </a-col>
+                  <a-col :span="6">
+                    <a-statistic title="分析时长" :value="analysisResult.statistics?.analysis_duration || 0" suffix="秒" />
+                  </a-col>
+                </a-row>
+                <div class="time-range-info">
+                  <p><strong>分析时间范围:</strong> {{ analysisResult.time_range?.start }} - {{ analysisResult.time_range?.end }}</p>
+                  <p><strong>分析完成时间:</strong> {{ analysisResult.analysis_time }}</p>
+                </div>
+              </div>
+
+              <!-- AI 总结 -->
+              <div class="result-section" v-if="analysisResult.summary">
+                <h3>AI 分析总结</h3>
+                <a-alert :message="analysisResult.summary" type="info" show-icon />
+              </div>
+
               <!-- 异常检测结果 -->
-              <div class="result-section" v-if="analysisResult.anomalies">
+              <div class="result-section" v-if="analysisResult.anomalies && Object.keys(analysisResult.anomalies).length > 0">
                 <h3>异常检测结果</h3>
-                <a-table :dataSource="anomaliesTableData" :columns="anomaliesColumns" :pagination="false"
-                  size="small" />
+                <a-table :dataSource="anomaliesTableData" :columns="anomaliesColumns" :pagination="false" size="small" />
               </div>
 
               <!-- 根因候选 -->
-              <div class="result-section" v-if="analysisResult.root_cause_candidates">
+              <div class="result-section" v-if="analysisResult.root_cause_candidates && analysisResult.root_cause_candidates.length > 0">
                 <h3>根因候选</h3>
                 <a-list :dataSource="analysisResult.root_cause_candidates" item-layout="vertical">
                   <template #renderItem="{ item, index }">
                     <a-list-item>
                       <template #extra>
-                        <div class="confidence-score">
-                          置信度: {{ (item.confidence * 100).toFixed(1) }}%
+                        <div class="candidate-stats">
+                          <div class="confidence-score">
+                            置信度: {{ (item.confidence * 100).toFixed(1) }}%
+                          </div>
+                          <div class="anomaly-count">
+                            异常次数: {{ item.anomaly_count }}
+                          </div>
                         </div>
                       </template>
                       <a-list-item-meta>
@@ -172,9 +205,9 @@
                         </template>
                         <template #description>
                           <div class="candidate-details">
-                            <p><strong>异常类型:</strong> {{ item.anomaly_type }}</p>
-                            <p><strong>相关指标:</strong> {{ item.correlated_metrics?.join(', ') || '无' }}</p>
-                            <p><strong>建议:</strong> {{ item.recommendation || '暂无建议' }}</p>
+                            <p><strong>描述:</strong> {{ item.description }}</p>
+                            <p><strong>首次出现:</strong> {{ item.first_occurrence }}</p>
+                            <p><strong>相关指标:</strong> {{ item.related_metrics?.join(', ') || '无' }}</p>
                           </div>
                         </template>
                       </a-list-item-meta>
@@ -184,16 +217,25 @@
               </div>
 
               <!-- 相关性分析 -->
-              <div class="result-section" v-if="analysisResult.correlation_analysis">
+              <div class="result-section" v-if="analysisResult.correlations && Object.keys(analysisResult.correlations).length > 0">
                 <h3>相关性分析</h3>
                 <div ref="correlationChartRef" class="correlation-chart"></div>
               </div>
 
-              <!-- AI分析总结 -->
-              <div class="result-section" v-if="analysisResult.ai_analysis">
-                <h3>AI分析总结</h3>
-                <a-alert :message="analysisResult.ai_analysis.summary"
-                  :description="analysisResult.ai_analysis.recommendations?.join('\n')" type="info" show-icon />
+              <!-- 分析指标列表 -->
+              <div class="result-section" v-if="analysisResult.metrics_analyzed && analysisResult.metrics_analyzed.length > 0">
+                <h3>已分析指标</h3>
+                <div class="metrics-list">
+                  <a-tag v-for="metric in analysisResult.metrics_analyzed" :key="metric" class="metric-tag">
+                    {{ metric }}
+                  </a-tag>
+                </div>
+              </div>
+
+              <!-- 错误信息 -->
+              <div class="result-section" v-if="analysisResult.error">
+                <h3>错误信息</h3>
+                <a-alert :message="analysisResult.error" type="error" show-icon />
               </div>
             </div>
           </a-tab-pane>
@@ -242,11 +284,46 @@ import {
   executeRCAApi,
   analyzeIncidentApi,
   type RCARequest,
-  type RCAResponse,
   type IncidentRequest
 } from '#/api/core/ai';
 
-// 类型定义
+// 使用新的接口定义
+export interface RCAResponse {
+  status: string;
+  analysis_time: string;
+  anomalies: Record<string, {
+    avg_score: number;
+    count: number;
+    detection_methods: Record<string, number | string>;
+    first_occurrence: string;
+    last_occurrence: string;
+    max_score: number;
+  }>;
+  correlations: Record<string, Array<[string, number]>>;
+  metrics_analyzed: string[];
+  root_cause_candidates: Array<{
+    metric: string;
+    confidence: number;
+    anomaly_count: number;
+    description: string;
+    first_occurrence: string;
+    related_metrics: string[];
+  }>;
+  statistics: {
+    analysis_duration: number;
+    anomalous_metrics: number;
+    correlation_pairs: number;
+    total_metrics: number;
+  };
+  summary: string;
+  time_range: {
+    start: string;
+    end: string;
+  };
+  error?: string;
+}
+
+// 其他类型定义保持不变
 interface HealthStatus {
   status: string;
   components: {
@@ -276,23 +353,6 @@ interface AvailableMetrics {
     anomaly_threshold: number;
     correlation_threshold: number;
   };
-}
-
-interface RCAResult {
-  anomalies: Record<string, any>;
-  root_cause_candidates: Array<{
-    metric: string;
-    confidence: number;
-    anomaly_type: string;
-    correlated_metrics: string[];
-    recommendation: string;
-  }>;
-  correlation_analysis: any;
-  ai_analysis: {
-    summary: string;
-    recommendations: string[];
-  };
-  error?: string;
 }
 
 // 响应式数据
@@ -349,7 +409,7 @@ const incidentForm = reactive({
 });
 
 // 结果数据
-const analysisResult = ref<RCAResult | null>(null);
+const analysisResult = ref<RCAResponse | null>(null);
 const incidentResult = ref<any>(null);
 const activeResultTab = ref('rca');
 
@@ -382,28 +442,34 @@ const metricOptions = computed(() => {
   return options;
 });
 
-// 异常检测结果表格数据
+// 修改异常检测结果表格数据，适配新的数据结构
 const anomaliesTableData = computed(() => {
   if (!analysisResult.value?.anomalies) return [];
 
-  return Object.entries(analysisResult.value.anomalies).map(([metric, data]: [string, any]) => ({
+  return Object.entries(analysisResult.value.anomalies).map(([metric, data]) => ({
     key: metric,
     metric,
-    anomaly_score: data.anomaly_score?.toFixed(3) || 'N/A',
-    detection_method: data.detection_method || 'unknown',
-    timestamp: data.timestamp || 'N/A'
+    avg_score: data.avg_score?.toFixed(3) || 'N/A',
+    max_score: data.max_score?.toFixed(3) || 'N/A',
+    count: data.count || 0,
+    first_occurrence: data.first_occurrence || 'N/A',
+    last_occurrence: data.last_occurrence || 'N/A',
+    detection_methods: Object.keys(data.detection_methods || {}).join(', ') || 'N/A'
   }));
 });
 
-// 异常检测表格列定义
+// 修改异常检测表格列定义
 const anomaliesColumns = [
-  { title: '指标名称', dataIndex: 'metric', key: 'metric' },
-  { title: '异常分数', dataIndex: 'anomaly_score', key: 'anomaly_score' },
-  { title: '检测方法', dataIndex: 'detection_method', key: 'detection_method' },
-  { title: '时间戳', dataIndex: 'timestamp', key: 'timestamp' }
+  { title: '指标名称', dataIndex: 'metric', key: 'metric', width: 200 },
+  { title: '平均分数', dataIndex: 'avg_score', key: 'avg_score', width: 100 },
+  { title: '最高分数', dataIndex: 'max_score', key: 'max_score', width: 100 },
+  { title: '异常次数', dataIndex: 'count', key: 'count', width: 100 },
+  { title: '检测方法', dataIndex: 'detection_methods', key: 'detection_methods', width: 150 },
+  { title: '首次发现', dataIndex: 'first_occurrence', key: 'first_occurrence', width: 180 },
+  { title: '最后发现', dataIndex: 'last_occurrence', key: 'last_occurrence', width: 180 }
 ];
 
-// API调用函数
+// API调用函数保持不变
 const fetchHealthStatus = async () => {
   try {
     healthLoading.value = true;
@@ -545,22 +611,31 @@ const analyzeIncident = async () => {
   }
 };
 
-// 渲染相关性图表
+// 修改相关性图表渲染函数，适配新的数据结构
 const renderCorrelationChart = () => {
   const chartDom = correlationChartRef.value;
-  if (!chartDom || !analysisResult.value?.correlation_analysis) return;
+  if (!chartDom || !analysisResult.value?.correlations) return;
 
   const myChart = echarts.init(chartDom);
 
-  // 处理相关性数据为热力图格式
-  const correlationData = analysisResult.value.correlation_analysis;
-  const metrics = Object.keys(correlationData);
+  // 处理新的相关性数据结构
+  const correlations = analysisResult.value.correlations;
+  const metrics = Object.keys(correlations);
   const data: Array<[number, number, number]> = [];
 
+  // 构建相关性矩阵数据
   metrics.forEach((metric1, i) => {
     metrics.forEach((metric2, j) => {
-      const value = correlationData[metric1]?.[metric2] || 0;
-      data.push([i, j, Math.abs(value)]);
+      let correlation = 0;
+      
+      if (correlations[metric1]) {
+        const correlationPair = correlations[metric1].find(([m, _]) => m === metric2);
+        if (correlationPair) {
+          correlation = correlationPair[1];
+        }
+      }
+      
+      data.push([i, j, Math.abs(correlation)]);
     });
   });
 
@@ -629,7 +704,7 @@ const renderCorrelationChart = () => {
   });
 };
 
-// 工具函数
+// 工具函数保持不变
 const handleTimeRangeChange = () => {
   const now = dayjs();
   const minutes = parseInt(timeRange.value);
@@ -811,9 +886,30 @@ onMounted(() => {
   padding-bottom: 5px;
 }
 
+.time-range-info {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.time-range-info p {
+  margin-bottom: 5px;
+}
+
+.candidate-stats {
+  text-align: right;
+}
+
 .confidence-score {
   font-weight: bold;
   color: #1890ff;
+  margin-bottom: 5px;
+}
+
+.anomaly-count {
+  font-size: 12px;
+  color: #666;
 }
 
 .candidate-details p {
@@ -824,6 +920,16 @@ onMounted(() => {
   height: 400px;
   border: 1px solid var(--ant-border-color);
   border-radius: 4px;
+}
+
+.metrics-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metric-tag {
+  margin-bottom: 8px;
 }
 
 .incident-summary {

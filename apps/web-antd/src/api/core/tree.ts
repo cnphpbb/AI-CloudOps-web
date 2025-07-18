@@ -433,7 +433,7 @@ export function createEcsResource(req: CreateEcsResourceReq) {
 }
 
 export function updateEcsResource(req: UpdateEcsResourceReq) {
-  return requestClient.put('/tree/ecs/update', req);
+  return requestClient.put(`/tree/ecs/update/${req.id}`, req);
 }
 
 export function startEcsResource(req: StartEcsReq) {

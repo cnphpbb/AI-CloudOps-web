@@ -155,18 +155,35 @@ export interface RCARequest {
  */
 export interface RCAResponse {
   status: string;
-  anomalies: Record<string, any>;
+  analysis_time: string;
+  anomalies: Record<string, {
+    avg_score: number;
+    count: number;
+    detection_methods: Record<string, number | string>;
+    first_occurrence: string;
+    last_occurrence: string;
+    max_score: number;
+  }>;
+  correlations: Record<string, Array<[string, number]>>;
+  metrics_analyzed: string[];
   root_cause_candidates: Array<{
     metric: string;
     confidence: number;
-    anomaly_type: string;
-    correlated_metrics: string[];
-    recommendation: string;
+    anomaly_count: number;
+    description: string;
+    first_occurrence: string;
+    related_metrics: string[];
   }>;
-  correlation_analysis: any;
-  ai_analysis: {
-    summary: string;
-    recommendations: string[];
+  statistics: {
+    analysis_duration: number;
+    anomalous_metrics: number;
+    correlation_pairs: number;
+    total_metrics: number;
+  };
+  summary: string;
+  time_range: {
+    start: string;
+    end: string;
   };
   error?: string;
 }
