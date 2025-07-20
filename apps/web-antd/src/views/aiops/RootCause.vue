@@ -165,25 +165,32 @@
                   </a-col>
                 </a-row>
                 <div class="time-range-info">
-                  <p><strong>分析时间范围:</strong> {{ analysisResult.time_range?.start }} - {{ analysisResult.time_range?.end }}</p>
+                  <p><strong>分析时间范围:</strong> {{ analysisResult.time_range?.start }} - {{ analysisResult.time_range?.end
+                  }}
+                  </p>
                   <p><strong>分析完成时间:</strong> {{ analysisResult.analysis_time }}</p>
                 </div>
               </div>
 
-              <!-- AI 总结 -->
+              <!-- AI 总结 - 改为 Markdown 格式显示 -->
               <div class="result-section" v-if="analysisResult.summary">
                 <h3>AI 分析总结</h3>
-                <a-alert :message="analysisResult.summary" type="info" show-icon />
+                <div class="markdown-summary">
+                  <MarkdownRenderer :content="analysisResult.summary" />
+                </div>
               </div>
 
               <!-- 异常检测结果 -->
-              <div class="result-section" v-if="analysisResult.anomalies && Object.keys(analysisResult.anomalies).length > 0">
+              <div class="result-section"
+                v-if="analysisResult.anomalies && Object.keys(analysisResult.anomalies).length > 0">
                 <h3>异常检测结果</h3>
-                <a-table :dataSource="anomaliesTableData" :columns="anomaliesColumns" :pagination="false" size="small" />
+                <a-table :dataSource="anomaliesTableData" :columns="anomaliesColumns" :pagination="false"
+                  size="small" />
               </div>
 
               <!-- 根因候选 -->
-              <div class="result-section" v-if="analysisResult.root_cause_candidates && analysisResult.root_cause_candidates.length > 0">
+              <div class="result-section"
+                v-if="analysisResult.root_cause_candidates && analysisResult.root_cause_candidates.length > 0">
                 <h3>根因候选</h3>
                 <a-list :dataSource="analysisResult.root_cause_candidates" item-layout="vertical">
                   <template #renderItem="{ item, index }">
@@ -217,13 +224,15 @@
               </div>
 
               <!-- 相关性分析 -->
-              <div class="result-section" v-if="analysisResult.correlations && Object.keys(analysisResult.correlations).length > 0">
+              <div class="result-section"
+                v-if="analysisResult.correlations && Object.keys(analysisResult.correlations).length > 0">
                 <h3>相关性分析</h3>
                 <div ref="correlationChartRef" class="correlation-chart"></div>
               </div>
 
               <!-- 分析指标列表 -->
-              <div class="result-section" v-if="analysisResult.metrics_analyzed && analysisResult.metrics_analyzed.length > 0">
+              <div class="result-section"
+                v-if="analysisResult.metrics_analyzed && analysisResult.metrics_analyzed.length > 0">
                 <h3>已分析指标</h3>
                 <div class="metrics-list">
                   <a-tag v-for="metric in analysisResult.metrics_analyzed" :key="metric" class="metric-tag">
@@ -246,7 +255,7 @@
                 :title="incidentResult.error ? '分析失败' : '事件分析完成'" :sub-title="incidentResult.error || '已完成事件根因分析'">
                 <template #extra v-if="!incidentResult.error">
                   <div class="incident-summary">
-                    <p>{{ incidentResult.summary || '分析结果详情请查看具体报告' }}</p>
+                    <MarkdownRenderer :content="incidentResult.summary || '分析结果详情请查看具体报告'" />
                   </div>
                 </template>
               </a-result>
@@ -286,6 +295,7 @@ import {
   type RCARequest,
   type IncidentRequest
 } from '#/api/core/ai';
+import MarkdownRenderer from './components/MarkdownRenderer.vue';
 
 // 使用新的接口定义
 export interface RCAResponse {
@@ -544,9 +554,24 @@ const performRootCauseAnalysis = async () => {
   try {
     analysisLoading.value = true;
 
+    // 结束时间：取整到分钟，去掉毫秒
+    let end = new Date(analysisForm.endTime.toISOString());
+    end.setSeconds(0, 0);
+
+    // 开始时间
+    let start = new Date(analysisForm.startTime.toISOString());
+    start.setSeconds(0, 0);
+
+    // 保证 start ≤ end，如果不是则交换
+    if (start > end) {
+      const tmp = start;
+      start = end;
+      end = tmp;
+    }
+
     const requestData: RCARequest = {
-      start_time: analysisForm.startTime.toISOString(),
-      end_time: analysisForm.endTime.toISOString(),
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
       metrics: analysisForm.selectedMetrics
     };
 
@@ -561,11 +586,7 @@ const performRootCauseAnalysis = async () => {
     activeResultTab.value = 'rca';
     message.success('根因分析完成');
 
-    // 渲染相关性图表
-    setTimeout(() => {
-      renderCorrelationChart();
-    }, 100);
-
+    setTimeout(renderCorrelationChart, 100);
   } catch (error: any) {
     console.error('根因分析失败:', error);
     message.error(`根因分析失败: ${error.response?.data?.error || error.message}`);
@@ -627,14 +648,14 @@ const renderCorrelationChart = () => {
   metrics.forEach((metric1, i) => {
     metrics.forEach((metric2, j) => {
       let correlation = 0;
-      
+
       if (correlations[metric1]) {
         const correlationPair = correlations[metric1].find(([m, _]) => m === metric2);
         if (correlationPair) {
           correlation = correlationPair[1];
         }
       }
-      
+
       data.push([i, j, Math.abs(correlation)]);
     });
   });
@@ -895,6 +916,21 @@ onMounted(() => {
 
 .time-range-info p {
   margin-bottom: 5px;
+}
+
+/* Markdown 总结样式 */
+.markdown-summary {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.markdown-summary:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .candidate-stats {
