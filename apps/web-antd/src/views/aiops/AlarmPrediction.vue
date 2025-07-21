@@ -318,10 +318,13 @@ const apiError = ref('');
 const serviceInfo = ref<ServiceInfo | null>(null);
 let updateTimer: any = null;
 
+// 新增：标记是否是首次启动
+const isFirstLoad = ref(true);
+
 // 部署统计数据
 const deploymentStats = ref({
-  currentReplicas: 3,
-  recommendedReplicas: 3,
+  currentReplicas: 1, 
+  recommendedReplicas: 1, 
   replicasTrend: 0,
   currentQPS: 0,
   confidence: 85,
@@ -362,13 +365,25 @@ const fetchPrediction = async () => {
 
     const data = await getPredictionApi(request);
 
-    // 更新统计数据
+    // 保存旧的推荐副本数用于比较
     const oldRecommendedReplicas = deploymentStats.value.recommendedReplicas;
-    deploymentStats.value.recommendedReplicas = data.instances;
+    
+    // 首次加载时，将当前副本数设置为预测值，避免虚假的变化记录
+    if (isFirstLoad.value) {
+      deploymentStats.value.currentReplicas = data.instances;
+      deploymentStats.value.recommendedReplicas = data.instances;
+      deploymentStats.value.replicasTrend = 0; // 首次加载不显示趋势
+      isFirstLoad.value = false; // 标记不再是首次加载
+    } else {
+      // 非首次加载时正常更新推荐副本数
+      deploymentStats.value.recommendedReplicas = data.instances;
+      deploymentStats.value.replicasTrend = data.instances - deploymentStats.value.currentReplicas;
+    }
+
+    // 更新其他统计数据
     deploymentStats.value.currentQPS = Math.round(data.current_qps * 100) / 100;
     deploymentStats.value.confidence = data.confidence ? Math.round(data.confidence) : 85;
     deploymentStats.value.lastUpdateTime = new Date(data.timestamp).toLocaleTimeString();
-    deploymentStats.value.replicasTrend = data.instances - deploymentStats.value.currentReplicas;
 
     // 添加到历史数据
     predictionHistory.value.push({
@@ -384,8 +399,8 @@ const fetchPrediction = async () => {
       predictionHistory.value = predictionHistory.value.slice(-100);
     }
 
-    // 如果推荐副本数发生变化，模拟自动伸缩
-    if (oldRecommendedReplicas !== data.instances) {
+    // 只有在非首次加载且推荐副本数发生变化时，才模拟自动伸缩
+    if (!isFirstLoad.value && oldRecommendedReplicas !== data.instances) {
       await simulateAutoScaling(data.instances, data);
     }
 
@@ -602,7 +617,7 @@ const startAutoUpdate = () => {
 
 // 手动设置副本数模态框
 const manualSettingVisible = ref(false);
-const manualReplicas = ref(3);
+const manualReplicas = ref(1);
 const targetDeployment = ref('frontend-service');
 
 // 手动设置副本数
@@ -723,15 +738,15 @@ const initLoadChart = () => {
     qpsData = recentData.map(item => item.qps);
     predictedReplicaData = recentData.map(item => item.instances);
   } else {
-    // 生成示例数据
+    // 生成示例数据，从1开始而不是从2开始
     const now = new Date();
     hours = Array.from({ length: 12 }, (_, i) => {
       const pastTime = new Date(now.getTime() - (11 - i) * 2 * 60 * 60 * 1000);
       return `${String(pastTime.getHours()).padStart(2, '0')}:00`;
     });
-    replicaData = [2, 2, 3, 3, 4, 4, 5, 6, 6, 4, 4, 4];
-    qpsData = [0.8, 0.95, 1.5, 2.2, 2.8, 3.1, 3.4, 3.5, 2.8, 2.0, 1.6, 1.3];
-    predictedReplicaData = [2, 3, 3, 4, 4, 5, 5, 6, 6, 4, 4, 4];
+    replicaData = [1, 1, 1, 2, 2, 3, 3, 4, 3, 2, 2, 1]; // 从1开始的合理数据
+    qpsData = [0.2, 0.3, 0.5, 1.2, 1.8, 2.1, 2.4, 2.5, 1.8, 1.0, 0.6, 0.3];
+    predictedReplicaData = [1, 1, 2, 2, 3, 3, 4, 4, 3, 2, 2, 1];
   }
 
   const option = {
