@@ -323,8 +323,8 @@ const isFirstLoad = ref(true);
 
 // 部署统计数据
 const deploymentStats = ref({
-  currentReplicas: 1, // 初始值改为1，更合理
-  recommendedReplicas: 1, // 初始值也改为1
+  currentReplicas: 1, 
+  recommendedReplicas: 1, 
   replicasTrend: 0,
   currentQPS: 0,
   confidence: 85,
