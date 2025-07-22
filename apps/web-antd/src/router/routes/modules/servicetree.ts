@@ -68,6 +68,15 @@ const routes: RouteRecordRaw[] = [
           title: '终端连接',
         },
       },
+      {
+        name: 'WebTerminal',
+        path: '/web-terminal/:id',
+        component: () => import('#/views/servicetree/WebTerminal.vue'),
+        meta: {
+          hideInMenu: true,
+          title: 'Web终端',
+        },
+      },
     ],
   },
 ];

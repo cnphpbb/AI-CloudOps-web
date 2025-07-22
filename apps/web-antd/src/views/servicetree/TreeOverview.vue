@@ -582,7 +582,7 @@ const loadNodeResources = async (nodeId: number) => {
 
     if (isUnmounted.value) return;
 
-    nodeResources.value = res.items;
+    nodeResources.value = res?.items || [];
 
     // 更新节点详情中的资源数量
     if (nodeDetails.value[nodeId]) {
