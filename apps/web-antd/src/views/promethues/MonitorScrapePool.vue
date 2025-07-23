@@ -170,14 +170,14 @@
             </template>
 
             <template v-if="column.key === 'support_alert'">
-              <a-tag :color="record.support_alert ? 'success' : 'default'">
-                {{ record.support_alert ? '支持' : '不支持' }}
+              <a-tag :color="record.support_alert === 1 ? 'success' : 'default'">
+                {{ record.support_alert === 1 ? '支持' : '不支持' }}
               </a-tag>
             </template>
 
             <template v-if="column.key === 'support_record'">
-              <a-tag :color="record.support_record ? 'success' : 'default'">
-                {{ record.support_record ? '支持' : '不支持' }}
+              <a-tag :color="record.support_record === 1 ? 'success' : 'default'">
+                {{ record.support_record === 1 ? '支持' : '不支持' }}
               </a-tag>
             </template>
 
@@ -224,10 +224,6 @@
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
-                      <a-menu-item key="clone">
-                        <Icon icon="carbon:copy" /> 克隆
-                      </a-menu-item>
-                      <a-menu-divider />
                       <a-menu-item key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
@@ -507,28 +503,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 克隆对话框 -->
-    <a-modal 
-      :open="cloneDialogVisible" 
-      title="克隆采集池" 
-      :width="dialogWidth" 
-      @ok="confirmClone" 
-      @cancel="closeCloneDialog"
-      :destroy-on-close="true"
-    >
-      <a-form :model="cloneDialog.form" layout="vertical">
-        <a-form-item 
-          label="新采集池名称" 
-          name="name" 
-          :rules="[{ required: true, message: '请输入新采集池名称' }]"
-        >
-          <a-input 
-            v-model:value="cloneDialog.form.name" 
-            placeholder="请输入新采集池名称" 
-          />
-        </a-form-item>
-      </a-form>
-    </a-modal>
 
     <!-- 详情对话框 -->
     <a-modal 
@@ -543,11 +517,11 @@
         <div class="detail-header">
           <h2>{{ detailDialog.form.name }}</h2>
           <div class="detail-badges">
-            <a-tag :color="detailDialog.form.support_alert ? 'success' : 'default'">
-              {{ detailDialog.form.support_alert ? '支持告警' : '不支持告警' }}
+            <a-tag :color="detailDialog.form.support_alert === 1 ? 'success' : 'default'">
+              {{ detailDialog.form.support_alert === 1 ? '支持告警' : '不支持告警' }}
             </a-tag>
-            <a-tag :color="detailDialog.form.support_record ? 'success' : 'default'">
-              {{ detailDialog.form.support_record ? '支持记录' : '不支持记录' }}
+            <a-tag :color="detailDialog.form.support_record === 1 ? 'success' : 'default'">
+              {{ detailDialog.form.support_record === 1 ? '支持记录' : '不支持记录' }}
             </a-tag>
           </div>
         </div>
@@ -599,6 +573,7 @@ import {
   createMonitorScrapePoolApi,
   updateMonitorScrapePoolApi,
   deleteMonitorScrapePoolApi,
+  getMonitorScrapePoolDetailApi,
   type ScrapePoolItem,
   type GetScrapePoolListParams,
   type createMonitorScrapePoolReq,
@@ -693,7 +668,6 @@ const stats = reactive({
 
 // 对话框状态
 const formDialogVisible = ref(false);
-const cloneDialogVisible = ref(false);
 const detailDialogVisible = ref(false);
 
 // 表单对话框数据
@@ -718,13 +692,6 @@ const formDialog = reactive({
   }
 });
 
-// 克隆对话框数据
-const cloneDialog = reactive({
-  form: {
-    name: '',
-    originalData: null as ScrapePoolItem | null
-  }
-});
 
 // 详情对话框数据
 const detailDialog = reactive({
@@ -750,8 +717,8 @@ const formRules = {
 
 // 辅助方法
 const getPoolStatusClass = (record: ScrapePoolItem): string => {
-  if (record.support_alert && record.support_record) return 'status-full';
-  if (record.support_alert || record.support_record) return 'status-partial';
+  if (record.support_alert === 1 && record.support_record === 1) return 'status-full';
+  if (record.support_alert === 1 || record.support_record === 1) return 'status-partial';
   return 'status-none';
 };
 
@@ -769,26 +736,26 @@ const getInitials = (name: string): string => {
   return name.slice(0, 2).toUpperCase();
 };
 
-const formatDate = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleDateString('zh-CN');
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleDateString('zh-CN');
 };
 
-const formatTime = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+const formatTime = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 };
 
-const formatFullDateTime = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleString('zh-CN');
+const formatFullDateTime = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleString('zh-CN');
 };
 
 // 更新统计数据
 const updateStats = () => {
-  stats.total = scrapePoolList.value.length;
-  stats.supportAlert = scrapePoolList.value.filter(item => item.support_alert).length;
-  stats.supportRecord = scrapePoolList.value.filter(item => item.support_record).length;
+  stats.total = paginationConfig.total;
+  stats.supportAlert = scrapePoolList.value.filter(item => item.support_alert === 1).length;
+  stats.supportRecord = scrapePoolList.value.filter(item => item.support_record === 1).length;
   stats.activeInstances = scrapePoolList.value.reduce((total, item) => {
     return total + (item.prometheus_instances?.length || 0) + (item.alert_manager_instances?.length || 0);
   }, 0);
@@ -875,8 +842,8 @@ const handleEditScrapePool = (record: ScrapePoolItem): void => {
     scrape_interval: record.scrape_interval,
     scrape_timeout: record.scrape_timeout,
     remote_timeout_seconds: record.remote_timeout_seconds,
-    support_alert: record.support_alert,
-    support_record: record.support_record,
+    support_alert: record.support_alert === 1,
+    support_record: record.support_record === 1,
     remote_write_url: record.remote_write_url,
     remote_read_url: record.remote_read_url,
     alert_manager_url: record.alert_manager_url,
@@ -897,27 +864,23 @@ const handleEditScrapePool = (record: ScrapePoolItem): void => {
   detailDialogVisible.value = false;
 };
 
-const handleViewScrapePool = (record: ScrapePoolItem): void => {
-  detailDialog.form = record;
-  detailDialogVisible.value = true;
+const handleViewScrapePool = async (record: ScrapePoolItem): Promise<void> => {
+  try {
+    const response = await getMonitorScrapePoolDetailApi(record.id);
+    detailDialog.form = response;
+    detailDialogVisible.value = true;
+  } catch (error: any) {
+    console.error('获取采集池详情失败:', error);
+    message.error(error.message || '获取采集池详情失败');
+  }
 };
 
 const handleMenuClick = (command: string, record: ScrapePoolItem): void => {
   switch (command) {
-    case 'clone':
-      showCloneDialog(record);
-      break;
     case 'delete':
       confirmDelete(record);
       break;
   }
-};
-
-const showCloneDialog = (record: ScrapePoolItem): void => {
-  // cloneDialog.form.name = `${record.name}_副本`;
-  // cloneDialog.form.originalData = record;
-  // cloneDialogVisible.value = true;
-  message.info('暂未实现');
 };
 
 const confirmDelete = (record: ScrapePoolItem): void => {
@@ -988,46 +951,6 @@ const saveScrapePool = async (): Promise<void> => {
   }
 };
 
-const confirmClone = async (): Promise<void> => {
-  if (!cloneDialog.form.name.trim()) {
-    message.error('请输入新采集池名称');
-    return;
-  }
-
-  if (!cloneDialog.form.originalData) {
-    message.error('原始数据不存在');
-    return;
-  }
-
-  try {
-    const originalData = cloneDialog.form.originalData;
-    const createData: createMonitorScrapePoolReq = {
-      name: cloneDialog.form.name,
-      prometheus_instances: originalData.prometheus_instances || [],
-      alert_manager_instances: originalData.alert_manager_instances || [],
-      user_id: 1, // 这里应该从用户上下文获取
-      scrape_interval: originalData.scrape_interval,
-      scrape_timeout: originalData.scrape_timeout,
-      remote_timeout_seconds: originalData.remote_timeout_seconds,
-      support_alert: originalData.support_alert ? 1 : 2,
-      support_record: originalData.support_record ? 1 : 2,
-      external_labels: originalData.external_labels || [],
-      remote_write_url: originalData.remote_write_url,
-      remote_read_url: originalData.remote_read_url,
-      alert_manager_url: originalData.alert_manager_url,
-      rule_file_path: originalData.rule_file_path,
-      record_file_path: originalData.record_file_path,
-    };
-
-    await createMonitorScrapePoolApi(createData);
-    message.success(`采集池已克隆为 "${cloneDialog.form.name}"`);
-    cloneDialogVisible.value = false;
-    loadScrapePoolList();
-  } catch (error: any) {
-    console.error('克隆采集池失败:', error);
-    message.error(error.message || '克隆采集池失败');
-  }
-};
 
 // 重置表单对话框
 const resetFormDialog = (): void => {
@@ -1097,10 +1020,6 @@ const removeExternalLabel = (item: LabelItem): void => {
 // 对话框关闭
 const closeFormDialog = (): void => {
   formDialogVisible.value = false;
-};
-
-const closeCloneDialog = (): void => {
-  cloneDialogVisible.value = false;
 };
 
 const closeDetailDialog = (): void => {

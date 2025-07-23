@@ -12,8 +12,8 @@ export interface GetScrapePoolListParams {
 // 采集池详情
 export interface ScrapePoolItem {
   id: number;
-  created_at: number;
-  updated_at: number;
+  created_at: string;
+  updated_at: string;
   deleted_at: number;
   name: string;
   prometheus_instances: string[];
@@ -22,8 +22,8 @@ export interface ScrapePoolItem {
   scrape_interval: number;
   scrape_timeout: number;
   remote_timeout_seconds: number;
-  support_alert: boolean;
-  support_record: boolean;
+  support_alert: 1 | 2;
+  support_record: 1 | 2;
   external_labels: string[];
   remote_write_url: string;
   remote_read_url: string;
@@ -73,26 +73,27 @@ export interface updateMonitorScrapePoolReq {
 }
 
 // 获取采集池列表
-export const getMonitorScrapePoolListApi = (data: GetScrapePoolListParams) => {
+export async function getMonitorScrapePoolListApi(data: GetScrapePoolListParams) {
   return requestClient.get(`/monitor/scrape_pools/list`, { params: data });
-};
+}
 
 // 创建采集池
-export const createMonitorScrapePoolApi = (
+export async function createMonitorScrapePoolApi(
   data: createMonitorScrapePoolReq,
-) => {
+) {
   return requestClient.post(`/monitor/scrape_pools/create`, data);
-};
+}
 
 // 更新采集池
-export const updateMonitorScrapePoolApi = (
-  id: number,
-  data: updateMonitorScrapePoolReq,
-) => {
+export async function updateMonitorScrapePoolApi(id: number, data: updateMonitorScrapePoolReq,) {
   return requestClient.put(`/monitor/scrape_pools/update/${id}`, data);
-};
+}
 
 // 删除采集池
-export const deleteMonitorScrapePoolApi = (id: number) => {
-  return requestClient.delete(`/monitor/scrape_pools/${id}`);
-};
+export async function deleteMonitorScrapePoolApi(id: number) {
+  return requestClient.delete(`/monitor/scrape_pools/delete/${id}`);
+}
+
+export async function getMonitorScrapePoolDetailApi(id: number) {
+  return requestClient.get(`/monitor/scrape_pools/detail/${id}`)
+}

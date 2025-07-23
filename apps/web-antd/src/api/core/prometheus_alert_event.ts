@@ -49,21 +49,21 @@ export interface EventAlertClaimParams {
 export interface EventAlertUnSilenceParams {
   id: number;
 }
-export const getAlertEventsListApi = (data: GetAlertEventsListParams) => {
+export async function getAlertEventsListApi(data: GetAlertEventsListParams) {
   return requestClient.get(`/monitor/alert_events/list`, { params: data });
-};
+}
 
-export const silenceAlertApi = (data: EventAlertSilenceParams) => {
+export async function silenceAlertApi(data: EventAlertSilenceParams) {
   return requestClient.post(`/monitor/alert_events/silence/${data.id}`, {
     use_name: data.use_name,
     time: data.time,
   });
-};
+}
 
-export const claimAlertApi = (data: EventAlertClaimParams) => {
+export async function claimAlertApi(data: EventAlertClaimParams) {
   return requestClient.post(`/monitor/alert_events/claim/${data.id}`);
-};
+}
 
-export const cancelSilenceAlertApi = (data: EventAlertUnSilenceParams) => {
+export async function cancelSilenceAlertApi(data: EventAlertUnSilenceParams) {
   return requestClient.post(`/monitor/alert_events/unsilence/${data.id}`);
-};
+}

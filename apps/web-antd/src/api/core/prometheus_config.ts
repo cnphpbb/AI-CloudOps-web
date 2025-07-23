@@ -81,22 +81,22 @@ export interface DeleteMonitorConfigParams {
 
 
 // API 接口
-export const getMonitorConfigListApi = (data: GetMonitorConfigListParams) => {
+export async function getMonitorConfigListApi(data: GetMonitorConfigListParams) {
   return requestClient.get('/monitor/configs/list', { params: data });
-};
+}
 
-export const getMonitorConfigApi = (data: GetMonitorConfigParams) => {
+export async function getMonitorConfigApi(data: GetMonitorConfigParams) {
   return requestClient.get(`/monitor/configs/detail/${data.id}`);
-};
+}
 
-export const createMonitorConfigApi = (data: CreateMonitorConfigParams) => {
+export async function createMonitorConfigApi(data: CreateMonitorConfigParams) {
   return requestClient.post('/monitor/configs/create', data);
-};
+}
 
-export const updateMonitorConfigApi = (data: UpdateMonitorConfigParams) => {
+export async function updateMonitorConfigApi(data: UpdateMonitorConfigParams) {
   return requestClient.put(`/monitor/configs/update/${data.id}`, data);
-};
+}
 
-export const deleteMonitorConfigApi = (data: DeleteMonitorConfigParams) => {
+export async function deleteMonitorConfigApi(data: DeleteMonitorConfigParams) {
   return requestClient.delete(`/monitor/configs/delete/${data.id}`);
-};
+}

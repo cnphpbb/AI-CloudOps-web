@@ -101,22 +101,22 @@ export interface updateSendGroupReq {
   }[];
 }
 
-export const getMonitorSendGroupListApi = (data: GetSendGroupListParams) => {
+export async function getMonitorSendGroupListApi(data: GetSendGroupListParams) {
   return requestClient.get('/monitor/send_groups/list', { params: data });
-};
+}
 
-export const getMonitorSendGroupDetailApi = (id: number) => {
+export async function getMonitorSendGroupDetailApi(id: number) {
   return requestClient.get(`/monitor/send_groups/detail/${id}`);
-};
+}
 
-export const createMonitorSendGroupApi = (data: createSendGroupReq) => {
+export async function createMonitorSendGroupApi(data: createSendGroupReq) {
   return requestClient.post('/monitor/send_groups/create', data);
-};
+}
 
-export const updateMonitorSendGroupApi = (data: updateSendGroupReq) => {
+export async function updateMonitorSendGroupApi(data: updateSendGroupReq) {
   return requestClient.put(`/monitor/send_groups/update/${data.id}`, data);
-};
+}
 
-export const deleteMonitorSendGroupApi = (id: number) => {
+export async function deleteMonitorSendGroupApi(id: number) {
   return requestClient.delete(`/monitor/send_groups/delete/${id}`);
-};
+}

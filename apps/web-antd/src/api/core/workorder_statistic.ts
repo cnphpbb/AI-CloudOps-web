@@ -89,49 +89,49 @@ export interface PriorityDistribution {
 }
 
 // 获取工单概览统计
-export function getWorkorderOverview(params: StatsReq) {
+export async function getWorkorderOverview(params: StatsReq) {
   return requestClient.get<OverviewStats>('/workorder/statistics/overview', {
     params,
   });
 }
 
 // 获取工单趋势统计
-export function getWorkorderTrend(params: StatsReq) {
+export async function getWorkorderTrend(params: StatsReq) {
   return requestClient.get<TrendStats>('/workorder/statistics/trend', {
     params,
   });
 }
 
 // 获取工单分类统计
-export function getWorkorderCategoryStats(params: StatsReq) {
+export async function getWorkorderCategoryStats(params: StatsReq) {
   return requestClient.get<CategoryStats[]>('/workorder/statistics/category', {
     params,
   });
 }
 
 // 获取工单用户统计
-export function getWorkorderUserStats(params: StatsReq) {
+export async function getWorkorderUserStats(params: StatsReq) {
   return requestClient.get<UserStats[]>('/workorder/statistics/user', {
     params,
   });
 }
 
 // 获取工单模板统计
-export function getWorkorderTemplateStats(params: StatsReq) {
+export async function getWorkorderTemplateStats(params: StatsReq) {
   return requestClient.get<TemplateStats[]>('/workorder/statistics/template', {
     params,
   });
 }
 
 // 获取工单状态分布
-export function getWorkorderStatusDistribution(params: StatsReq) {
+export async function getWorkorderStatusDistribution(params: StatsReq) {
   return requestClient.get<StatusDistribution[]>('/workorder/statistics/status', {
     params,
   });
 }
 
 // 获取工单优先级分布
-export function getWorkorderPriorityDistribution(params: StatsReq) {
+export async function getWorkorderPriorityDistribution(params: StatsReq) {
   return requestClient.get<PriorityDistribution[]>('/workorder/statistics/priority', {
     params,
   });

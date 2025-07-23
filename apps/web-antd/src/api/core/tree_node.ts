@@ -138,78 +138,78 @@ export interface UnbindResourceParams {
 
 // API接口
 // 获取树节点列表
-export const getTreeList = (params?: GetTreeListParams) => {
+export async function getTreeList(params?: GetTreeListParams) {
   return requestClient.get('/tree/node/list', { params });
-};
+}
 
 // 获取节点详情
-export const getNodeDetail = (id: number) => {
+export async function getNodeDetail(id: number) {
   return requestClient.get(`/tree/node/detail/${id}`);
-};
+}
 
 // 获取子节点列表
-export const getChildNodes = (id: number) => {
+export async function getChildNodes(id: number) {
   return requestClient.get(`/tree/node/children/${id}`);
-};
+}
 
 // 获取树统计信息
-export const getTreeStatistics = () => {
+export async function getTreeStatistics() {
   return requestClient.get('/tree/node/statistics');
-};
+}
 
 // 创建节点
-export const createNode = (data: CreateNodeParams) => {
+export async function createNode(data: CreateNodeParams) {
   return requestClient.post('/tree/node/create', data);
-};
+}
 
 // 更新节点
-export const updateNode = (id: number, data: UpdateNodeParams) => {
+export async function updateNode(id: number, data: UpdateNodeParams) {
   return requestClient.put(`/tree/node/update/${id}`, data);
-};
+}
 
 // 删除节点
-export const deleteNode = (id: number) => {
+export async function deleteNode(id: number) {
   return requestClient.delete(`/tree/node/delete/${id}`, { data: { id: id } });
-};
+}
 
 // 移动节点
-export const moveNode = (id: number, data: MoveNodeParams) => {
+export async function moveNode(id: number, data: MoveNodeParams) {
   return requestClient.put(`/tree/node/move/${id}`, data);
-};
+}
 
 // 更新节点状态
-export const updateNodeStatus = (id: number, data: UpdateNodeStatusParams) => {
+export async function updateNodeStatus(id: number, data: UpdateNodeStatusParams) {
   return requestClient.put(`/tree/node/status/${id}`, data);
-};
+}
 
 // 获取节点成员
-export const getNodeMembers = (id: number, params?: GetNodeMembersParams) => {
+export async function getNodeMembers(id: number, params?: GetNodeMembersParams) {
   return requestClient.get(`/tree/node/members/${id}`, { params });
-};
+}
 
 // 添加节点成员
-export const addNodeMember = (data: AddNodeMemberParams) => {
+export async function addNodeMember(data: AddNodeMemberParams) {
   return requestClient.post('/tree/node/member/add', data);
-};
+}
 
 // 移除节点成员
-export const removeNodeMember = (data: RemoveNodeMemberParams) => {
+export async function removeNodeMember(data: RemoveNodeMemberParams) {
   return requestClient.delete(`/tree/node/member/remove/${data.nodeId}`, {
     data: data,
   });
-};
+}
 
 // 获取节点资源
-export const getNodeResources = (id: number) => {
+export async function getNodeResources(id: number) {
   return requestClient.get(`/tree/node/resources/${id}`);
-};
+}
 
 // 绑定资源
-export const bindResource = (data: BindResourceParams) => {
+export async function bindResource(data: BindResourceParams) {
   return requestClient.post('/tree/node/resource/bind', data);
-};
+}
 
 // 解绑资源
-export const unbindResource = (data: UnbindResourceParams) => {
+export async function unbindResource(data: UnbindResourceParams) {
   return requestClient.delete('/tree/node/resource/unbind', { data });
-};
+}

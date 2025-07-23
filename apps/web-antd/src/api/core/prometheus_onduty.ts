@@ -119,40 +119,40 @@ export interface getOnDutyFuturePlan {
   end_time: string;
 }
 
-export const getMonitorOnDutyGroupListApi = (data: GetOnDutyListParams) => {
+export async function getMonitorOnDutyGroupListApi(data: GetOnDutyListParams) {
   return requestClient.get('/monitor/onduty_groups/list', { params: data });
-};
+}
 
-export const createMonitorOnDutyGroupApi = (data: createOnDutyReq) => {
+export async function createMonitorOnDutyGroupApi(data: createOnDutyReq) {
   return requestClient.post('/monitor/onduty_groups/create', data);
-};
+}
 
-export const createMonitorOnDutyGroupChangeApi = (
+export async function createMonitorOnDutyGroupChangeApi(
   data: createOnDutychangeReq,
-) => {
+) {
   return requestClient.post('/monitor/onduty_groups/changes', data);
-};
+}
 
-export const updateMonitorOnDutyGroupApi = (data: updateOnDutyReq) => {
+export async function updateMonitorOnDutyGroupApi(data: updateOnDutyReq) {
   return requestClient.put(`/monitor/onduty_groups/update/${data.id}`, data);
-};
+}
 
-export const deleteMonitorOnDutyGroupApi = (id: number) => {
+export async function deleteMonitorOnDutyGroupApi(id: number) {
   return requestClient.delete(`/monitor/onduty_groups/delete/${id}`);
-};
+}
 
-export const getMonitorOnDutyGroupDetailApi = (id: number) => {
+export async function getMonitorOnDutyGroupDetailApi(id: number) {
   return requestClient.get(`/monitor/onduty_groups/detail/${id}`);
-};
+}
 
-export const getMonitorOnDutyGroupFuturePlanApi = (
+export async function getMonitorOnDutyGroupFuturePlanApi(
   id: number,
   params?: { start_time: string; end_time: string },
-) => {
+) {
   return requestClient.get<FuturePlanResponse>(
     `/monitor/onduty_groups/future_plan/${id}`,
     {
       params,
     },
   );
-};
+}

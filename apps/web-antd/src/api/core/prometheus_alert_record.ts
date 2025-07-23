@@ -49,22 +49,22 @@ export interface updateAlertManagerRecordReq {
   annotations?: string[];
 }
 
-export const getRecordRulesListApi = (data: GetRecordRulesListParams) => {
+export async function getRecordRulesListApi(data: GetRecordRulesListParams) {
   return requestClient.get('/monitor/record_rules/list', { params: data });
-};
+}
 
-export const createRecordRuleApi = (data: createAlertManagerRecordReq) => {
+export async function createRecordRuleApi(data: createAlertManagerRecordReq) {
   return requestClient.post('/monitor/record_rules/create', data);
-};
+}
 
-export const updateRecordRuleApi = (data: updateAlertManagerRecordReq) => {
+export async function updateRecordRuleApi(data: updateAlertManagerRecordReq) {
   return requestClient.put(`/monitor/record_rules/update/${data.id}`, data);
-};
+}
 
-export const deleteRecordRuleApi = (id: number) => {
+export async function deleteRecordRuleApi(id: number) {
   return requestClient.delete(`/monitor/record_rules/delete/${id}`);
-};
+}
 
-export const getRecordRuleDetailApi = (id: number) => {
+export async function getRecordRuleDetailApi(id: number) {
   return requestClient.get(`/monitor/record_rules/detail/${id}`);
-};
+}

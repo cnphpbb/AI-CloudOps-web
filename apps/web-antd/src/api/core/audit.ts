@@ -131,45 +131,45 @@ export interface AuditTypeInfo {
 }
 
 // 查询相关接口
-export function listAuditLogsApi(data: ListAuditLogsRequest) {
+export async function listAuditLogsApi(data: ListAuditLogsRequest) {
   return requestClient.get('/audit/list', { params: data });
 }
 
-export function getAuditLogDetailApi(id: number) {
+export async function getAuditLogDetailApi(id: number) {
   return requestClient.get(`/audit/detail/${id}`);
 }
 
-export function searchAuditLogsApi(data: SearchAuditLogsRequest) {
+export async function searchAuditLogsApi(data: SearchAuditLogsRequest) {
   return requestClient.get('/audit/search', { params: data });
 }
 
 // 统计和分析接口
-export function getAuditStatisticsApi() {
+export async function getAuditStatisticsApi() {
   return requestClient.get('/audit/statistics');
 }
 
-export function getAuditTypesApi() {
+export async function getAuditTypesApi() {
   return requestClient.get('/audit/types');
 }
 
 // 管理接口
-export function deleteAuditLogApi(id: number) {
+export async function deleteAuditLogApi(id: number) {
   return requestClient.delete(`/audit/${id}`);
 }
 
-export function batchDeleteLogsApi(data: BatchDeleteRequest) {
+export async function batchDeleteLogsApi(data: BatchDeleteRequest) {
   return requestClient.post('/audit/batch-delete', data);
 }
 
-export function archiveAuditLogsApi(data: ArchiveAuditLogsRequest) {
+export async function archiveAuditLogsApi(data: ArchiveAuditLogsRequest) {
   return requestClient.post('/audit/archive', data);
 }
 
 // 创建接口
-export function createAuditLogApi(data: CreateAuditLogRequest) {
+export async function createAuditLogApi(data: CreateAuditLogRequest) {
   return requestClient.post('/audit/create', data);
 }
 
-export function batchCreateAuditLogsApi(data: AuditLogBatch) {
+export async function batchCreateAuditLogsApi(data: AuditLogBatch) {
   return requestClient.post('/audit/batch-create', data);
 }

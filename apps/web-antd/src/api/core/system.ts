@@ -68,61 +68,61 @@ import { requestClient } from '#/api/request';
   }
 
 // 角色管理
-export function listRolesApi(data: ListRolesReq) {
+export async function listRolesApi(data: ListRolesReq) {
   return requestClient.post('/role/list', data);
 }
 
-export function createRoleApi(data: CreateRoleReq) {
+export async function createRoleApi(data: CreateRoleReq) {
   return requestClient.post('/role/create', data);
 }
 
-export function updateRoleApi(data: UpdateRoleReq) {
+export async function updateRoleApi(data: UpdateRoleReq) {
   return requestClient.post('/role/update', data);
 }
 
-export function deleteRoleApi(data: DeleteRoleReq) {
+export async function deleteRoleApi(data: DeleteRoleReq) {
   return requestClient.post('/role/delete', data);
 }
 
-export function getRoleDetailApi(id: number) {
+export async function getRoleDetailApi(id: number) {
   return requestClient.get(`/role/detail/${id}`);
 }
 
 // 角色权限管理
-export function assignApisToRoleApi(data: AssignRoleApiReq) {
+export async function assignApisToRoleApi(data: AssignRoleApiReq) {
   return requestClient.post('/role/assign-apis', data);
 }
 
-export function revokeApisFromRoleApi(data: RevokeRoleApiReq) {
+export async function revokeApisFromRoleApi(data: RevokeRoleApiReq) {
   return requestClient.post('/role/revoke-apis', data);
 }
 
-export function getRoleApisApi(id: number) {
+export async function getRoleApisApi(id: number) {
   return requestClient.get(`/role/apis/${id}`);
 }
 
 // 用户角色管理
-export function assignRolesToUserApi(data: AssignRolesToUserReq) {
+export async function assignRolesToUserApi(data: AssignRolesToUserReq) {
   return requestClient.post('/role/assign_users', data);
 }
 
-export function revokeRolesFromUserApi(data: RevokeRolesFromUserReq) {
+export async function revokeRolesFromUserApi(data: RevokeRolesFromUserReq) {
   return requestClient.post('/role/revoke_users', data);
 }
 
-export function getRoleUsersApi(id: number) {
+export async function getRoleUsersApi(id: number) {
   return requestClient.get(`/role/users/${id}`);
 }
 
-export function getUserRolesApi(id: number) {
+export async function getUserRolesApi(id: number) {
   return requestClient.get(`/role/user_roles/${id}`);
 }
 
 // 权限检查
-export function checkUserPermissionApi(data: CheckUserPermissionReq) {
+export async function checkUserPermissionApi(data: CheckUserPermissionReq) {
   return requestClient.post('/role/check_permission', data);
 }
 
-export function getUserPermissionsApi(id: number) {
+export async function getUserPermissionsApi(id: number) {
   return requestClient.get(`/role/user_permissions/${id}`);
 }

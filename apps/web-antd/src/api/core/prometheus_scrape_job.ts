@@ -85,18 +85,18 @@ export interface updateScrapeJobReq {
 }
 
 
-export const getMonitorScrapeJobListApi = (data: GetScrapeJobListParams) => {
+export async function getMonitorScrapeJobListApi(data: GetScrapeJobListParams) {
   return requestClient.get(`/monitor/scrape_jobs/list`, { params: data });
-};
+}
 
-export const createScrapeJobApi = (data: createScrapeJobReq) => {
+export async function createScrapeJobApi(data: createScrapeJobReq) {
   return requestClient.post(`/monitor/scrape_jobs/create`, data);
-};
+}
 
-export const updateScrapeJobApi = (data: updateScrapeJobReq) => {
+export async function updateScrapeJobApi(data: updateScrapeJobReq) {
   return requestClient.put(`/monitor/scrape_jobs/update/${data.id}`, data);
-};
+}
 
-export const deleteScrapeJobApi = (id: number) => {
+export async function deleteScrapeJobApi(id: number) {
   return requestClient.delete(`/monitor/scrape_jobs/delete/${id}`);
-};
+}

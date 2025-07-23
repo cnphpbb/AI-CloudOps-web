@@ -44,26 +44,26 @@ export interface validateExprApiReq {
   promql_expr: string;
 }
 
-export const getAlertRulesListApi = (data: GetAlertRulesListParams) => {
+export async function getAlertRulesListApi(data: GetAlertRulesListParams) {
   return requestClient.get('/monitor/alert_rules/list', { params: data });
-};
+}
 
-export const getAlertRuleDetailApi = (id: number) => {
+export async function getAlertRuleDetailApi(id: number) {
   return requestClient.get(`/monitor/alert_rules/detail/${id}`);
-};
+}
 
-export const validateExprApi = (data: validateExprApiReq) => {
+export async function validateExprApi(data: validateExprApiReq) {
   return requestClient.post('/monitor/alert_rules/promql_check', data);
-};
+}
 
-export const createAlertRuleApi = (data: createAlertRuleReq) => {
+export async function createAlertRuleApi(data: createAlertRuleReq) {
   return requestClient.post('/monitor/alert_rules/create', data);
-};
+}
 
-export const updateAlertRuleApi = (data: updateAlertRuleReq) => {
+export async function updateAlertRuleApi(data: updateAlertRuleReq) {
   return requestClient.put(`/monitor/alert_rules/update/${data.id}`, data);
-};
+}
 
-export const deleteAlertRuleApi = (id: number) => {
+export async function deleteAlertRuleApi(id: number) {
   return requestClient.delete(`/monitor/alert_rules/delete/${id}`);
-};
+}

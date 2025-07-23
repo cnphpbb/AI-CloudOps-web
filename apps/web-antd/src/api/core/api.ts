@@ -34,25 +34,25 @@ import { requestClient } from '#/api/request';
 
 
   // API管理
-export function listApisApi(data: ListApisReq) {
+export async function listApisApi(data: ListApisReq) {
     return requestClient.get('/apis/list', { params: data });
   }
   
-export function createApiApi(data: CreateApiReq) {
+export async function createApiApi(data: CreateApiReq) {
   return requestClient.post('/apis/create', data);
 }
 
-export function updateApiApi(data: UpdateApiReq) {
+export async function updateApiApi(data: UpdateApiReq) {
   return requestClient.put(`/apis/update/${data.id}`, data);
 }
 
-export function deleteApiApi(id: number) {
+export async function deleteApiApi(id: number) {
   return requestClient.delete(`/apis/delete/${id}`);
 }
 
-export function getApiDetailApi(id: number) {
+export async function getApiDetailApi(id: number) {
   return requestClient.get(`/apis/detail/${id}`);
 }
-export function getApiStatisticsApi() {
+export async function getApiStatisticsApi() {
   return requestClient.get('/apis/statistics');
 }

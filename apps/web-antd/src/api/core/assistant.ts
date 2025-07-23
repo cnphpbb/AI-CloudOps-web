@@ -85,31 +85,31 @@ export interface ClearCacheResponse {
 }
 
 // 健康检查接口
-export const getHealthCheck = () => {
+export async function getHealthCheck() {
   return requestClientAIOps.get('/api/v1/health');
-};
+}
 
 // 创建会话接口
-export const createAssistantSession = () => {
+export async function createAssistantSession() {
   return requestClientAIOps.post('/api/v1/assistant/session');
-};
+}
 
 // 智能小助手查询接口
-export const queryAssistant = (params: AssistantQueryRequest) => {
+export async function queryAssistant(params: AssistantQueryRequest) {
   return requestClientAIOps.post('/api/v1/assistant/query', params);
-};
+}
 
 // 刷新知识库接口
-export const refreshKnowledgeBase = () => {
+export async function refreshKnowledgeBase() {
   return requestClientAIOps.post('/api/v1/assistant/refresh');
-};
+}
 
 // 添加文档到知识库接口
-export const addDocumentToKnowledgeBase = (params: AddDocumentRequest) => {
+export async function addDocumentToKnowledgeBase(params: AddDocumentRequest) {
   return requestClientAIOps.post('/api/v1/assistant/add-document', params);
-};
+}
 
 // 清除缓存接口
-export const clearAssistantCache = () => {
+export async function clearAssistantCache() {
   return requestClientAIOps.post('/api/v1/assistant/clear-cache');
-};
+}

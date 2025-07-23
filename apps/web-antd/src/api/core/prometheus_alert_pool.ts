@@ -47,22 +47,22 @@ export interface updateAlertManagerPoolReq {
   receiver: string;
 }
 
-export const getAlertManagerPoolListApi = (data: GetAlertManagerPoolListParams) => {
+export async function getAlertManagerPoolListApi(data: GetAlertManagerPoolListParams) {
   return requestClient.get('/monitor/alert_manager_pools/list', { params: data });
-};
+}
 
-export const createAlertManagerPoolApi = (data: createAlertManagerPoolReq) => {
+export async function createAlertManagerPoolApi(data: createAlertManagerPoolReq) {
   return requestClient.post('/monitor/alert_manager_pools/create', data);
-};
+}
 
-export const updateAlertManagerPoolApi = (data: updateAlertManagerPoolReq) => {
+export async function updateAlertManagerPoolApi(data: updateAlertManagerPoolReq) {
   return requestClient.put(`/monitor/alert_manager_pools/update/${data.id}`, data);
-};
+}
 
-export const deleteAlertManagerPoolApi = (id: number) => {
+export async function deleteAlertManagerPoolApi(id: number) {
   return requestClient.delete(`/monitor/alert_manager_pools/delete/${id}`);
-};
+}
 
-export const getAlertManagerPoolDetailApi = (id: number) => {
+export async function getAlertManagerPoolDetailApi(id: number) {
   return requestClient.get(`/monitor/alert_manager_pools/detail/${id}`);
-};
+}

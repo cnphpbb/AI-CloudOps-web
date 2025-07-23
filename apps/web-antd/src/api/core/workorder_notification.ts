@@ -149,55 +149,55 @@ export interface SendLogListResponse {
 }
 
 // 获取通知配置列表
-export function getNotificationList(params: ListNotificationReq) {
+export async function getNotificationList(params: ListNotificationReq) {
   return requestClient.get('/workorder/notification/list', {
     params
   });
 }
 
 // 获取通知配置详情
-export function getNotificationDetail(id: number) {
+export async function getNotificationDetail(id: number) {
   return requestClient.get(`/workorder/notification/detail/${id}`);
 }
 
 // 创建通知配置
-export function createNotification(data: CreateNotificationReq) {
+export async function createNotification(data: CreateNotificationReq) {
   return requestClient.post('/workorder/notification/create', data);
 }
 
 // 更新通知配置
-export function updateNotification(data: UpdateNotificationReq) {
+export async function updateNotification(data: UpdateNotificationReq) {
   return requestClient.put(`/workorder/notification/update/${data.id}`, data);
 }
 
 // 删除通知配置
-export function deleteNotification(id: number) {
+export async function deleteNotification(id: number) {
   return requestClient.delete(`/workorder/notification/delete/${id}`);
 }
 
 // 更新通知配置状态
-export function updateNotificationStatus(id: number, status: NotificationStatus) {
+export async function updateNotificationStatus(id: number, status: NotificationStatus) {
   return requestClient.put(`/workorder/notification/status/${id}`, { status });
 }
 
 // 获取通知统计信息
-export function getNotificationStats() {
+export async function getNotificationStats() {
   return requestClient.get('/workorder/notification/statistics');
 }
 
 // 获取发送记录
-export function getSendLogs(params: ListSendLogReq) {
+export async function getSendLogs(params: ListSendLogReq) {
   return requestClient.get('/workorder/notification/logs', {
     params
   });
 }
 
 // 测试发送通知
-export function testSendNotification(data: TestSendReq) {
+export async function testSendNotification(data: TestSendReq) {
   return requestClient.post('/workorder/notification/test/send', data);
 }
 
 // 复制通知配置
-export function duplicateNotification(data: DuplicateNotificationReq) {
+export async function duplicateNotification(data: DuplicateNotificationReq) {
   return requestClient.post('/workorder/notification/duplicate', data);
 }

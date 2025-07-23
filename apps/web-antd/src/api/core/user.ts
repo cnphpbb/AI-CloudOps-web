@@ -55,9 +55,9 @@ export async function getUserInfoApi() {
   return requestClient.get<UserInfo>('/user/profile');
 }
 
-export const getUserList = (data: GetUserListReq) => {
+export async function getUserList(data: GetUserListReq) {
   return requestClient.get('/user/list', { params: data });
-};
+}
 
 export async function registerApi(data: UserSignUpReq) {
   return requestClient.post('/user/signup', data);

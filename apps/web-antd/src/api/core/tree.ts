@@ -404,71 +404,71 @@ export interface TreeNodeDeleteReq {
 }
 
 
-export function getVpcResourceList(req: ListVpcResourcesReq) {
+export async function getVpcResourceList(req: ListVpcResourcesReq) {
   return requestClient.post('/tree/vpc/list', req);
 }
 
-export function createVpcResource(req: CreateVpcResourceReq) {
+export async function createVpcResource(req: CreateVpcResourceReq) {
   return requestClient.post('/tree/vpc/create', req);
 }
 
-export function getVpcResourceDetail(req: GetVpcDetailReq) {
+export async function getVpcResourceDetail(req: GetVpcDetailReq) {
   return requestClient.post('/tree/vpc/detail', req);
 }
 
-export function deleteVpcResource(req: DeleteVpcReq) {
+export async function deleteVpcResource(req: DeleteVpcReq) {
   return requestClient.delete('/tree/vpc/delete', { data: req });
 }
 
-export function getEcsResourceList(req: ListEcsResourceReq) {
+export async function getEcsResourceList(req: ListEcsResourceReq) {
   return requestClient.get('/tree/ecs/list', { params: req });
 }
 
-export function getEcsResourceDetail(req: GetEcsDetailReq) {
+export async function getEcsResourceDetail(req: GetEcsDetailReq) {
   return requestClient.get(`/tree/ecs/detail/${req.instanceId}`, { params: req });
 }
 
-export function createEcsResource(req: CreateEcsResourceReq) {
+export async function createEcsResource(req: CreateEcsResourceReq) {
   return requestClient.post('/tree/ecs/create', req);
 }
 
-export function updateEcsResource(req: UpdateEcsResourceReq) {
+export async function updateEcsResource(req: UpdateEcsResourceReq) {
   return requestClient.put(`/tree/ecs/update/${req.id}`, req);
 }
 
-export function startEcsResource(req: StartEcsReq) {
+export async function startEcsResource(req: StartEcsReq) {
   return requestClient.post('/tree/ecs/start', req);
 }
 
-export function stopEcsResource(req: StopEcsReq) {
+export async function stopEcsResource(req: StopEcsReq) {
   return requestClient.post('/tree/ecs/stop', req);
 }
 
-export function restartEcsResource(req: RestartEcsReq) {
+export async function restartEcsResource(req: RestartEcsReq) {
   return requestClient.post('/tree/ecs/restart', req);
 }
 
-export function deleteEcsResource(req: DeleteEcsReq) {
+export async function deleteEcsResource(req: DeleteEcsReq) {
   return requestClient.delete(`/tree/ecs/delete/${req.instanceId}`, { data: req });
 }
 
-export function getInstanceOptions(req: ListInstanceOptionsReq) {
+export async function getInstanceOptions(req: ListInstanceOptionsReq) {
   return requestClient.post('/tree/ecs/instance_options', req);
 }
 
-export function createSecurityGroup(req: CreateSecurityGroupReq) {
+export async function createSecurityGroup(req: CreateSecurityGroupReq) {
   return requestClient.post('/tree/security_group/create', req);
 }
 
-export function deleteSecurityGroup(req: DeleteSecurityGroupReq) {
+export async function deleteSecurityGroup(req: DeleteSecurityGroupReq) {
   return requestClient.delete('/tree/security_group/delete', { data: req });
 }
 
-export function listSecurityGroups(req: ListSecurityGroupsReq) {
+export async function listSecurityGroups(req: ListSecurityGroupsReq) {
   return requestClient.post('/tree/security_group/list', req);
 }
 
-export function getSecurityGroupDetail(req: GetSecurityGroupDetailReq) {
+export async function getSecurityGroupDetail(req: GetSecurityGroupDetailReq) {
   return requestClient.post('/tree/security_group/detail', req);
 }
 
@@ -571,34 +571,34 @@ export interface TreeNodeDeleteReq {
 }
 
 // 树结构相关接口
-export function getTreeList(req: TreeNodeListReq) {
+export async function getTreeList(req: TreeNodeListReq) {
   return requestClient.get('/tree/node/list', { params: req });
 }
 
-export function getNodeDetail(id: number) {
+export async function getNodeDetail(id: number) {
   return requestClient.get(`/tree/node/detail/${id}`);
 }
 
-export function getTreeStatistics() {
+export async function getTreeStatistics() {
   return requestClient.get('/tree/node/statistics');
 }
 
-export function createNode(req: TreeNodeCreateReq) {
+export async function createNode(req: TreeNodeCreateReq) {
   return requestClient.post('/tree/node/create', req);
 }
 
-export function updateNode(req: TreeNodeUpdateReq) {
+export async function updateNode(req: TreeNodeUpdateReq) {
   return requestClient.post('/tree/node/update', req);
 }
 
-export function deleteNode(id: number) {
+export async function deleteNode(id: number) {
   return requestClient.delete(`/tree/node/delete/${id}`);
 }
 
-export function addNodeMember(req: TreeNodeMemberReq) {
+export async function addNodeMember(req: TreeNodeMemberReq) {
   return requestClient.post('/tree/node/member/add', req);
 }
 
-export function removeNodeMember(req: TreeNodeMemberReq) {
+export async function removeNodeMember(req: TreeNodeMemberReq) {
   return requestClient.post('/tree/node/member/remove', req);
 }

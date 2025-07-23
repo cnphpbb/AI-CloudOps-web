@@ -81,34 +81,34 @@ export interface UnbindLocalResourceParams {
   tree_node_ids: number[];
 }
 
-export function getTreeLocalList(params: GetTreeLocalListParams) {
+export async function getTreeLocalList(params: GetTreeLocalListParams) {
   return requestClient.get('/tree/local/list', { params });
 }
 
-export function getTreeLocalDetail(id: number) {
+export async function getTreeLocalDetail(id: number) {
   return requestClient.get(`/tree/local/detail/${id}`);
 }
 
-export function createTreeLocal(data: CreateTreeLocalParams) {
+export async function createTreeLocal(data: CreateTreeLocalParams) {
   return requestClient.post('/tree/local/create', data);
 }
 
-export function updateTreeLocal(id: number, data: UpdateTreeLocalParams) {
+export async function updateTreeLocal(id: number, data: UpdateTreeLocalParams) {
   return requestClient.put(`/tree/local/update/${id}`, data);
 }
 
-export function deleteTreeLocal(id: number) {
+export async function deleteTreeLocal(id: number) {
   return requestClient.delete(`/tree/local/delete/${id}`);
 }
 
-export function connectTerminal(id: number, token: string) {
+export async function connectTerminal(id: number, token: string) {
   return requestClient.get(`/tree/local/terminal/${id}?token=${token}`);
 }
 
-export function bindTreeLocal(id: number, data: BindLocalResourceParams) {
+export async function bindTreeLocal(id: number, data: BindLocalResourceParams) {
   return requestClient.post(`/tree/local/bind/${id}`, data);
 }
 
-export function unbindTreeLocal(id: number, data: UnbindLocalResourceParams) {
+export async function unbindTreeLocal(id: number, data: UnbindLocalResourceParams) {
   return requestClient.post(`/tree/local/unbind/${id}`, data);
 }
