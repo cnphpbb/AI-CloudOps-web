@@ -229,8 +229,17 @@
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="关联采集池" name="pool_id" :rules="[{ required: true, message: '请选择关联采集池' }]">
-                <a-select v-model:value="formDialog.form.pool_id" placeholder="请选择关联采集池">
-                  <a-select-option v-for="pool in pools" :key="pool.id" :value="pool.id">
+                <a-select
+                  v-model:value="formDialog.form.pool_id"
+                  placeholder="请搜索并选择关联采集池"
+                  show-search
+                  :filter-option="false"
+                  @search="handleDialogPoolSearch"
+                  @popupScroll="handleDialogPoolScroll"
+                  :loading="dialogPoolLoading"
+                  allow-clear
+                >
+                  <a-select-option v-for="pool in dialogPools" :key="pool.id" :value="pool.id">
                     {{ pool.name }}
                   </a-select-option>
                 </a-select>
@@ -358,52 +367,54 @@
     <!-- 详情对话框 -->
     <a-modal :open="detailDialogVisible" title="采集任务详情" :width="previewDialogWidth" :footer="null"
       @cancel="closeDetailDialog" class="detail-dialog">
-      <div v-if="detailDialog.form" class="job-details">
-        <div class="detail-header">
-          <h2>{{ detailDialog.form.name }}</h2>
-          <div class="detail-badges">
-            <a-tag :color="detailDialog.form.enable === 1 ? 'success' : 'default'">
-              {{ detailDialog.form.enable === 1 ? '已启用' : '已禁用' }}
-            </a-tag>
-            <a-tag :color="detailDialog.form.service_discovery_type === 'k8s' ? 'blue' : 'green'">
-              {{ detailDialog.form.service_discovery_type === 'k8s' ? 'Kubernetes' : 'HTTP' }}
-            </a-tag>
+      <a-spin :spinning="detailDialog.loading">
+        <div v-if="detailDialog.form" class="job-details">
+          <div class="detail-header">
+            <h2>{{ detailDialog.form.name }}</h2>
+            <div class="detail-badges">
+              <a-tag :color="detailDialog.form.enable === 1 ? 'success' : 'default'">
+                {{ detailDialog.form.enable === 1 ? '已启用' : '已禁用' }}
+              </a-tag>
+              <a-tag :color="detailDialog.form.service_discovery_type === 'k8s' ? 'blue' : 'green'">
+                {{ detailDialog.form.service_discovery_type === 'k8s' ? 'Kubernetes' : 'HTTP' }}
+              </a-tag>
+            </div>
+          </div>
+
+          <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
+            <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
+            <a-descriptions-item label="服务发现类型">{{ detailDialog.form.service_discovery_type }}</a-descriptions-item>
+            <a-descriptions-item label="协议方案">{{ detailDialog.form.scheme }}</a-descriptions-item>
+            <a-descriptions-item label="监控路径">{{ detailDialog.form.metrics_path }}</a-descriptions-item>
+            <a-descriptions-item label="目标地址">{{ detailDialog.form.ip_address }}:{{ detailDialog.form.port
+            }}</a-descriptions-item>
+            <a-descriptions-item label="采集间隔">{{ detailDialog.form.scrape_interval }}秒</a-descriptions-item>
+            <a-descriptions-item label="采集超时">{{ detailDialog.form.scrape_timeout }}秒</a-descriptions-item>
+            <a-descriptions-item label="刷新间隔">{{ detailDialog.form.refresh_interval }}秒</a-descriptions-item>
+            <a-descriptions-item label="关联采集池">{{ getPoolName(detailDialog.form.pool_id) }}</a-descriptions-item>
+            <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
+            <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '')
+            }}</a-descriptions-item>
+            <a-descriptions-item v-if="detailDialog.form.service_discovery_type === 'k8s'" label="Kubernetes角色">
+              {{ detailDialog.form.kubernetes_sd_role || '未配置' }}
+            </a-descriptions-item>
+            <a-descriptions-item v-if="detailDialog.form.service_discovery_type === 'k8s'" label="KubeConfig路径">
+              {{ detailDialog.form.kube_config_file_path || '未配置' }}
+            </a-descriptions-item>
+            <a-descriptions-item v-if="detailDialog.form.tls_ca_file_path" label="TLS CA文件">
+              {{ detailDialog.form.tls_ca_file_path }}
+            </a-descriptions-item>
+            <a-descriptions-item v-if="detailDialog.form.bearer_token" label="Bearer Token">
+              ******
+            </a-descriptions-item>
+          </a-descriptions>
+
+          <div class="detail-footer">
+            <a-button @click="closeDetailDialog">关闭</a-button>
+            <a-button type="primary" @click="handleEditScrapeJob(detailDialog.form!)">编辑</a-button>
           </div>
         </div>
-
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
-          <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
-          <a-descriptions-item label="服务发现类型">{{ detailDialog.form.service_discovery_type }}</a-descriptions-item>
-          <a-descriptions-item label="协议方案">{{ detailDialog.form.scheme }}</a-descriptions-item>
-          <a-descriptions-item label="监控路径">{{ detailDialog.form.metrics_path }}</a-descriptions-item>
-          <a-descriptions-item label="目标地址">{{ detailDialog.form.ip_address }}:{{ detailDialog.form.port
-          }}</a-descriptions-item>
-          <a-descriptions-item label="采集间隔">{{ detailDialog.form.scrape_interval }}秒</a-descriptions-item>
-          <a-descriptions-item label="采集超时">{{ detailDialog.form.scrape_timeout }}秒</a-descriptions-item>
-          <a-descriptions-item label="刷新间隔">{{ detailDialog.form.refresh_interval }}秒</a-descriptions-item>
-          <a-descriptions-item label="关联采集池">{{ getPoolName(detailDialog.form.pool_id) }}</a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '')
-          }}</a-descriptions-item>
-          <a-descriptions-item v-if="detailDialog.form.service_discovery_type === 'k8s'" label="Kubernetes角色">
-            {{ detailDialog.form.kubernetes_sd_role || '未配置' }}
-          </a-descriptions-item>
-          <a-descriptions-item v-if="detailDialog.form.service_discovery_type === 'k8s'" label="KubeConfig路径">
-            {{ detailDialog.form.kube_config_file_path || '未配置' }}
-          </a-descriptions-item>
-          <a-descriptions-item v-if="detailDialog.form.tls_ca_file_path" label="TLS CA文件">
-            {{ detailDialog.form.tls_ca_file_path }}
-          </a-descriptions-item>
-          <a-descriptions-item v-if="detailDialog.form.bearer_token" label="Bearer Token">
-            ******
-          </a-descriptions-item>
-        </a-descriptions>
-
-        <div class="detail-footer">
-          <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button type="primary" @click="handleEditScrapeJob(detailDialog.form)">编辑</a-button>
-        </div>
-      </div>
+      </a-spin>
     </a-modal>
   </div>
 </template>
@@ -421,6 +432,7 @@ import {
   createScrapeJobApi,
   updateScrapeJobApi,
   deleteScrapeJobApi,
+  getScrapeJobDetailApi,
   type MonitorScrapeJobItem,
   type GetScrapeJobListParams,
   type createScrapeJobReq,
@@ -475,6 +487,14 @@ const enableFilter = ref<1 | 2 | undefined>(undefined);
 const poolFilter = ref<number | undefined>(undefined);
 const scrapeJobList = ref<MonitorScrapeJobItem[]>([]);
 const pools = ref<Pool[]>([]);
+
+// for dialog pool select
+const dialogPools = ref<Pool[]>([]);
+const dialogPoolLoading = ref(false);
+const dialogPoolSearch = ref('');
+const dialogPoolPage = ref(1);
+const dialogPoolHasMore = ref(true);
+let poolSearchDebounce: any;
 
 // 防抖处理
 let searchTimeout: any = null;
@@ -531,7 +551,8 @@ const formDialog = reactive({
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as MonitorScrapeJobItem | null
+  form: null as MonitorScrapeJobItem | null,
+  loading: false,
 });
 
 // 表单验证规则
@@ -606,8 +627,60 @@ const formatFullDateTime = (timestamp: string): string => {
 };
 
 const getPoolName = (poolId: number): string => {
-  const pool = pools.value.find(p => p.id === poolId);
+  const allKnownPools = [...pools.value, ...dialogPools.value];
+  const pool = allKnownPools.find(p => p.id === poolId);
   return pool ? pool.name : '未知';
+};
+
+const loadDialogPools = async (isNewSearch = false) => {
+  if (dialogPoolLoading.value) return;
+
+  if (isNewSearch) {
+    dialogPoolPage.value = 1;
+    dialogPoolHasMore.value = true;
+    dialogPools.value = [];
+  }
+
+  if (!dialogPoolHasMore.value) return;
+
+  dialogPoolLoading.value = true;
+  try {
+    const response = await getMonitorScrapePoolListApi({
+      page: dialogPoolPage.value,
+      size: 20,
+      search: dialogPoolSearch.value,
+    });
+
+    if (response && response.items && response.items.length > 0) {
+      const newPools = response.items.map((p: any) => ({ id: p.id, name: p.name }));
+      dialogPools.value.push(...newPools);
+      dialogPoolPage.value++;
+      if (dialogPools.value.length >= (response.total || 0)) {
+        dialogPoolHasMore.value = false;
+      }
+    } else {
+      dialogPoolHasMore.value = false;
+    }
+  } catch (error: any) {
+    message.error(error.message || '获取采集池数据失败');
+  } finally {
+    dialogPoolLoading.value = false;
+  }
+};
+
+const handleDialogPoolSearch = (value: string) => {
+  clearTimeout(poolSearchDebounce);
+  poolSearchDebounce = setTimeout(() => {
+    dialogPoolSearch.value = value;
+    loadDialogPools(true);
+  }, 300);
+};
+
+const handleDialogPoolScroll = (e: any) => {
+  const { target } = e;
+  if (target.scrollTop + target.offsetHeight >= target.scrollHeight - 5) {
+    loadDialogPools();
+  }
 };
 
 // 更新统计数据
@@ -642,7 +715,7 @@ const loadScrapeJobList = async (): Promise<void> => {
   try {
     const params: GetScrapeJobListParams = {
       page: paginationConfig.current,
-      page_size: paginationConfig.pageSize,
+      size: paginationConfig.pageSize,
       search: searchQuery.value || undefined,
       enable: enableFilter.value,
       pool_id: poolFilter.value
@@ -650,6 +723,7 @@ const loadScrapeJobList = async (): Promise<void> => {
 
     const response = await getMonitorScrapeJobListApi(params);
     if (response && response.items) {
+      console.log(response)
       scrapeJobList.value = response.items.map((item: any) => ({
         ...item,
         ip_address: Array.isArray(item.ip_address) ? item.ip_address[0] || '' : (item.ip_address || '')
@@ -681,8 +755,6 @@ const loadPools = async (): Promise<void> => {
         page: currentPage,
         size: pageSize,
         search: '',
-        support_alert: 1,
-        support_record: 1,
       });
 
       if (response && response.items && response.items.length > 0) {
@@ -755,6 +827,8 @@ const handleResetFilters = (): void => {
 const handleCreateScrapeJob = (): void => {
   formDialog.isEdit = false;
   resetFormDialog();
+  dialogPoolSearch.value = '';
+  loadDialogPools(true);
   formDialogVisible.value = true;
 };
 
@@ -784,13 +858,38 @@ const handleEditScrapeJob = (record: MonitorScrapeJobItem): void => {
     bearer_token_file: record.bearer_token_file || '',
     kubernetes_sd_role: record.kubernetes_sd_role || '',
   };
+
+  dialogPoolSearch.value = '';
+  loadDialogPools(true).then(() => {
+    const selectedPoolInList = dialogPools.value.some(p => p.id === record.pool_id);
+    if (!selectedPoolInList) {
+      const pool = pools.value.find(p => p.id === record.pool_id);
+      if (pool) {
+        dialogPools.value.unshift(pool);
+      }
+    }
+  });
+
   formDialogVisible.value = true;
   detailDialogVisible.value = false;
 };
 
-const handleViewScrapeJob = (record: MonitorScrapeJobItem): void => {
-  detailDialog.form = record;
+const handleViewScrapeJob = async (record: MonitorScrapeJobItem): Promise<void> => {
   detailDialogVisible.value = true;
+  detailDialog.loading = true;
+  detailDialog.form = null;
+  try {
+    const response = await getScrapeJobDetailApi(record.id);
+    detailDialog.form = {
+      ...response,
+      ip_address: Array.isArray(response.ip_address) ? response.ip_address[0] || '' : (response.ip_address || '')
+    };
+  } catch (error: any) {
+    message.error(error.message || '获取任务详情失败');
+    detailDialogVisible.value = false;
+  } finally {
+    detailDialog.loading = false;
+  }
 };
 
 const handleMenuClick = (command: string, record: MonitorScrapeJobItem): void => {

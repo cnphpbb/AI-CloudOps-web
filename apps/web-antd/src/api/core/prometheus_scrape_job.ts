@@ -32,7 +32,7 @@ export interface MonitorScrapeJobItem {
 // 获取采集任务列表参数
 export interface GetScrapeJobListParams {
   page?: number;
-  page_size?: number;
+  size?: number;
   pool_id?: number;
   enable?: 1 | 2;
   search?: string;
@@ -99,4 +99,8 @@ export async function updateScrapeJobApi(data: updateScrapeJobReq) {
 
 export async function deleteScrapeJobApi(id: number) {
   return requestClient.delete(`/monitor/scrape_jobs/delete/${id}`);
+}
+
+export async function getScrapeJobDetailApi(id: number) {
+  return requestClient.get(`/monitor/scrape_jobs/detail/${id}`);
 }
