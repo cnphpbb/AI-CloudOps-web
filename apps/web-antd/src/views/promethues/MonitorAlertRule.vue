@@ -1,10 +1,12 @@
 <template>
   <div class="alert-rule-container">
-    <!-- 页面标题与筛选 -->
+    <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-actions">
         <a-button type="primary" @click="showAddModal" class="btn-create">
-          <template #icon> <PlusOutlined /> </template>
+          <template #icon>
+            <PlusOutlined />
+          </template>
           <span class="btn-text">新增AlertRule</span>
         </a-button>
         <div class="search-filters">
@@ -36,33 +38,69 @@
             <a-select-option :value="1">启用</a-select-option>
             <a-select-option :value="2">禁用</a-select-option>
           </a-select>
-          <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
+          <a-button @click="handleReset" class="reset-btn">
+            重置
+          </a-button>
         </div>
       </div>
     </div>
 
     <!-- 统计卡片 -->
-    <div class="stats-grid">
-      <a-card class="stats-card">
-        <a-statistic title="总规则" :value="stats.total" :value-style="{ color: '#3f8600' }">
-          <template #prefix> <Icon icon="carbon:container-registry" /> </template>
-        </a-statistic>
-      </a-card>
-      <a-card class="stats-card">
-        <a-statistic title="Critical" :value="stats.critical" :value-style="{ color: '#cf1322' }">
-          <template #prefix> <Icon icon="carbon:warning-alt" /> </template>
-        </a-statistic>
-      </a-card>
-      <a-card class="stats-card">
-        <a-statistic title="Warning" :value="stats.warning" :value-style="{ color: '#faad14' }">
-          <template #prefix> <Icon icon="carbon:notification" /> </template>
-        </a-statistic>
-      </a-card>
-      <a-card class="stats-card">
-        <a-statistic title="已启用" :value="stats.enabled" :value-style="{ color: '#1890ff' }">
-          <template #prefix> <Icon icon="carbon:checkmark-outline" /> </template>
-        </a-statistic>
-      </a-card>
+    <div class="stats-row">
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="总规则" 
+              :value="stats.total" 
+              :value-style="{ color: '#3f8600' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:container-registry" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="Critical" 
+              :value="stats.critical" 
+              :value-style="{ color: '#cf1322' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:warning-alt" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="Warning" 
+              :value="stats.warning" 
+              :value-style="{ color: '#faad14' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:notification" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="已启用" 
+              :value="stats.enabled" 
+              :value-style="{ color: '#1890ff' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:checkmark-outline" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+      </a-row>
     </div>
 
     <!-- 表格容器 -->
@@ -241,7 +279,7 @@
       @ok="handleAdd"
       @cancel="closeAddModal"
       :destroy-on-close="true"
-      class="responsive-modal"
+      class="responsive-modal alert-rule-modal"
     >
       <a-form ref="addFormRef" :model="addForm" :rules="formRules" layout="vertical">
         <div class="form-section">
@@ -334,8 +372,9 @@
             :label="index === 0 ? '分组标签' : ''"
           >
             <div class="label-input-group">
-              <a-input v-model:value="label.labelKey" placeholder="标签名" />
-              <a-input v-model:value="label.labelValue" placeholder="标签值" />
+              <a-input v-model:value="label.labelKey" placeholder="标签名" class="label-key-input" />
+              <div class="label-separator">:</div>
+              <a-input v-model:value="label.labelValue" placeholder="标签值" class="label-value-input" />
               <MinusCircleOutlined
                 v-if="addForm.labels.length > 1"
                 class="dynamic-delete-button"
@@ -358,8 +397,9 @@
             :label="index === 0 ? '注解' : ''"
           >
             <div class="label-input-group">
-              <a-input v-model:value="annotation.labelKey" placeholder="注解名" />
-              <a-input v-model:value="annotation.labelValue" placeholder="注解值" />
+              <a-input v-model:value="annotation.labelKey" placeholder="注解名" class="label-key-input" />
+              <div class="label-separator">:</div>
+              <a-input v-model:value="annotation.labelValue" placeholder="注解值" class="label-value-input" />
               <MinusCircleOutlined
                 v-if="addForm.annotations.length > 1"
                 class="dynamic-delete-button"
@@ -384,7 +424,7 @@
       @ok="handleEdit"
       @cancel="closeEditModal"
       :destroy-on-close="true"
-      class="responsive-modal"
+      class="responsive-modal alert-rule-modal"
     >
       <a-form ref="editFormRef" :model="editForm" :rules="formRules" layout="vertical">
         <div class="form-section">
@@ -484,8 +524,9 @@
             :label="index === 0 ? '分组标签' : ''"
           >
             <div class="label-input-group">
-              <a-input v-model:value="label.labelKey" placeholder="标签名" />
-              <a-input v-model:value="label.labelValue" placeholder="标签值" />
+              <a-input v-model:value="label.labelKey" placeholder="标签名" class="label-key-input" />
+              <div class="label-separator">:</div>
+              <a-input v-model:value="label.labelValue" placeholder="标签值" class="label-value-input" />
               <MinusCircleOutlined
                 v-if="editForm.labels.length > 1"
                 class="dynamic-delete-button"
@@ -508,8 +549,9 @@
             :label="index === 0 ? '注解' : ''"
           >
             <div class="label-input-group">
-              <a-input v-model:value="annotation.labelKey" placeholder="注解名" />
-              <a-input v-model:value="annotation.labelValue" placeholder="注解值" />
+              <a-input v-model:value="annotation.labelKey" placeholder="注解名" class="label-key-input" />
+              <div class="label-separator">:</div>
+              <a-input v-model:value="annotation.labelValue" placeholder="注解值" class="label-value-input" />
               <MinusCircleOutlined
                 v-if="editForm.annotations.length > 1"
                 class="dynamic-delete-button"
@@ -674,6 +716,7 @@ const paginationConfig = reactive({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
+  size: 'default' as const
 });
 
 // --- 统计数据 ---
@@ -729,8 +772,25 @@ const formRules = {
 };
 
 // --- 响应式布局 ---
-const formDialogWidth = computed(() => (window.innerWidth < 768 ? '95%' : '900px'));
-const previewDialogWidth = computed(() => (window.innerWidth < 768 ? '95%' : '80%'));
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
+
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
 
 // --- 列定义 ---
 const columns = [
@@ -1068,12 +1128,12 @@ const removeEditAnnotation = (item: LabelOrAnnotationItem) => {
 };
 
 // --- 辅助函数 ---
-const getAlertStatusClass = (record: MonitorAlertRuleItem) => ({
-  'status-critical': record.enable === ENABLE_STATUS.ENABLED && record.severity === 'critical',
-  'status-warning': record.enable === ENABLE_STATUS.ENABLED && record.severity === 'warning',
-  'status-enabled': record.enable === ENABLE_STATUS.ENABLED && !['critical', 'warning'].includes(record.severity),
-  'status-disabled': record.enable !== ENABLE_STATUS.ENABLED,
-});
+const getAlertStatusClass = (record: MonitorAlertRuleItem): string => {
+  if (record.enable === ENABLE_STATUS.ENABLED && record.severity === 'critical') return 'status-critical';
+  if (record.enable === ENABLE_STATUS.ENABLED && record.severity === 'warning') return 'status-warning';
+  if (record.enable === ENABLE_STATUS.ENABLED) return 'status-enabled';
+  return 'status-disabled';
+};
 
 const getPoolName = (poolId?: number) => 
   scrapePools.value.find((p) => p.id === poolId)?.name || `ID: ${poolId}`;
@@ -1081,18 +1141,34 @@ const getPoolName = (poolId?: number) =>
 const getSendGroupName = (groupId?: number) => 
   sendGroups.value.find((g) => g.id === groupId)?.name || `ID: ${groupId}`;
 
-const getAvatarColor = (name: string) => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1'];
-  return colors[name.length % colors.length];
+const getAvatarColor = (name: string): string => {
+  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length]!;
 };
 
-const getInitials = (name?: string) => (name ? name.slice(0, 2).toUpperCase() : '');
+const getInitials = (name?: string): string => {
+  if (!name) return '';
+  return name.slice(0, 2).toUpperCase();
+};
 
-const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString();
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleDateString('zh-CN');
+};
 
-const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString();
+const formatTime = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+};
 
-const formatFullDateTime = (dateStr: string) => new Date(dateStr).toLocaleString();
+const formatFullDateTime = (dateString: string): string => {
+  if (!dateString) return '';
+  return new Date(dateString).toLocaleString('zh-CN');
+};
 
 // --- 生命周期 ---
 onMounted(() => {
@@ -1104,15 +1180,10 @@ onMounted(() => {
 .alert-rule-container {
   padding: 12px;
   min-height: 100vh;
-  background: #f5f5f5;
 }
 
 .page-header {
   margin-bottom: 20px;
-  background: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .header-actions {
@@ -1126,13 +1197,6 @@ onMounted(() => {
   background: linear-gradient(135deg, #1890ff 0%);
   border: none;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
-  transition: all 0.3s ease;
-}
-
-.btn-create:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.4);
 }
 
 .search-filters {
@@ -1146,15 +1210,6 @@ onMounted(() => {
 .search-input {
   width: 250px;
   min-width: 200px;
-  border-radius: 6px;
-}
-
-.search-input :deep(.ant-input) {
-  border-radius: 6px;
-}
-
-.search-input :deep(.ant-input-search-button) {
-  border-radius: 0 6px 6px 0;
 }
 
 .filter-select {
@@ -1164,13 +1219,9 @@ onMounted(() => {
 
 .reset-btn {
   flex-shrink: 0;
-  border-radius: 6px;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+.stats-row {
   margin-bottom: 20px;
 }
 
@@ -1178,21 +1229,10 @@ onMounted(() => {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
-  transition: all 0.3s ease;
-  border: none;
-}
-
-.stats-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .table-container {
   margin-bottom: 24px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
 }
 
 .rule-name-cell {
@@ -1206,29 +1246,27 @@ onMounted(() => {
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
 }
 
 .status-critical {
-  background: linear-gradient(45deg, #cf1322, #ff4d4f);
+  background-color: #cf1322;
 }
 
 .status-warning {
-  background: linear-gradient(45deg, #faad14, #fadb14);
+  background-color: #faad14;
 }
 
 .status-enabled {
-  background: linear-gradient(45deg, #52c41a, #73d13d);
+  background-color: #52c41a;
 }
 
 .status-disabled {
-  background: linear-gradient(45deg, #d9d9d9, #f0f0f0);
+  background-color: #d9d9d9;
 }
 
 .rule-name-text {
   font-weight: 500;
   word-break: break-all;
-  color: #1f2937;
 }
 
 .expr-container {
@@ -1248,93 +1286,73 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  max-width: 220px;
 }
 
 .tech-tag {
-  margin: 2px;
-  border-radius: 4px;
-  font-size: 12px;
-  padding: 2px 6px;
   display: inline-flex;
   align-items: center;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
   border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.tech-tag:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .severity-critical {
-  background: #fff1f0;
+  background-color: #fff1f0;
   color: #cf1322;
   border-left: 3px solid #ff4d4f;
 }
 
 .severity-warning {
-  background: #fff7e6;
+  background-color: #fff7e6;
   color: #d46b08;
   border-left: 3px solid #fa8c16;
 }
 
 .severity-info {
-  background: #e6f7ff;
+  background-color: #e6f7ff;
   color: #0958d9;
   border-left: 3px solid #1890ff;
 }
 
 .label-tag {
-  background: #f6ffed;
+  background-color: #f6ffed;
   color: #389e0d;
   border-left: 3px solid #52c41a;
 }
 
 .annotation-tag {
-  background: #f0f5ff;
+  background-color: #f0f5ff;
   color: #1d39c4;
   border-left: 3px solid #2f54eb;
 }
 
 .more-tag {
-  background: #f5f5f5;
+  background-color: #f5f5f5;
   color: #8c8c8c;
   border-left: 3px solid #d9d9d9;
   cursor: pointer;
 }
 
 .empty-text {
-  color: #bfbfbf;
+  color: #999;
   font-style: italic;
   font-size: 12px;
-  padding: 4px 8px;
-  background: #fafafa;
-  border-radius: 4px;
 }
 
 .label-key {
-  font-weight: 500;
-  color: #262626;
+  font-weight: 600;
 }
 
 .label-separator {
-  margin: 0 2px;
+  margin: 0 4px;
   color: #8c8c8c;
-  font-weight: bold;
 }
 
 .label-value {
-  color: #595959;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 80px;
+  color: #555;
 }
 
 .all-tags-container {
@@ -1344,35 +1362,27 @@ onMounted(() => {
   gap: 4px;
 }
 
-.all-tags-container .tech-tag {
-  max-width: none;
-}
-
 .config-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  background: #f8f9fa;
-  padding: 8px;
-  border-radius: 6px;
+  gap: 2px;
 }
 
 .config-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .config-label {
   font-size: 12px;
   color: #666;
-  font-weight: 500;
 }
 
 .config-value {
   font-size: 12px;
-  font-weight: 600;
-  color: #1f2937;
+  font-weight: 500;
+  color: #333;
 }
 
 .creator-info {
@@ -1384,8 +1394,6 @@ onMounted(() => {
 .creator-name {
   font-size: 14px;
   word-break: break-all;
-  color: #1f2937;
-  font-weight: 500;
 }
 
 .date-info {
@@ -1396,7 +1404,6 @@ onMounted(() => {
 .date {
   font-weight: 500;
   font-size: 14px;
-  color: #1f2937;
 }
 
 .time {
@@ -1411,25 +1418,94 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.action-buttons .ant-btn {
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+/* 表单样式 */
+.form-section {
+  margin-bottom: 28px;
+  padding: 0;
+  position: relative;
 }
 
-.action-buttons .ant-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+  padding-left: 12px;
+  border-left: 4px solid #1890ff;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.tech-switch {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.tech-switch.ant-switch-checked {
+  background: linear-gradient(45deg, #1890ff, #36cfc9);
+}
+
+.dynamic-input-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dynamic-input {
+  width: 100%;
+}
+
+.dynamic-delete-button {
+  cursor: pointer;
+  color: #ff4d4f;
+  font-size: 18px;
+  transition: all 0.3s;
+}
+
+.dynamic-delete-button:hover {
+  color: #cf1322;
+  transform: scale(1.1);
+}
+
+.add-dynamic-button {
+  width: 100%;
+  margin-top: 8px;
+  background: #f5f5f5;
+  border: 1px dashed #d9d9d9;
+  color: #595959;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.add-dynamic-button:hover {
+  color: #1890ff;
+  border-color: #1890ff;
+  background: #f0f7ff;
+}
+
+.label-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label-key-input,
+.label-value-input {
+  flex: 1;
+}
+
+.label-separator {
+  font-weight: bold;
+  color: #8c8c8c;
 }
 
 .ip-port-container {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #f8f9fa;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #e1e5e9;
 }
 
 .ip-input {
@@ -1446,95 +1522,7 @@ onMounted(() => {
   font-size: 16px;
 }
 
-.form-section {
-  margin-bottom: 28px;
-  padding: 20px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #e1e5e9;
-  position: relative;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 16px;
-  padding-left: 12px;
-  border-left: 4px solid #1890ff;
-  background: #fff;
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin: -10px -10px 16px -10px;
-}
-
-.tech-switch {
-  background-color: rgba(0, 0, 0, 0.25);
-  border-radius: 20px;
-}
-
-.tech-switch.ant-switch-checked {
-  background: linear-gradient(45deg, #1890ff, #36cfc9);
-}
-
-.dynamic-delete-button {
-  cursor: pointer;
-  color: #ff4d4f;
-  font-size: 18px;
-  transition: all 0.3s;
-  padding: 4px;
-  border-radius: 50%;
-}
-
-.dynamic-delete-button:hover {
-  color: #cf1322;
-  transform: scale(1.1);
-  background: #fff1f0;
-}
-
-.add-dynamic-button {
-  width: 100%;
-  margin-top: 8px;
-  background: #f5f5f5;
-  border: 1px dashed #d9d9d9;
-  color: #595959;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 6px;
-  padding: 12px;
-  transition: all 0.3s ease;
-}
-
-.add-dynamic-button:hover {
-  color: #1890ff;
-  border-color: #1890ff;
-  background: #f0f7ff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
-}
-
-.label-input-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #fff;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #e1e5e9;
-}
-
-.pagination-container {
-  margin-top: 8px;
-  display: flex;
-  justify-content: center;
-  padding: 8px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #e8e8e8;
-}
-
+/* 详情对话框样式 */
 .detail-dialog .pool-details {
   margin-bottom: 20px;
 }
@@ -1543,12 +1531,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
-  padding: 16px;
-  background: #f0f7ff;
-  border-radius: 8px;
-  border: 1px solid #d6e4ff;
 }
 
 .detail-header h2 {
@@ -1570,76 +1554,6 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
-  padding-top: 16px;
-  border-top: 1px solid #e1e5e9;
-}
-
-.responsive-modal :deep(.ant-modal) {
-  border-radius: 8px;
-  overflow: hidden;
-  max-width: calc(100vw - 16px);
-  margin: 8px;
-}
-
-.responsive-modal :deep(.ant-modal-header) {
-  background: linear-gradient(135deg, #1890ff, #36cfc9);
-  color: #fff;
-  border-bottom: none;
-}
-
-.responsive-modal :deep(.ant-modal-title) {
-  color: #fff;
-  font-weight: 600;
-}
-
-.responsive-modal :deep(.ant-modal-close) {
-  color: #fff;
-}
-
-.responsive-modal :deep(.ant-modal-close:hover) {
-  color: #f0f0f0;
-}
-
-.responsive-modal :deep(.ant-modal-body) {
-  max-height: calc(100vh - 220px);
-  overflow-y: auto;
-  padding: 24px;
-}
-
-.responsive-modal :deep(.ant-modal-footer) {
-  border-top: 1px solid #e1e5e9;
-  padding: 16px 24px;
-  background: #fafafa;
-}
-
-.table-container :deep(.ant-table-wrapper) {
-  overflow: auto;
-  border-radius: 8px;
-}
-
-.table-container :deep(.ant-table) {
-  border-radius: 8px;
-}
-
-.table-container :deep(.ant-table-thead > tr > th) {
-  background: #f8f9fa;
-  color: #1f2937;
-  font-weight: 600;
-  border-bottom: 2px solid #e1e5e9;
-  white-space: nowrap;
-}
-
-.table-container :deep(.ant-table-tbody > tr:hover) {
-  background: #f0f7ff;
-}
-
-.table-container :deep(.ant-table-tbody > tr > td) {
-  word-break: break-word;
-}
-
-.table-container :deep(.ant-pagination) {
-  margin: 16px 0;
-  text-align: center;
 }
 
 /* 响应式设计 */
@@ -1648,18 +1562,20 @@ onMounted(() => {
     padding: 8px;
   }
 
-  .page-header {
-    padding: 12px;
-  }
-
-  .header-actions,
-  .search-filters {
+  .header-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .search-filters {
     width: 100%;
   }
 
-  .search-input,
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
   .filter-select {
     width: 100%;
     min-width: auto;
@@ -1670,84 +1586,44 @@ onMounted(() => {
   }
 
   .btn-create {
-    width: fit-content;
-    align-self: flex-end;
+    padding: 4px 8px;
+    min-width: auto;
   }
 
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-
-  .form-section {
-    margin-bottom: 20px;
-    padding: 16px;
-  }
-
-  .label-input-group {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .ip-port-container {
-    flex-direction: column;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .action-buttons .ant-btn {
-    width: 100%;
-    margin: 0;
-  }
-
-  .tag-container {
-    max-width: 180px;
-  }
-
-  .tech-tag {
-    max-width: 80px;
-    font-size: 11px;
-  }
-
-  .config-info {
-    font-size: 11px;
-  }
-
-  .config-label {
-    min-width: 28px;
-    font-size: 10px;
-  }
-
-  .config-value {
-    font-size: 11px;
-  }
-
-  .responsive-modal :deep(.ant-modal-body) {
-    padding: 16px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
-  }
-}
-
-@media (max-width: 576px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .config-info {
+  .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
   }
 
-  .detail-header {
-    flex-direction: column;
-    align-items: flex-start;
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
   }
 
-  .tag-container {
-    max-width: 150px;
+  .action-buttons {
+    gap: 2px;
+  }
+
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .stats-card {
+    text-align: center;
   }
 
   .creator-info {
@@ -1770,6 +1646,33 @@ onMounted(() => {
 
   .time {
     font-size: 10px;
+  }
+}
+
+/* 表格滚动优化 */
+.table-container :deep(.ant-table-wrapper) {
+  overflow: auto;
+}
+
+.table-container :deep(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.table-container :deep(.ant-table-tbody > tr > td) {
+  word-break: break-word;
+}
+
+/* 对话框响应式优化 */
+.responsive-modal :deep(.ant-modal) {
+  max-width: calc(100vw - 16px);
+  margin: 8px;
+}
+
+@media (max-width: 768px) {
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
   }
 }
 </style>

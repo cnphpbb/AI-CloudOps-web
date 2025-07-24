@@ -2,9 +2,9 @@ import { requestClient } from '#/api/request';
 
 export interface MonitorAlertManagerPool {
   id: number;
-  created_at: number;
-  updated_at: number;
-  deleted_at: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string;
   name: string;
   alert_manager_instances: string[];
   user_id: number;
