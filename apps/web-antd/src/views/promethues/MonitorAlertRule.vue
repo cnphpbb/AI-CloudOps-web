@@ -1,89 +1,88 @@
 <template>
-  <div class="scrape-pool-container">
-    <!-- 页面标题 -->
+  <div class="alert-rule-container">
+    <!-- 页面标题与筛选 -->
     <div class="page-header">
       <div class="header-actions">
         <a-button type="primary" @click="showAddModal" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
+          <template #icon> <PlusOutlined /> </template>
           <span class="btn-text">新增AlertRule</span>
         </a-button>
         <div class="search-filters">
-          <a-input-search v-model:value="searchText" placeholder="搜索AlertRule名称..." class="search-input"
-            @search="handleSearch" @change="handleSearchChange" allow-clear />
-          <a-select v-model:value="severityFilter" placeholder="严重性" class="filter-select"
-            @change="handleSeverityChange" allow-clear>
-            <a-select-option :value="undefined">全部</a-select-option>
+          <a-input-search
+            v-model:value="searchParams.search"
+            placeholder="搜索规则名称..."
+            class="search-input"
+            @search="handleSearch"
+            allow-clear
+          />
+          <a-select
+            v-model:value="searchParams.severity"
+            placeholder="严重性"
+            class="filter-select"
+            @change="handleSearch"
+            allow-clear
+          >
             <a-select-option value="critical">Critical</a-select-option>
             <a-select-option value="warning">Warning</a-select-option>
             <a-select-option value="info">Info</a-select-option>
           </a-select>
-          <a-select v-model:value="enableFilter" placeholder="启用状态" class="filter-select" @change="handleEnableChange"
-            allow-clear>
-            <a-select-option :value="undefined">全部</a-select-option>
+          <a-select
+            v-model:value="searchParams.enable"
+            placeholder="启用状态"
+            class="filter-select"
+            @change="handleSearch"
+            allow-clear
+          >
             <a-select-option :value="1">启用</a-select-option>
             <a-select-option :value="2">禁用</a-select-option>
           </a-select>
-          <a-button @click="handleReset" class="reset-btn">
-            重置
-          </a-button>
+          <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
         </div>
       </div>
     </div>
 
     <!-- 统计卡片 -->
-    <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="总规则" :value="stats.total" :value-style="{ color: '#3f8600' }">
-              <template #prefix>
-                <Icon icon="carbon:container-registry" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="Critical" :value="stats.critical" :value-style="{ color: '#cf1322' }">
-              <template #prefix>
-                <Icon icon="carbon:warning-alt" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="Warning" :value="stats.warning" :value-style="{ color: '#faad14' }">
-              <template #prefix>
-                <Icon icon="carbon:notification" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="已启用" :value="stats.enabled" :value-style="{ color: '#1890ff' }">
-              <template #prefix>
-                <Icon icon="carbon:checkmark-outline" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
+    <div class="stats-grid">
+      <a-card class="stats-card">
+        <a-statistic title="总规则" :value="stats.total" :value-style="{ color: '#3f8600' }">
+          <template #prefix> <Icon icon="carbon:container-registry" /> </template>
+        </a-statistic>
+      </a-card>
+      <a-card class="stats-card">
+        <a-statistic title="Critical" :value="stats.critical" :value-style="{ color: '#cf1322' }">
+          <template #prefix> <Icon icon="carbon:warning-alt" /> </template>
+        </a-statistic>
+      </a-card>
+      <a-card class="stats-card">
+        <a-statistic title="Warning" :value="stats.warning" :value-style="{ color: '#faad14' }">
+          <template #prefix> <Icon icon="carbon:notification" /> </template>
+        </a-statistic>
+      </a-card>
+      <a-card class="stats-card">
+        <a-statistic title="已启用" :value="stats.enabled" :value-style="{ color: '#1890ff' }">
+          <template #prefix> <Icon icon="carbon:checkmark-outline" /> </template>
+        </a-statistic>
+      </a-card>
     </div>
 
     <!-- 表格容器 -->
     <div class="table-container">
       <a-card>
-        <a-table :data-source="data" :columns="columns" :pagination="paginationConfig" :loading="loading" row-key="id"
-          bordered :scroll="{ x: 1400 }" @change="handleTableChange">
+        <a-table
+          :data-source="data"
+          :columns="columns"
+          :pagination="paginationConfig"
+          :loading="loading"
+          row-key="id"
+          bordered
+          :scroll="{ x: 1400 }"
+          @change="handleTableChange"
+        >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
-              <div class="pool-name-cell">
-                <div class="pool-badge" :class="getAlertStatusClass(record)"></div>
-                <span class="pool-name-text">{{ record.name }}</span>
+              <div class="rule-name-cell">
+                <div class="rule-badge" :class="getAlertStatusClass(record)"></div>
+                <span class="rule-name-text">{{ record.name }}</span>
               </div>
             </template>
 
@@ -95,12 +94,35 @@
 
             <template v-if="column.key === 'labels'">
               <div class="tag-container">
-                <template v-if="record.labels && record.labels.length && record.labels[0] !== ''">
-                  <a-tag v-for="label in record.labels" :key="label" class="tech-tag label-tag">
-                    <span class="label-key">{{ label.split(',')[0] }}</span>
-                    <span class="label-separator">:</span>
-                    <span class="label-value">{{ label.split(',')[1] }}</span>
-                  </a-tag>
+                <template v-if="record.labels?.length && record.labels[0] !== ''">
+                  <template v-for="(label, index) in getDisplayLabels(record.labels)" :key="index">
+                    <a-tag class="tech-tag label-tag">
+                      <span class="label-key">{{ label.split(',')[0] }}</span>
+                      <span class="label-separator">:</span>
+                      <span class="label-value">{{ label.split(',')[1] }}</span>
+                    </a-tag>
+                  </template>
+                  <a-popover
+                    v-if="record.labels.length > 2"
+                    title="所有标签"
+                    trigger="hover"
+                    placement="topLeft"
+                  >
+                    <template #content>
+                      <div class="all-tags-container">
+                        <a-tag
+                          v-for="(label, index) in record.labels"
+                          :key="index"
+                          class="tech-tag label-tag"
+                        >
+                          <span class="label-key">{{ label.split(',')[0] }}</span>
+                          <span class="label-separator">:</span>
+                          <span class="label-value">{{ label.split(',')[1] }}</span>
+                        </a-tag>
+                      </div>
+                    </template>
+                    <a-tag class="tech-tag more-tag">+{{ record.labels.length - 2 }}</a-tag>
+                  </a-popover>
                 </template>
                 <span v-else class="empty-text">无标签</span>
               </div>
@@ -108,12 +130,35 @@
 
             <template v-if="column.key === 'annotations'">
               <div class="tag-container">
-                <template v-if="record.annotations && record.annotations.length && record.annotations[0] !== ''">
-                  <a-tag v-for="annotation in record.annotations" :key="annotation" class="tech-tag annotation-tag">
-                    <span class="label-key">{{ annotation.split(',')[0] }}</span>
-                    <span class="label-separator">:</span>
-                    <span class="label-value">{{ annotation.split(',')[1] }}</span>
-                  </a-tag>
+                <template v-if="record.annotations?.length && record.annotations[0] !== ''">
+                  <template v-for="(annotation, index) in getDisplayAnnotations(record.annotations)" :key="index">
+                    <a-tag class="tech-tag annotation-tag">
+                      <span class="label-key">{{ annotation.split(',')[0] }}</span>
+                      <span class="label-separator">:</span>
+                      <span class="label-value">{{ annotation.split(',')[1] }}</span>
+                    </a-tag>
+                  </template>
+                  <a-popover
+                    v-if="record.annotations.length > 2"
+                    title="所有注解"
+                    trigger="hover"
+                    placement="topLeft"
+                  >
+                    <template #content>
+                      <div class="all-tags-container">
+                        <a-tag
+                          v-for="(annotation, index) in record.annotations"
+                          :key="index"
+                          class="tech-tag annotation-tag"
+                        >
+                          <span class="label-key">{{ annotation.split(',')[0] }}</span>
+                          <span class="label-separator">:</span>
+                          <span class="label-value">{{ annotation.split(',')[1] }}</span>
+                        </a-tag>
+                      </div>
+                    </template>
+                    <a-tag class="tech-tag more-tag">+{{ record.annotations.length - 2 }}</a-tag>
+                  </a-popover>
                 </template>
                 <span v-else class="empty-text">无注解</span>
               </div>
@@ -146,7 +191,10 @@
 
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }">
+                <a-avatar
+                  size="small"
+                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
                 <span class="creator-name">{{ record.create_user_name }}</span>
@@ -162,7 +210,7 @@
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewAlert(record)">
+                <a-button type="primary" size="small" @click="showDetailModal(record)">
                   查看
                 </a-button>
                 <a-button type="default" size="small" @click="showEditModal(record)">
@@ -170,18 +218,13 @@
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
-                    <a-menu @click="(e: MenuInfo) => handleMenuClick(e.key, record)">
-                      <a-menu-item key="clone">
-                        <Icon icon="carbon:copy" /> 克隆
-                      </a-menu-item>
+                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
+                      <a-menu-item key="clone"> <Icon icon="carbon:copy" /> 克隆 </a-menu-item>
                       <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-item key="delete" danger> 删除 </a-menu-item>
                     </a-menu>
                   </template>
-                  <a-button size="small">
-                    更多
-                    <DownOutlined />
-                  </a-button>
+                  <a-button size="small"> 更多 <DownOutlined /> </a-button>
                 </a-dropdown>
               </div>
             </template>
@@ -190,24 +233,36 @@
       </a-card>
     </div>
 
-    <!-- 新增/编辑AlertRule对话框 -->
-    <a-modal :open="isAddModalVisible || isEditModalVisible" :title="isEditModalVisible ? '编辑AlertRule' : '新增AlertRule'"
-      :width="formDialogWidth" @ok="isEditModalVisible ? handleEdit : handleAdd" @cancel="closeFormDialog"
-      :destroy-on-close="true" class="responsive-modal scrape-pool-modal">
-      <a-form ref="formRef" :model="isEditModalVisible ? editForm : addForm" :rules="formRules" layout="vertical">
+    <!-- 新增AlertRule对话框 -->
+    <a-modal
+      :open="isAddModalVisible"
+      title="新增AlertRule"
+      :width="formDialogWidth"
+      @ok="handleAdd"
+      @cancel="closeAddModal"
+      :destroy-on-close="true"
+      class="responsive-modal"
+    >
+      <a-form ref="addFormRef" :model="addForm" :rules="formRules" layout="vertical">
         <div class="form-section">
           <div class="section-title">基本信息</div>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="名称" name="name" :rules="[{ required: true, message: '请输入名称' }]">
-                <a-input v-model:value="formName" placeholder="请输入名称" />
+              <a-form-item label="名称" name="name">
+                <a-input v-model:value="addForm.name" placeholder="请输入名称" />
               </a-form-item>
             </a-col>
           </a-row>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
-              <a-form-item label="所属实例池" name="pool_id" :rules="[{ required: true, message: '请选择所属实例池' }]">
-                <a-select v-model:value="formPoolId" placeholder="请选择所属实例池">
+              <a-form-item label="所属实例池" name="pool_id">
+                <a-select
+                  v-model:value="addForm.pool_id"
+                  placeholder="请选择所属实例池"
+                  @dropdown-visible-change="onPoolDropdownChange"
+                  @popupScroll="handlePoolScroll"
+                  :loading="poolLoading"
+                >
                   <a-select-option v-for="pool in scrapePools" :key="pool.id" :value="pool.id">
                     {{ pool.name }}
                   </a-select-option>
@@ -216,7 +271,13 @@
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="发送组" name="send_group_id">
-                <a-select v-model:value="formSendGroupId" placeholder="请选择发送组">
+                <a-select
+                  v-model:value="addForm.send_group_id"
+                  placeholder="请选择发送组"
+                  @dropdown-visible-change="onSendGroupDropdownChange"
+                  @popupScroll="handleSendGroupScroll"
+                  :loading="sendGroupLoading"
+                >
                   <a-select-option v-for="group in sendGroups" :key="group.id" :value="group.id">
                     {{ group.name }}
                   </a-select-option>
@@ -226,20 +287,12 @@
           </a-row>
           <a-row :gutter="16">
             <a-col :span="24">
-              <a-form-item label="目标地址" name="ip_address" :rules="[{ required: true, message: '请输入IP地址和端口' }]">
+              <a-form-item label="目标地址" name="ip_address">
                 <div class="ip-port-container">
-                  <a-input v-model:value="formIp" placeholder="请输入IP地址" class="ip-input" />
+                  <a-input v-model:value="addForm.ip" placeholder="请输入IP地址" class="ip-input" />
                   <span class="separator">:</span>
-                  <a-input v-model:value="formPort" placeholder="端口" class="port-input" />
+                  <a-input v-model:value="addForm.port" placeholder="端口" class="port-input" />
                 </div>
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16" v-if="isEditModalVisible">
-            <a-col :span="24">
-              <a-form-item label="启用状态" name="enable">
-                <a-switch v-model:checked="editForm.enableSwitch" class="tech-switch"
-                  @change="(checked: boolean) => editForm.enable = checked ? 1 : 2" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -247,27 +300,18 @@
 
         <div class="form-section">
           <div class="section-title">规则配置</div>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="表达式" name="expr">
-                <a-input v-model:value="formExpr" placeholder="请输入表达式" />
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item>
-                <a-button type="primary" class="action-button"
-                  @click="isEditModalVisible ? validateEditExpression() : validateAddExpression(addForm.expr)">
-                  验证表达式
-                </a-button>
-              </a-form-item>
-            </a-col>
-          </a-row>
+          <a-form-item label="表达式" name="expr">
+            <a-textarea v-model:value="addForm.expr" placeholder="请输入PromQL表达式" :rows="4" />
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="validateExpression(addForm.expr)">
+              验证表达式
+            </a-button>
+          </a-form-item>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item label="严重性" name="severity">
-                <a-select v-model:value="formSeverity" placeholder="请选择严重性">
+                <a-select v-model:value="addForm.severity" placeholder="请选择严重性">
                   <a-select-option value="critical">Critical</a-select-option>
                   <a-select-option value="warning">Warning</a-select-option>
                   <a-select-option value="info">Info</a-select-option>
@@ -276,7 +320,7 @@
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="持续时间" name="for_time">
-                <a-input v-model:value="formForTime" placeholder="例如: 10s" />
+                <a-input v-model:value="addForm.for_time" placeholder="例如: 10s" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -284,44 +328,198 @@
 
         <div class="form-section">
           <div class="section-title">标签配置</div>
-          <a-form-item v-for="(label, index) in (isEditModalVisible ? editForm.labels : addForm.labels)"
-            :key="label.key" :label="index === 0 ? '分组标签' : ''">
+          <a-form-item
+            v-for="(label, index) in addForm.labels"
+            :key="label.key"
+            :label="index === 0 ? '分组标签' : ''"
+          >
             <div class="label-input-group">
-              <a-input v-model:value="label.labelKey" placeholder="标签名" class="label-key-input" />
-              <div class="label-separator">:</div>
-              <a-input v-model:value="label.labelValue" placeholder="标签值" class="label-value-input" />
-              <MinusCircleOutlined v-if="(isEditModalVisible ? editForm.labels : addForm.labels).length > 1"
+              <a-input v-model:value="label.labelKey" placeholder="标签名" />
+              <a-input v-model:value="label.labelValue" placeholder="标签值" />
+              <MinusCircleOutlined
+                v-if="addForm.labels.length > 1"
                 class="dynamic-delete-button"
-                @click="isEditModalVisible ? removeEditLabel(label) : removeLabel(label)" />
+                @click="removeLabel(label)"
+              />
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button"
-              @click="isEditModalVisible ? addEditLabel() : addLabel()">
-              <PlusOutlined />
-              添加标签
+            <a-button type="dashed" class="add-dynamic-button" @click="addLabel">
+              <PlusOutlined /> 添加标签
             </a-button>
           </a-form-item>
         </div>
 
         <div class="form-section">
           <div class="section-title">注解配置</div>
-          <a-form-item v-for="(annotation, index) in (isEditModalVisible ? editForm.annotations : addForm.annotations)"
-            :key="annotation.key" :label="index === 0 ? '注解' : ''">
+          <a-form-item
+            v-for="(annotation, index) in addForm.annotations"
+            :key="annotation.key"
+            :label="index === 0 ? '注解' : ''"
+          >
             <div class="label-input-group">
-              <a-input v-model:value="annotation.labelKey" placeholder="注解名" class="label-key-input" />
-              <div class="label-separator">:</div>
-              <a-input v-model:value="annotation.labelValue" placeholder="注解值" class="label-value-input" />
-              <MinusCircleOutlined v-if="(isEditModalVisible ? editForm.annotations : addForm.annotations).length > 1"
+              <a-input v-model:value="annotation.labelKey" placeholder="注解名" />
+              <a-input v-model:value="annotation.labelValue" placeholder="注解值" />
+              <MinusCircleOutlined
+                v-if="addForm.annotations.length > 1"
                 class="dynamic-delete-button"
-                @click="isEditModalVisible ? removeEditAnnotation(annotation) : removeAnnotation(annotation)" />
+                @click="removeAnnotation(annotation)"
+              />
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="dashed" class="add-dynamic-button"
-              @click="isEditModalVisible ? addEditAnnotation() : addAnnotation()">
-              <PlusOutlined />
-              添加注解
+            <a-button type="dashed" @click="addAnnotation" class="add-dynamic-button">
+              <PlusOutlined /> 添加注解
+            </a-button>
+          </a-form-item>
+        </div>
+      </a-form>
+    </a-modal>
+
+    <!-- 编辑AlertRule对话框 -->
+    <a-modal
+      :open="isEditModalVisible"
+      title="编辑AlertRule"
+      :width="formDialogWidth"
+      @ok="handleEdit"
+      @cancel="closeEditModal"
+      :destroy-on-close="true"
+      class="responsive-modal"
+    >
+      <a-form ref="editFormRef" :model="editForm" :rules="formRules" layout="vertical">
+        <div class="form-section">
+          <div class="section-title">基本信息</div>
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="名称" name="name">
+                <a-input v-model:value="editForm.name" placeholder="请输入名称" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="所属实例池" name="pool_id">
+                <a-select
+                  v-model:value="editForm.pool_id"
+                  placeholder="请选择所属实例池"
+                  @dropdown-visible-change="onPoolDropdownChange"
+                  @popupScroll="handlePoolScroll"
+                  :loading="poolLoading"
+                >
+                  <a-select-option v-for="pool in scrapePools" :key="pool.id" :value="pool.id">
+                    {{ pool.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="发送组" name="send_group_id">
+                <a-select
+                  v-model:value="editForm.send_group_id"
+                  placeholder="请选择发送组"
+                  @dropdown-visible-change="onSendGroupDropdownChange"
+                  @popupScroll="handleSendGroupScroll"
+                  :loading="sendGroupLoading"
+                >
+                  <a-select-option v-for="group in sendGroups" :key="group.id" :value="group.id">
+                    {{ group.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="目标地址" name="ip_address">
+                <div class="ip-port-container">
+                  <a-input v-model:value="editForm.ip" placeholder="请输入IP地址" class="ip-input" />
+                  <span class="separator">:</span>
+                  <a-input v-model:value="editForm.port" placeholder="端口" class="port-input" />
+                </div>
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :span="24">
+              <a-form-item label="启用状态" name="enable">
+                <a-switch v-model:checked="editForm.enableSwitch" class="tech-switch" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">规则配置</div>
+          <a-form-item label="表达式" name="expr">
+            <a-textarea v-model:value="editForm.expr" placeholder="请输入PromQL表达式" :rows="4" />
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="validateExpression(editForm.expr)">
+              验证表达式
+            </a-button>
+          </a-form-item>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="严重性" name="severity">
+                <a-select v-model:value="editForm.severity" placeholder="请选择严重性">
+                  <a-select-option value="critical">Critical</a-select-option>
+                  <a-select-option value="warning">Warning</a-select-option>
+                  <a-select-option value="info">Info</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="持续时间" name="for_time">
+                <a-input v-model:value="editForm.for_time" placeholder="例如: 10s" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">标签配置</div>
+          <a-form-item
+            v-for="(label, index) in editForm.labels"
+            :key="label.key"
+            :label="index === 0 ? '分组标签' : ''"
+          >
+            <div class="label-input-group">
+              <a-input v-model:value="label.labelKey" placeholder="标签名" />
+              <a-input v-model:value="label.labelValue" placeholder="标签值" />
+              <MinusCircleOutlined
+                v-if="editForm.labels.length > 1"
+                class="dynamic-delete-button"
+                @click="removeEditLabel(label)"
+              />
+            </div>
+          </a-form-item>
+          <a-form-item>
+            <a-button type="dashed" class="add-dynamic-button" @click="addEditLabel">
+              <PlusOutlined /> 添加标签
+            </a-button>
+          </a-form-item>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title">注解配置</div>
+          <a-form-item
+            v-for="(annotation, index) in editForm.annotations"
+            :key="annotation.key"
+            :label="index === 0 ? '注解' : ''"
+          >
+            <div class="label-input-group">
+              <a-input v-model:value="annotation.labelKey" placeholder="注解名" />
+              <a-input v-model:value="annotation.labelValue" placeholder="注解值" />
+              <MinusCircleOutlined
+                v-if="editForm.annotations.length > 1"
+                class="dynamic-delete-button"
+                @click="removeEditAnnotation(annotation)"
+              />
+            </div>
+          </a-form-item>
+          <a-form-item>
+            <a-button type="dashed" @click="addEditAnnotation" class="add-dynamic-button">
+              <PlusOutlined /> 添加注解
             </a-button>
           </a-form-item>
         </div>
@@ -329,35 +527,49 @@
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal :open="detailDialogVisible" title="AlertRule详情" :width="previewDialogWidth" :footer="null"
-      @cancel="closeDetailDialog" class="detail-dialog">
-      <div v-if="detailDialog.form" class="pool-details">
+    <a-modal
+      :open="detailModalVisible"
+      title="AlertRule详情"
+      :width="previewDialogWidth"
+      :footer="null"
+      @cancel="closeDetailModal"
+      class="detail-dialog"
+    >
+      <div v-if="currentRecord" class="pool-details">
         <div class="detail-header">
-          <h2>{{ detailDialog.form.name }}</h2>
+          <h2>{{ currentRecord.name }}</h2>
           <div class="detail-badges">
-            <a-tag :class="['tech-tag', `severity-${detailDialog.form.severity}`]">
-              {{ detailDialog.form.severity }}
+            <a-tag :class="['tech-tag', `severity-${currentRecord.severity}`]">
+              {{ currentRecord.severity }}
             </a-tag>
-            <a-tag :color="detailDialog.form.enable === 1 ? 'success' : 'default'">
-              {{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}
+            <a-tag :color="currentRecord.enable === 1 ? 'success' : 'default'">
+              {{ currentRecord.enable === 1 ? '启用' : '禁用' }}
             </a-tag>
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
-          <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
-          <a-descriptions-item label="表达式">{{ detailDialog.form.expr }}</a-descriptions-item>
-          <a-descriptions-item label="持续时间">{{ detailDialog.form.for_time }}</a-descriptions-item>
-          <a-descriptions-item label="目标地址">{{ detailDialog.form.ip_address }}</a-descriptions-item>
-          <a-descriptions-item label="实例池">{{ getPoolName(detailDialog.form.pool_id) }}</a-descriptions-item>
-          <a-descriptions-item label="发送组">{{ getSendGroupName(detailDialog.form.send_group_id) }}</a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at) }}</a-descriptions-item>
+        <a-descriptions bordered :column="1" :label-style="{ width: '150px' }">
+          <a-descriptions-item label="ID">{{ currentRecord.id }}</a-descriptions-item>
+          <a-descriptions-item label="表达式">{{ currentRecord.expr }}</a-descriptions-item>
+          <a-descriptions-item label="持续时间">{{ currentRecord.for_time }}</a-descriptions-item>
+          <a-descriptions-item label="目标地址">{{ currentRecord.ip_address }}</a-descriptions-item>
+          <a-descriptions-item label="实例池">
+            {{ getPoolName(currentRecord.pool_id) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="发送组">
+            {{ getSendGroupName(currentRecord.send_group_id) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建人">
+            {{ currentRecord.create_user_name }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(currentRecord.created_at) }}
+          </a-descriptions-item>
         </a-descriptions>
 
         <div class="detail-footer">
-          <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button type="primary" @click="showEditModal(detailDialog.form)">编辑</a-button>
+          <a-button @click="closeDetailModal">关闭</a-button>
+          <a-button type="primary" @click="showEditModal(currentRecord!)">编辑</a-button>
         </div>
       </div>
     </a-modal>
@@ -367,119 +579,94 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import {
-  PlusOutlined,
-  DownOutlined,
-  MinusCircleOutlined
-} from '@ant-design/icons-vue';
+import { PlusOutlined, DownOutlined, MinusCircleOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { useDebounceFn } from '@vueuse/core';
 import {
-  getAlertRulesListApi,
+  getMonitorAlertRuleListApi,
   createAlertRuleApi,
   updateAlertRuleApi,
   deleteAlertRuleApi,
   validateExprApi,
-  type GetAlertRulesListParams,
+  type GetAlertRuleListParams,
+  type MonitorAlertRuleItem,
   type createAlertRuleReq,
   type updateAlertRuleReq,
-  type validateExprApiReq
 } from '#/api/core/prometheus_alert_rule';
-import { getAlertManagerPoolListApi } from '#/api/core/prometheus_alert_pool';
-import { getMonitorSendGroupListApi } from '#/api/core/prometheus_send_group';
+import {
+  getAlertManagerPoolListApi,
+  getAlertManagerPoolDetailApi,
+  type MonitorAlertManagerPool,
+} from '#/api/core/prometheus_alert_pool';
+import {
+  getMonitorSendGroupListApi,
+  getMonitorSendGroupDetailApi,
+  type MonitorSendGroup,
+} from '#/api/core/prometheus_send_group';
 
-// Define AlertRuleItem interface
-interface AlertRuleItem {
-  id: number;
-  created_at: number;
-  updated_at: number;
-  deleted_at: number;
-  name: string;
-  pool_id: number;
-  send_group_id: number;
-  ip_address?: string;
-  enable: number;
-  expr: string;
-  severity: string;
-  grafana_link?: string;
-  for_time: string;
-  labels?: string[];
-  annotations?: string[];
-  creator_name?: string;
-  create_user_name?: string;
-}
+const ENABLE_STATUS = {
+  ENABLED: 1,
+  DISABLED: 2,
+} as const;
 
-interface ScrapePool {
-  id: number;
-  name: string;
-}
-
-interface SendGroup {
-  id: number;
-  name: string;
-}
-
-interface LabelItem {
+// --- 类型定义 ---
+interface LabelOrAnnotationItem {
+  key: number;
   labelKey: string;
   labelValue: string;
-  key: number;
 }
 
-// Menu event interface
-interface MenuInfo {
-  key: string;
-  keyPath: string[];
-  item: any;
-  domEvent: MouseEvent;
-}
-
-// 响应式对话框宽度
-const formDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '900px';
-  }
-  return '900px';
+// --- 分页状态 ---
+const poolPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
 });
 
-const previewDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '80%';
-  }
-  return '80%';
+const sendGroupPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
 });
 
-// 列定义
-const columns = [
-  { title: 'AlertRule名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
-  { title: '表达式', dataIndex: 'expr', key: 'expr', width: 250 },
-  { title: '严重性', dataIndex: 'severity', key: 'severity', width: 100, align: 'center' as const },
-  { title: '启用状态', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
-  { title: '标签', dataIndex: 'labels', key: 'labels', width: 200 },
-  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 200 },
-  { title: '实例配置', dataIndex: 'pool_config', key: 'pool_config', width: 180 },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
-  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
-];
+const poolLoading = ref(false);
+const sendGroupLoading = ref(false);
 
-// 状态数据
+// --- 辅助函数 ---
+const createInitialForm = () => ({
+  name: '',
+  pool_id: undefined as number | undefined,
+  send_group_id: undefined as number | undefined,
+  ip: '',
+  port: '',
+  expr: '',
+  severity: undefined as string | undefined,
+  for_time: '10s',
+  labels: [{ key: Date.now(), labelKey: '', labelValue: '' }] as LabelOrAnnotationItem[],
+  annotations: [{ key: Date.now(), labelKey: '', labelValue: '' }] as LabelOrAnnotationItem[],
+});
+
+const handleApiError = (error: any, defaultMessage: string) => {
+  const errorMessage = error?.response?.data?.message || error.message || defaultMessage;
+  message.error(errorMessage);
+};
+
+// --- 响应式状态 ---
 const loading = ref(false);
-const searchText = ref('');
-const severityFilter = ref<'critical' | 'warning' | 'info' | undefined>(undefined);
-const enableFilter = ref<1 | 2 | undefined>(undefined);
-const data = ref<AlertRuleItem[]>([]);
-const scrapePools = ref<ScrapePool[]>([]);
-const sendGroups = ref<SendGroup[]>([]);
+const data = ref<MonitorAlertRuleItem[]>([]);
+const scrapePools = ref<MonitorAlertManagerPool[]>([]);
+const sendGroups = ref<MonitorSendGroup[]>([]);
+const addFormRef = ref();
+const editFormRef = ref();
+const currentRecord = ref<MonitorAlertRuleItem | null>(null);
 
-// 防抖处理
-let searchTimeout: any = null;
+// --- 筛选与分页 ---
+const searchParams = reactive({
+  search: '',
+  severity: undefined as string | undefined,
+  enable: undefined as number | undefined,
+});
 
-// 分页配置
 const paginationConfig = reactive({
   current: 1,
   pageSize: 10,
@@ -487,624 +674,445 @@ const paginationConfig = reactive({
   showSizeChanger: true,
   showQuickJumper: true,
   showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const
 });
 
-// 统计数据
-const stats = reactive({
-  total: 0,
-  critical: 0,
-  warning: 0,
-  info: 0,
-  enabled: 0
-});
+// --- 统计数据 ---
+const stats = computed(() => ({
+  total: paginationConfig.total,
+  critical: data.value.filter((item) => item.severity === 'critical').length,
+  warning: data.value.filter((item) => item.severity === 'warning').length,
+  enabled: data.value.filter((item) => item.enable === ENABLE_STATUS.ENABLED).length,
+}));
 
-// 对话框状态
+// --- 模态框状态 ---
 const isAddModalVisible = ref(false);
 const isEditModalVisible = ref(false);
-const detailDialogVisible = ref(false);
+const detailModalVisible = ref(false);
 
-// 详情对话框数据
-const detailDialog = reactive({
-  form: null as AlertRuleItem | null
-});
+// --- 表单 ---
+const addForm = reactive(createInitialForm());
 
-// 新增表单
-const addForm = reactive({
-  name: '',
-  pool_id: 0,
-  send_group_id: 0,
-  ip: '',
-  port: '',
-  enable: 1,
-  expr: '',
-  severity: '',
-  grafana_link: '',
-  for_time: '',
-  labels: [
-    { labelKey: 'severity', labelValue: '', key: Date.now() },
-    { labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2 },
-    { labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3 }
-  ] as LabelItem[],
-  annotations: [
-    { labelKey: 'severity', labelValue: '', key: Date.now() },
-    { labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2 }
-  ] as LabelItem[],
-});
-
-// 编辑表单
 const editForm = reactive({
   id: 0,
   name: '',
-  pool_id: 0,
-  send_group_id: 0,
+  pool_id: undefined as number | undefined,
+  send_group_id: undefined as number | undefined,
   ip: '',
   port: '',
-  enable: 1,
   enableSwitch: true,
   expr: '',
-  severity: '',
-  grafana_link: '',
+  severity: undefined as string | undefined,
   for_time: '',
-  labels: [{ labelKey: '', labelValue: '', key: Date.now() }] as LabelItem[],
-  annotations: [{ labelKey: '', labelValue: '', key: Date.now() }] as LabelItem[],
+  labels: [] as LabelOrAnnotationItem[],
+  annotations: [] as LabelOrAnnotationItem[],
 });
 
-// 计算属性来处理v-model绑定
-const formName = computed({
-  get: () => isEditModalVisible.value ? editForm.name : addForm.name,
-  set: (val) => {
-    if (isEditModalVisible.value) {
-      editForm.name = val;
-    } else {
-      addForm.name = val;
-    }
-  }
-});
-
-const formPoolId = computed({
-  get: () => isEditModalVisible.value ? editForm.pool_id : addForm.pool_id,
-  set: (val) => {
-    if (isEditModalVisible.value) {
-      editForm.pool_id = val;
-    } else {
-      addForm.pool_id = val;
-    }
-  }
-});
-
-const formSendGroupId = computed({
-  get: () => isEditModalVisible.value ? editForm.send_group_id : addForm.send_group_id,
-  set: (val) => {
-    if (isEditModalVisible.value) {
-      editForm.send_group_id = val;
-    } else {
-      addForm.send_group_id = val;
-    }
-  }
-});
-
-const formIp = computed({
-  get: () => isEditModalVisible.value ? editForm.ip : addForm.ip,
-  set: (val) => {
-    if (isEditModalVisible.value) {
-      editForm.ip = val;
-    } else {
-      addForm.ip = val;
-    }
-  }
-});
-
-const formPort = computed({
-  get: () => isEditModalVisible.value ? editForm.port : addForm.port,
-  set: (val) => {
-    if (isEditModalVisible.value) {
-      editForm.port = val;
-    } else {
-      addForm.port = val;
-    }
-  }
-});
-
-const formExpr = computed({
-  get: () => isEditModalVisible.value ? editForm.expr : addForm.expr,
-  set: (val) => {
-    if (isEditModalVisible.value) {
-      editForm.expr = val;
-    } else {
-      addForm.expr = val;
-    }
-  }
-});
-
-const formSeverity = computed({
-  get: () => isEditModalVisible.value ? editForm.severity : addForm.severity,
-  set: (val) => {
-    if (isEditModalVisible.value) {
-      editForm.severity = val;
-    } else {
-      addForm.severity = val;
-    }
-  }
-});
-
-const formForTime = computed({
-  get: () => isEditModalVisible.value ? editForm.for_time : addForm.for_time,
-  set: (val) => {
-    if (isEditModalVisible.value) {
-      editForm.for_time = val;
-    } else {
-      addForm.for_time = val;
-    }
-  }
-});
-
-// 表单验证规则
 const formRules = {
-  name: [
-    { required: true, message: '请输入名称', trigger: 'blur' },
-    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
-  ],
-  pool_id: [
-    { required: true, message: '请选择所属实例池', trigger: 'blur' }
-  ],
+  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+  pool_id: [{ required: true, message: '请选择所属实例池', trigger: 'change' }],
   ip_address: [
-    { required: true, message: '请输入IP地址和端口', trigger: 'blur' }
-  ]
+    {
+      required: true,
+      validator: () => {
+        const form = isEditModalVisible.value ? editForm : addForm;
+        if (!form.ip || !form.port) {
+          return Promise.reject('请输入IP地址和端口');
+        }
+        return Promise.resolve();
+      },
+      trigger: 'blur',
+    },
+  ],
+  expr: [{ required: true, message: '请输入PromQL表达式', trigger: 'blur' }],
+  severity: [{ required: true, message: '请选择严重性', trigger: 'change' }],
+  for_time: [{ required: true, message: '请输入持续时间', trigger: 'blur' }],
 };
 
-// 辅助方法
-const getAlertStatusClass = (record: AlertRuleItem): string => {
-  if (record.enable === 1 && record.severity === 'critical') return 'status-critical';
-  if (record.enable === 1 && record.severity === 'warning') return 'status-warning';
-  if (record.enable === 1) return 'status-enabled';
-  return 'status-disabled';
+// --- 响应式布局 ---
+const formDialogWidth = computed(() => (window.innerWidth < 768 ? '95%' : '900px'));
+const previewDialogWidth = computed(() => (window.innerWidth < 768 ? '95%' : '80%'));
+
+// --- 列定义 ---
+const columns = [
+  { title: 'AlertRule名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
+  { title: '表达式', dataIndex: 'expr', key: 'expr', width: 250, ellipsis: true },
+  { title: '严重性', dataIndex: 'severity', key: 'severity', width: 100, align: 'center' as const },
+  { title: '启用状态', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
+  { title: '标签', dataIndex: 'labels', key: 'labels', width: 220 },
+  { title: '注解', dataIndex: 'annotations', key: 'annotations', width: 220 },
+  { title: '实例配置', key: 'pool_config', width: 180 },
+  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
+  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' },
+];
+
+// --- 标签显示函数 ---
+const getDisplayLabels = (labels: string[]) => {
+  if (!labels || labels.length === 0 || labels[0] === '') return [];
+  return labels.slice(0, 2);
 };
 
-const getPoolName = (poolId: number): string => {
-  const pool = scrapePools.value.find(p => p.id === poolId);
-  return pool ? pool.name : `ID: ${poolId}`;
+const getDisplayAnnotations = (annotations: string[]) => {
+  if (!annotations || annotations.length === 0 || annotations[0] === '') return [];
+  return annotations.slice(0, 2);
 };
 
-const getSendGroupName = (groupId: number): string => {
-  const group = sendGroups.value.find(g => g.id === groupId);
-  return group ? group.name : `ID: ${groupId}`;
-};
-
-const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
-};
-
-const getInitials = (name: string): string => {
-  if (!name) return '';
-  return name.slice(0, 2).toUpperCase();
-};
-
-const formatDate = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleDateString('zh-CN');
-};
-
-const formatTime = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-};
-
-const formatFullDateTime = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleString('zh-CN');
-};
-
-// 更新统计数据
-const updateStats = () => {
-  stats.total = data.value.length;
-  stats.critical = data.value.filter(item => item.severity === 'critical').length;
-  stats.warning = data.value.filter(item => item.severity === 'warning').length;
-  stats.info = data.value.filter(item => item.severity === 'info').length;
-  stats.enabled = data.value.filter(item => item.enable === 1).length;
-};
-
-// 数据加载
-const fetchAlertRules = async (): Promise<void> => {
+// --- API 调用 ---
+const fetchAlertRules = async () => {
   loading.value = true;
   try {
-    const params: GetAlertRulesListParams = {
+    const params: GetAlertRuleListParams = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
-      search: searchText.value || undefined,
+      search: searchParams.search || undefined,
+      severity: searchParams.severity,
+      enable: searchParams.enable,
     };
-
-    const response = await getAlertRulesListApi(params);
-    if (response) {
-      data.value = response.items || [];
-      paginationConfig.total = response.total || 0;
-      updateStats();
-    }
+    const response = await getMonitorAlertRuleListApi(params);
+    data.value = response.items || [];
+    paginationConfig.total = response.total || 0;
   } catch (error: any) {
-    console.error('加载AlertRule列表失败:', error);
-    message.error(error.message || '加载AlertRule列表失败');
+    handleApiError(error, '加载告警规则列表失败');
   } finally {
     loading.value = false;
   }
 };
 
-// 获取实例池数据
-const fetchScrapePools = async () => {
+const fetchScrapePools = async (page = 1, size = 20) => {
+  poolLoading.value = true;
   try {
-    const response = await getAlertManagerPoolListApi({
-      page: 1,
-      size: 100,
-      search: ''
-    });
-    scrapePools.value = response.items;
+    const response = await getAlertManagerPoolListApi({ page, size });
+    const items = response.items || [];
+    if (page === 1) {
+      scrapePools.value = items;
+    } else {
+      scrapePools.value.push(...items);
+    }
+    poolPagination.total = response.total || 0;
+    poolPagination.current = page;
   } catch (error: any) {
-    message.error(error.message || '获取实例池数据失败');
-    console.error(error);
+    handleApiError(error, '获取实例池数据失败');
+  } finally {
+    poolLoading.value = false;
   }
 };
 
-// 获取发送组数据
-const fetchSendGroups = async () => {
+const fetchSendGroups = async (page = 1, size = 20) => {
+  sendGroupLoading.value = true;
   try {
-    const response = await getMonitorSendGroupListApi({
-      page: 1,
-      size: 100,
-    });
-    sendGroups.value = response.items;
+    const response = await getMonitorSendGroupListApi({ page, size });
+    const items = response.items || [];
+    if (page === 1) {
+      sendGroups.value = items;
+    } else {
+      sendGroups.value.push(...items);
+    }
+    sendGroupPagination.total = response.total || 0;
+    sendGroupPagination.current = page;
   } catch (error: any) {
-    message.error(error.message || '获取发送组数据失败');
-    console.error(error);
+    handleApiError(error, '获取发送组数据失败');
+  } finally {
+    sendGroupLoading.value = false;
   }
 };
 
-// 事件处理
-const handleTableChange = (pagination: any): void => {
+// --- 分页处理 ---
+const handlePoolScroll = (e: any) => {
+  const { scrollTop, scrollHeight, clientHeight } = e.target;
+  if (
+    scrollTop + clientHeight >= scrollHeight - 10 &&
+    !poolLoading.value &&
+    scrapePools.value.length < poolPagination.total
+  ) {
+    fetchScrapePools(poolPagination.current + 1, poolPagination.pageSize);
+  }
+};
+
+const handleSendGroupScroll = (e: any) => {
+  const { scrollTop, scrollHeight, clientHeight } = e.target;
+  if (
+    scrollTop + clientHeight >= scrollHeight - 10 &&
+    !sendGroupLoading.value &&
+    sendGroups.value.length < sendGroupPagination.total
+  ) {
+    fetchSendGroups(sendGroupPagination.current + 1, sendGroupPagination.pageSize);
+  }
+};
+
+const onPoolDropdownChange = (open: boolean) => {
+  if (open && scrapePools.value.length === 0) {
+    fetchScrapePools(1, poolPagination.pageSize);
+  }
+};
+
+const onSendGroupDropdownChange = (open: boolean) => {
+  if (open && sendGroups.value.length === 0) {
+    fetchSendGroups(1, sendGroupPagination.pageSize);
+  }
+};
+
+// --- 事件处理 ---
+const handleTableChange = (pagination: { current: number; pageSize: number }) => {
   paginationConfig.current = pagination.current;
   paginationConfig.pageSize = pagination.pageSize;
   fetchAlertRules();
 };
 
-const handleSearch = (): void => {
+const handleSearch = useDebounceFn(() => {
   paginationConfig.current = 1;
   fetchAlertRules();
-};
+}, 300);
 
-const handleSearchChange = (): void => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-  searchTimeout = setTimeout(() => {
-    paginationConfig.current = 1;
-    fetchAlertRules();
-  }, 500);
-};
-
-const handleSeverityChange = (): void => {
+const handleReset = () => {
+  searchParams.search = '';
+  searchParams.severity = undefined;
+  searchParams.enable = undefined;
   paginationConfig.current = 1;
   fetchAlertRules();
+  message.success('筛选条件已重置');
 };
 
-const handleEnableChange = (): void => {
-  paginationConfig.current = 1;
-  fetchAlertRules();
-};
-
-const handleReset = (): void => {
-  searchText.value = '';
-  severityFilter.value = undefined;
-  enableFilter.value = undefined;
-  paginationConfig.current = 1;
-  fetchAlertRules();
-  message.success('过滤条件已重置');
-};
-
-const showAddModal = (): void => {
-  isAddModalVisible.value = true;
-  resetAddForm();
-};
-
-const showEditModal = (record: AlertRuleItem): void => {
-  isEditModalVisible.value = true;
-  const ipParts = record.ip_address?.split(':') || ['', ''];
-
-  Object.assign(editForm, {
-    id: record.id,
-    name: record.name,
-    pool_id: record.pool_id || 0,
-    send_group_id: record.send_group_id || 0,
-    ip: ipParts[0] || '',
-    port: ipParts[1] || '',
-    enable: record.enable,
-    enableSwitch: record.enable === 1,
-    expr: record.expr,
-    severity: record.severity,
-    grafana_link: record.grafana_link || '',
-    for_time: record.for_time,
-    labels: record.labels ? record.labels.map((value: string) => {
-      const [labelKey, labelValue] = value.split(',');
-      return {
-        labelKey: labelKey || '',
-        labelValue: labelValue || '',
-        key: Date.now() + Math.random()
-      };
-    }) : [{ labelKey: '', labelValue: '', key: Date.now() }],
-    annotations: record.annotations ? record.annotations.map((value: string) => {
-      const [labelKey, labelValue] = value.split(',');
-      return {
-        labelKey: labelKey || '',
-        labelValue: labelValue || '',
-        key: Date.now() + Math.random()
-      };
-    }) : [{ labelKey: '', labelValue: '', key: Date.now() }],
-  });
-
-  detailDialogVisible.value = false;
-};
-
-const handleViewAlert = (record: AlertRuleItem): void => {
-  detailDialog.form = record;
-  detailDialogVisible.value = true;
-};
-
-const handleMenuClick = (command: string, record: AlertRuleItem): void => {
-  switch (command) {
-    case 'clone':
-      message.info('克隆功能暂未实现');
-      break;
-    case 'delete':
-      confirmDelete(record);
-      break;
+const handleMenuClick = (key: string, record: MonitorAlertRuleItem) => {
+  if (key === 'clone') {
+    const { name, ...rest } = record;
+    showEditModal({ ...rest, name: `${name}_clone` } as MonitorAlertRuleItem, true);
+    message.info('已克隆规则，请修改后保存');
+  } else if (key === 'delete') {
+    handleDelete(record.id);
   }
 };
 
-const confirmDelete = (record: AlertRuleItem): void => {
+const handleDelete = (id: number) => {
   Modal.confirm({
-    title: '警告',
-    content: `确定要删除AlertRule "${record.name}" 吗？`,
-    okText: '删除',
-    okType: 'danger',
+    title: '确认删除',
+    content: '您确定要删除这条告警规则吗？此操作不可撤销。',
+    okText: '确认',
     cancelText: '取消',
-    async onOk() {
+    onOk: async () => {
       try {
-        await deleteAlertRuleApi(record.id);
-        message.success(`AlertRule "${record.name}" 已删除`);
+        await deleteAlertRuleApi(id);
+        message.success('删除成功');
         fetchAlertRules();
       } catch (error: any) {
-        console.error('删除AlertRule失败:', error);
-        message.error(error.message || '删除AlertRule失败');
+        handleApiError(error, '删除失败');
       }
-    }
+    },
   });
 };
 
-// 表单保存
-const handleAdd = async (): Promise<void> => {
-  if (!addForm.name.trim() || addForm.pool_id === 0) {
-    message.error('请填写所有必填项');
-    return;
-  }
-
-  if (!addForm.ip || !addForm.port) {
-    message.error('请填写IP地址和端口');
-    return;
-  }
-
-  try {
-    const ip_address = `${addForm.ip}:${addForm.port}`;
-
-    const formData: createAlertRuleReq = {
-      name: addForm.name,
-      pool_id: addForm.pool_id,
-      send_group_id: addForm.send_group_id,
-      ip_address,
-      enable: addForm.enable,
-      expr: addForm.expr,
-      severity: addForm.severity,
-      grafana_link: addForm.grafana_link,
-      for_time: addForm.for_time,
-      labels: addForm.labels
-        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '')
-        .map(item => `${item.labelKey},${item.labelValue}`),
-      annotations: addForm.annotations
-        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '')
-        .map(item => `${item.labelKey},${item.labelValue}`),
-    };
-
-    await createAlertRuleApi(formData);
-    message.success(`AlertRule "${addForm.name}" 已创建`);
-    isAddModalVisible.value = false;
-    fetchAlertRules();
-  } catch (error: any) {
-    console.error('保存AlertRule失败:', error);
-    message.error(error.message || '保存AlertRule失败');
-  }
+// --- 模态框操作 ---
+const showAddModal = () => {
+  resetAddForm();
+  isAddModalVisible.value = true;
 };
 
-const handleEdit = async (): Promise<void> => {
-  if (!editForm.name.trim() || editForm.pool_id === 0) {
-    message.error('请填写所有必填项');
-    return;
-  }
-
-  if (!editForm.ip || !editForm.port) {
-    message.error('请填写IP地址和端口');
-    return;
-  }
-
-  try {
-    const ip_address = `${editForm.ip}:${editForm.port}`;
-
-    const formData: updateAlertRuleReq = {
-      id: editForm.id,
-      name: editForm.name,
-      pool_id: editForm.pool_id,
-      send_group_id: editForm.send_group_id,
-      ip_address,
-      enable: editForm.enable,
-      expr: editForm.expr,
-      severity: editForm.severity,
-      grafana_link: editForm.grafana_link,
-      for_time: editForm.for_time,
-      labels: editForm.labels
-        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '')
-        .map(item => `${item.labelKey},${item.labelValue}`),
-      annotations: editForm.annotations
-        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '')
-        .map(item => `${item.labelKey},${item.labelValue}`),
-    };
-
-    await updateAlertRuleApi(formData);
-    message.success(`AlertRule "${editForm.name}" 已更新`);
-    isEditModalVisible.value = false;
-    fetchAlertRules();
-  } catch (error: any) {
-    console.error('更新AlertRule失败:', error);
-    message.error(error.message || '更新AlertRule失败');
-  }
-};
-
-// 重置表单
-const resetAddForm = (): void => {
-  addForm.name = '';
-  addForm.pool_id = 0;
-  addForm.send_group_id = 0;
-  addForm.ip = '';
-  addForm.port = '';
-  addForm.enable = 1;
-  addForm.expr = '';
-  addForm.severity = '';
-  addForm.grafana_link = '';
-  addForm.for_time = '';
-  addForm.labels = [
-    { labelKey: 'severity', labelValue: '', key: Date.now() },
-    { labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2 },
-    { labelKey: 'alert_rule_id', labelValue: '', key: Date.now() + 3 }
-  ];
-  addForm.annotations = [
-    { labelKey: 'severity', labelValue: '', key: Date.now() },
-    { labelKey: 'alert_send_group', labelValue: '', key: Date.now() + 2 }
-  ];
-};
-
-// 动态表单项操作
-const addLabel = (): void => {
-  addForm.labels.push({
-    labelKey: '',
-    labelValue: '',
-    key: Date.now(),
-  });
-};
-
-const removeLabel = (item: LabelItem): void => {
-  const index = addForm.labels.indexOf(item);
-  if (index !== -1) {
-    addForm.labels.splice(index, 1);
-  }
-};
-
-const addEditLabel = (): void => {
-  editForm.labels.push({
-    labelKey: '',
-    labelValue: '',
-    key: Date.now(),
-  });
-};
-
-const removeEditLabel = (item: LabelItem): void => {
-  const index = editForm.labels.indexOf(item);
-  if (index !== -1) {
-    editForm.labels.splice(index, 1);
-  }
-};
-
-const addAnnotation = (): void => {
-  addForm.annotations.push({
-    labelKey: '',
-    labelValue: '',
-    key: Date.now(),
-  });
-};
-
-const removeAnnotation = (item: LabelItem): void => {
-  const index = addForm.annotations.indexOf(item);
-  if (index !== -1) {
-    addForm.annotations.splice(index, 1);
-  }
-};
-
-const addEditAnnotation = (): void => {
-  editForm.annotations.push({
-    labelKey: '',
-    labelValue: '',
-    key: Date.now(),
-  });
-};
-
-const removeEditAnnotation = (item: LabelItem): void => {
-  const index = editForm.annotations.indexOf(item);
-  if (index !== -1) {
-    editForm.annotations.splice(index, 1);
-  }
-};
-
-// 验证表达式的方法
-const validateAddExpression = async (expr: string) => {
-  try {
-    const payload: validateExprApiReq = { promql_expr: expr };
-    const result = await validateExprApi(payload);
-    message.success('验证表达式成功');
-    return true;
-  } catch (error: any) {
-    message.error(error.message || '验证表达式失败');
-    console.error(error);
-    return false;
-  }
-};
-
-const validateEditExpression = async () => {
-  try {
-    const payload: validateExprApiReq = { promql_expr: editForm.expr };
-    const result = await validateExprApi(payload);
-    message.success('验证表达式成功');
-    return true;
-  } catch (error: any) {
-    message.error(error.message || '验证表达式失败');
-    console.error(error);
-    return false;
-  }
-};
-
-// 对话框关闭
-const closeFormDialog = (): void => {
+const closeAddModal = () => {
   isAddModalVisible.value = false;
+};
+
+const showEditModal = async (record: MonitorAlertRuleItem, isClone = false) => {
+  // --- 确保关联数据显示 ---
+  // 确保关联的实例池在选项列表中，以便正确显示名称
+  if (record.pool_id && !scrapePools.value.some((p) => p.id === record.pool_id)) {
+    try {
+      const pool = await getAlertManagerPoolDetailApi(record.pool_id);
+      if (pool) {
+        // 使用 unshift 将其添加到列表开头，以便用户能立即看到
+        scrapePools.value.unshift(pool);
+      }
+    } catch (error) {
+      handleApiError(error, `加载实例池 ${record.pool_id} 详情失败`);
+    }
+  }
+
+  // 确保关联的发送组在选项列表中
+  if (record.send_group_id && !sendGroups.value.some((g) => g.id === record.send_group_id)) {
+    try {
+      const group = await getMonitorSendGroupDetailApi(record.send_group_id);
+      if (group) {
+        sendGroups.value.unshift(group);
+      }
+    } catch (error) {
+      handleApiError(error, `加载发送组 ${record.send_group_id} 详情失败`);
+    }
+  }
+
+  const [ip, port] = record.ip_address?.split(':') || ['', ''];
+  const parseItems = (items: string[] | undefined) =>
+    items?.length && items[0] !== ''
+      ? items.map((item) => {
+          const [labelKey, labelValue] = item.split(',');
+          return { key: Date.now() + Math.random(), labelKey, labelValue };
+        })
+      : [{ key: Date.now(), labelKey: '', labelValue: '' }];
+
+  Object.assign(editForm, {
+    id: isClone ? 0 : record.id,
+    name: record.name,
+    pool_id: record.pool_id,
+    send_group_id: record.send_group_id,
+    ip,
+    port,
+    enableSwitch: record.enable === ENABLE_STATUS.ENABLED,
+    expr: record.expr,
+    severity: record.severity,
+    for_time: record.for_time,
+    labels: parseItems(record.labels),
+    annotations: parseItems(record.annotations),
+  });
+  isEditModalVisible.value = true;
+  detailModalVisible.value = false;
+};
+
+const closeEditModal = () => {
   isEditModalVisible.value = false;
 };
 
-const closeDetailDialog = (): void => {
-  detailDialogVisible.value = false;
+const showDetailModal = (record: MonitorAlertRuleItem) => {
+  currentRecord.value = record;
+  detailModalVisible.value = true;
 };
 
-// 生命周期钩子
+const closeDetailModal = () => {
+  detailModalVisible.value = false;
+  currentRecord.value = null;
+};
+
+// --- 表单操作 ---
+const resetAddForm = () => {
+  Object.assign(addForm, createInitialForm());
+};
+
+const formatItemsForApi = (items: LabelOrAnnotationItem[]) => {
+  return items
+    .filter((item) => item.labelKey && item.labelValue)
+    .map((item) => `${item.labelKey},${item.labelValue}`);
+};
+
+const handleAdd = async () => {
+  try {
+    await addFormRef.value?.validate();
+    const apiData: createAlertRuleReq = {
+      ...addForm,
+      ip_address: `${addForm.ip}:${addForm.port}`,
+      pool_id: addForm.pool_id!,
+      send_group_id: addForm.send_group_id!,
+      severity: addForm.severity!,
+      labels: formatItemsForApi(addForm.labels),
+      annotations: formatItemsForApi(addForm.annotations),
+    };
+    await createAlertRuleApi(apiData);
+    message.success('新增成功');
+    closeAddModal();
+    fetchAlertRules();
+  } catch (error: any) {
+    handleApiError(error, '操作失败');
+  }
+};
+
+const handleEdit = async () => {
+  try {
+    await editFormRef.value?.validate();
+    const apiData: updateAlertRuleReq = {
+      ...editForm,
+      ip_address: `${editForm.ip}:${editForm.port}`,
+      enable: editForm.enableSwitch ? ENABLE_STATUS.ENABLED : ENABLE_STATUS.DISABLED,
+      pool_id: editForm.pool_id!,
+      send_group_id: editForm.send_group_id!,
+      severity: editForm.severity!,
+      labels: formatItemsForApi(editForm.labels),
+      annotations: formatItemsForApi(editForm.annotations),
+    };
+    await updateAlertRuleApi(apiData);
+    message.success('更新成功');
+    closeEditModal();
+    fetchAlertRules();
+  } catch (error: any) {
+    handleApiError(error, '操作失败');
+  }
+};
+
+const validateExpression = async (expr: string) => {
+  if (!expr) {
+    message.warning('请输入表达式');
+    return;
+  }
+  try {
+    await validateExprApi({ promql_expr: expr });
+    message.success('表达式验证通过');
+  } catch (error: any) {
+    handleApiError(error, '表达式验证失败');
+  }
+};
+
+// --- 动态表单项 ---
+const addLabel = () => addForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const removeLabel = (item: LabelOrAnnotationItem) => {
+  const index = addForm.labels.indexOf(item);
+  if (index !== -1) addForm.labels.splice(index, 1);
+};
+const addAnnotation = () => addForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const removeAnnotation = (item: LabelOrAnnotationItem) => {
+  const index = addForm.annotations.indexOf(item);
+  if (index !== -1) addForm.annotations.splice(index, 1);
+};
+const addEditLabel = () => editForm.labels.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const removeEditLabel = (item: LabelOrAnnotationItem) => {
+  const index = editForm.labels.indexOf(item);
+  if (index !== -1) editForm.labels.splice(index, 1);
+};
+const addEditAnnotation = () => editForm.annotations.push({ key: Date.now(), labelKey: '', labelValue: '' });
+const removeEditAnnotation = (item: LabelOrAnnotationItem) => {
+  const index = editForm.annotations.indexOf(item);
+  if (index !== -1) editForm.annotations.splice(index, 1);
+};
+
+// --- 辅助函数 ---
+const getAlertStatusClass = (record: MonitorAlertRuleItem) => ({
+  'status-critical': record.enable === ENABLE_STATUS.ENABLED && record.severity === 'critical',
+  'status-warning': record.enable === ENABLE_STATUS.ENABLED && record.severity === 'warning',
+  'status-enabled': record.enable === ENABLE_STATUS.ENABLED && !['critical', 'warning'].includes(record.severity),
+  'status-disabled': record.enable !== ENABLE_STATUS.ENABLED,
+});
+
+const getPoolName = (poolId?: number) => 
+  scrapePools.value.find((p) => p.id === poolId)?.name || `ID: ${poolId}`;
+
+const getSendGroupName = (groupId?: number) => 
+  sendGroups.value.find((g) => g.id === groupId)?.name || `ID: ${groupId}`;
+
+const getAvatarColor = (name: string) => {
+  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1'];
+  return colors[name.length % colors.length];
+};
+
+const getInitials = (name?: string) => (name ? name.slice(0, 2).toUpperCase() : '');
+
+const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString();
+
+const formatTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString();
+
+const formatFullDateTime = (dateStr: string) => new Date(dateStr).toLocaleString();
+
+// --- 生命周期 ---
 onMounted(() => {
   fetchAlertRules();
-  fetchScrapePools();
-  fetchSendGroups();
 });
 </script>
 
 <style scoped>
-.scrape-pool-container {
+.alert-rule-container {
   padding: 12px;
   min-height: 100vh;
+  background: #f5f5f5;
 }
 
 .page-header {
   margin-bottom: 20px;
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .header-actions {
@@ -1118,6 +1126,13 @@ onMounted(() => {
   background: linear-gradient(135deg, #1890ff 0%);
   border: none;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-create:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(24, 144, 255, 0.4);
 }
 
 .search-filters {
@@ -1131,6 +1146,15 @@ onMounted(() => {
 .search-input {
   width: 250px;
   min-width: 200px;
+  border-radius: 6px;
+}
+
+.search-input :deep(.ant-input) {
+  border-radius: 6px;
+}
+
+.search-input :deep(.ant-input-search-button) {
+  border-radius: 0 6px 6px 0;
 }
 
 .filter-select {
@@ -1140,9 +1164,13 @@ onMounted(() => {
 
 .reset-btn {
   flex-shrink: 0;
+  border-radius: 6px;
 }
 
-.stats-row {
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
   margin-bottom: 20px;
 }
 
@@ -1150,44 +1178,57 @@ onMounted(() => {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   height: 100%;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .table-container {
   margin-bottom: 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
-.pool-name-cell {
+.rule-name-cell {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.pool-badge {
+.rule-badge {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
 }
 
 .status-critical {
-  background-color: #cf1322;
+  background: linear-gradient(45deg, #cf1322, #ff4d4f);
 }
 
 .status-warning {
-  background-color: #faad14;
+  background: linear-gradient(45deg, #faad14, #fadb14);
 }
 
 .status-enabled {
-  background-color: #52c41a;
+  background: linear-gradient(45deg, #52c41a, #73d13d);
 }
 
 .status-disabled {
-  background-color: #d9d9d9;
+  background: linear-gradient(45deg, #d9d9d9, #f0f0f0);
 }
 
-.pool-name-text {
+.rule-name-text {
   font-weight: 500;
   word-break: break-all;
+  color: #1f2937;
 }
 
 .expr-container {
@@ -1196,95 +1237,142 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: 'Monaco', 'Menlo', monospace;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-left: 3px solid #1890ff;
 }
 
 .tag-container {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  max-width: 220px;
 }
 
 .tech-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
+  margin: 2px;
   border-radius: 4px;
   font-size: 12px;
-  font-weight: 500;
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.tech-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .severity-critical {
-  background-color: #fff1f0;
+  background: #fff1f0;
   color: #cf1322;
   border-left: 3px solid #ff4d4f;
 }
 
 .severity-warning {
-  background-color: #fff7e6;
+  background: #fff7e6;
   color: #d46b08;
   border-left: 3px solid #fa8c16;
 }
 
 .severity-info {
-  background-color: #e6f7ff;
+  background: #e6f7ff;
   color: #0958d9;
   border-left: 3px solid #1890ff;
 }
 
 .label-tag {
-  background-color: #f6ffed;
+  background: #f6ffed;
   color: #389e0d;
   border-left: 3px solid #52c41a;
 }
 
 .annotation-tag {
-  background-color: #f0f5ff;
+  background: #f0f5ff;
   color: #1d39c4;
   border-left: 3px solid #2f54eb;
 }
 
+.more-tag {
+  background: #f5f5f5;
+  color: #8c8c8c;
+  border-left: 3px solid #d9d9d9;
+  cursor: pointer;
+}
+
 .empty-text {
-  color: #999;
+  color: #bfbfbf;
   font-style: italic;
   font-size: 12px;
+  padding: 4px 8px;
+  background: #fafafa;
+  border-radius: 4px;
 }
 
 .label-key {
-  font-weight: 600;
+  font-weight: 500;
+  color: #262626;
 }
 
 .label-separator {
-  margin: 0 4px;
+  margin: 0 2px;
   color: #8c8c8c;
+  font-weight: bold;
 }
 
 .label-value {
-  color: #555;
+  color: #595959;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80px;
+}
+
+.all-tags-container {
+  max-width: 400px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.all-tags-container .tech-tag {
+  max-width: none;
 }
 
 .config-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  background: #f8f9fa;
+  padding: 8px;
+  border-radius: 6px;
 }
 
 .config-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .config-label {
   font-size: 12px;
   color: #666;
+  font-weight: 500;
 }
 
 .config-value {
   font-size: 12px;
-  font-weight: 500;
-  color: #333;
+  font-weight: 600;
+  color: #1f2937;
 }
 
 .creator-info {
@@ -1296,6 +1384,8 @@ onMounted(() => {
 .creator-name {
   font-size: 14px;
   word-break: break-all;
+  color: #1f2937;
+  font-weight: 500;
 }
 
 .date-info {
@@ -1306,6 +1396,7 @@ onMounted(() => {
 .date {
   font-weight: 500;
   font-size: 14px;
+  color: #1f2937;
 }
 
 .time {
@@ -1320,11 +1411,25 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-/* IP地址和端口输入框样式 */
+.action-buttons .ant-btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.action-buttons .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
 .ip-port-container {
   display: flex;
   align-items: center;
   gap: 8px;
+  background: #f8f9fa;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #e1e5e9;
 }
 
 .ip-input {
@@ -1337,14 +1442,16 @@ onMounted(() => {
 
 .separator {
   font-weight: bold;
-  color: #8c8c8c;
+  color: #1890ff;
   font-size: 16px;
 }
 
-/* 表单样式 */
 .form-section {
   margin-bottom: 28px;
-  padding: 0;
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e1e5e9;
   position: relative;
 }
 
@@ -1355,28 +1462,19 @@ onMounted(() => {
   margin-bottom: 16px;
   padding-left: 12px;
   border-left: 4px solid #1890ff;
-}
-
-.full-width {
-  width: 100%;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: -10px -10px 16px -10px;
 }
 
 .tech-switch {
   background-color: rgba(0, 0, 0, 0.25);
+  border-radius: 20px;
 }
 
 .tech-switch.ant-switch-checked {
   background: linear-gradient(45deg, #1890ff, #36cfc9);
-}
-
-.dynamic-input-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.dynamic-input {
-  width: 100%;
 }
 
 .dynamic-delete-button {
@@ -1384,11 +1482,14 @@ onMounted(() => {
   color: #ff4d4f;
   font-size: 18px;
   transition: all 0.3s;
+  padding: 4px;
+  border-radius: 50%;
 }
 
 .dynamic-delete-button:hover {
   color: #cf1322;
   transform: scale(1.1);
+  background: #fff1f0;
 }
 
 .add-dynamic-button {
@@ -1401,31 +1502,39 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  border-radius: 6px;
+  padding: 12px;
+  transition: all 0.3s ease;
 }
 
 .add-dynamic-button:hover {
   color: #1890ff;
   border-color: #1890ff;
   background: #f0f7ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
 }
 
 .label-input-group {
   display: flex;
   align-items: center;
   gap: 8px;
+  background: #fff;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e1e5e9;
 }
 
-.label-key-input,
-.label-value-input {
-  flex: 1;
+.pagination-container {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e8e8e8;
 }
 
-.label-separator {
-  font-weight: bold;
-  color: #8c8c8c;
-}
-
-/* 详情对话框样式 */
 .detail-dialog .pool-details {
   margin-bottom: 20px;
 }
@@ -1434,8 +1543,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
+  padding: 16px;
+  background: #f0f7ff;
+  border-radius: 8px;
+  border: 1px solid #d6e4ff;
 }
 
 .detail-header h2 {
@@ -1457,28 +1570,96 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid #e1e5e9;
+}
+
+.responsive-modal :deep(.ant-modal) {
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: calc(100vw - 16px);
+  margin: 8px;
+}
+
+.responsive-modal :deep(.ant-modal-header) {
+  background: linear-gradient(135deg, #1890ff, #36cfc9);
+  color: #fff;
+  border-bottom: none;
+}
+
+.responsive-modal :deep(.ant-modal-title) {
+  color: #fff;
+  font-weight: 600;
+}
+
+.responsive-modal :deep(.ant-modal-close) {
+  color: #fff;
+}
+
+.responsive-modal :deep(.ant-modal-close:hover) {
+  color: #f0f0f0;
+}
+
+.responsive-modal :deep(.ant-modal-body) {
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.responsive-modal :deep(.ant-modal-footer) {
+  border-top: 1px solid #e1e5e9;
+  padding: 16px 24px;
+  background: #fafafa;
+}
+
+.table-container :deep(.ant-table-wrapper) {
+  overflow: auto;
+  border-radius: 8px;
+}
+
+.table-container :deep(.ant-table) {
+  border-radius: 8px;
+}
+
+.table-container :deep(.ant-table-thead > tr > th) {
+  background: #f8f9fa;
+  color: #1f2937;
+  font-weight: 600;
+  border-bottom: 2px solid #e1e5e9;
+  white-space: nowrap;
+}
+
+.table-container :deep(.ant-table-tbody > tr:hover) {
+  background: #f0f7ff;
+}
+
+.table-container :deep(.ant-table-tbody > tr > td) {
+  word-break: break-word;
+}
+
+.table-container :deep(.ant-pagination) {
+  margin: 16px 0;
+  text-align: center;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .scrape-pool-container {
+  .alert-rule-container {
     padding: 8px;
   }
 
-  .header-actions {
+  .page-header {
+    padding: 12px;
+  }
+
+  .header-actions,
+  .search-filters {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .search-filters {
     width: 100%;
   }
 
-  .search-input {
-    width: 100%;
-    min-width: auto;
-  }
-
+  .search-input,
   .filter-select {
     width: 100%;
     min-width: auto;
@@ -1489,44 +1670,84 @@ onMounted(() => {
   }
 
   .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
+    width: fit-content;
+    align-self: flex-end;
   }
 
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
+  .form-section {
+    margin-bottom: 20px;
+    padding: 16px;
   }
 
-  .action-buttons {
-    gap: 2px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
-  }
-
-  .detail-footer {
-    justify-content: center;
-  }
-
-  .detail-footer .ant-btn {
-    flex: 1;
-    max-width: 120px;
-  }
-}
-
-@media (max-width: 480px) {
-  .header-actions {
+  .label-input-group {
+    flex-direction: column;
     gap: 8px;
   }
 
-  .stats-card {
-    text-align: center;
+  .ip-port-container {
+    flex-direction: column;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .action-buttons .ant-btn {
+    width: 100%;
+    margin: 0;
+  }
+
+  .tag-container {
+    max-width: 180px;
+  }
+
+  .tech-tag {
+    max-width: 80px;
+    font-size: 11px;
+  }
+
+  .config-info {
+    font-size: 11px;
+  }
+
+  .config-label {
+    min-width: 28px;
+    font-size: 10px;
+  }
+
+  .config-value {
+    font-size: 11px;
+  }
+
+  .responsive-modal :deep(.ant-modal-body) {
+    padding: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 576px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-info {
+    font-size: 12px;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tag-container {
+    max-width: 150px;
   }
 
   .creator-info {
@@ -1549,33 +1770,6 @@ onMounted(() => {
 
   .time {
     font-size: 10px;
-  }
-}
-
-/* 表格滚动优化 */
-.table-container :deep(.ant-table-wrapper) {
-  overflow: auto;
-}
-
-.table-container :deep(.ant-table-thead > tr > th) {
-  white-space: nowrap;
-}
-
-.table-container :deep(.ant-table-tbody > tr > td) {
-  word-break: break-word;
-}
-
-/* 对话框响应式优化 */
-.responsive-modal :deep(.ant-modal) {
-  max-width: calc(100vw - 16px);
-  margin: 8px;
-}
-
-@media (max-width: 768px) {
-  .responsive-modal :deep(.ant-modal-body) {
-    padding: 16px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
   }
 }
 </style>

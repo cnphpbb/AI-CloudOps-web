@@ -592,17 +592,6 @@ interface LabelItem {
   key: number;
 }
 
-// 响应式对话框宽度
-const dialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '80%';
-    return '600px';
-  }
-  return '600px';
-});
-
 const formDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
     const width = window.innerWidth;
