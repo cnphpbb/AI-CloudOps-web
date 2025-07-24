@@ -11,17 +11,16 @@ export interface MonitorAlertManagerPool {
   resolve_timeout: string;
   group_wait: string;
   group_interval: string;
-  repeat_interval: string;
-  group_by: string[];
-  receiver: string;
-  creator_name: string;
+  repeat_interval?: string;
+  group_by?: string[];
+  receiver?: string;
+  create_user_name?: string;
 }
 
 export interface GetAlertManagerPoolListParams {
   page: number;
   size: number;
   search?: string;
-  pool_id?: number;
 }
 
 export interface createAlertManagerPoolReq {
@@ -32,7 +31,7 @@ export interface createAlertManagerPoolReq {
   group_interval?: string;
   repeat_interval?: string;
   group_by?: string[];
-  receiver: string;
+  receiver?: string;
 }
 
 export interface updateAlertManagerPoolReq {
@@ -44,7 +43,7 @@ export interface updateAlertManagerPoolReq {
   group_interval?: string;
   repeat_interval?: string;
   group_by?: string[];
-  receiver: string;
+  receiver?: string;
 }
 
 export async function getAlertManagerPoolListApi(data: GetAlertManagerPoolListParams) {

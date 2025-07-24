@@ -10,11 +10,15 @@
           <span class="btn-text">新增AlertManager实例池</span>
         </a-button>
         <div class="search-filters">
-          <a-input-search v-model:value="searchText" placeholder="搜索实例池名称..." class="search-input"
-            @search="handleSearch" @change="handleSearchChange" allow-clear />
-          <a-button @click="handleReset" class="reset-btn">
-            重置
-          </a-button>
+          <a-input-search
+            v-model:value="searchText"
+            placeholder="搜索实例池名称..."
+            class="search-input"
+            @search="handleSearch"
+            @change="handleSearchChange"
+            allow-clear
+          />
+          <a-button @click="handleReset" class="reset-btn"> 重置 </a-button>
         </div>
       </div>
     </div>
@@ -76,7 +80,11 @@
 
             <template v-if="column.key === 'alert_manager_instances'">
               <div class="tag-container">
-                <a-tag v-for="instance in record.alert_manager_instances" :key="instance" class="tech-tag alert-tag">
+                <a-tag 
+                  v-for="instance in record.alert_manager_instances" 
+                  :key="instance" 
+                  class="tech-tag alert-tag"
+                >
                   {{ instance }}
                 </a-tag>
                 <span v-if="!record.alert_manager_instances?.length" class="empty-text">无实例</span>
@@ -85,37 +93,42 @@
 
             <template v-if="column.key === 'group_by'">
               <div class="tag-container">
-                <template v-if="record.group_by && record.group_by.length && record.group_by[0] !== ''">
-                  <a-tag v-for="label in record.group_by" :key="label" class="tech-tag label-tag">
-                    <span class="label-key">{{ label.split(',')[0] }}</span>
-                    <span class="label-separator">:</span>
-                    <span class="label-value">{{ label.split(',')[1] }}</span>
+                <template v-if="record.group_by?.length">
+                  <a-tag 
+                    v-for="label in record.group_by" 
+                    :key="label" 
+                    class="tech-tag group-tag"
+                  >
+                    {{ label }}
                   </a-tag>
                 </template>
-                <span v-else class="empty-text">无标签</span>
+                <span v-else class="empty-text">无分组</span>
               </div>
             </template>
 
             <template v-if="column.key === 'timing_config'">
               <div class="config-info">
                 <div class="config-item">
-                  <span class="config-label">恢复:</span>
-                  <span class="config-value">{{ record.resolve_timeout || '-' }}</span>
-                </div>
-                <div class="config-item">
                   <span class="config-label">等待:</span>
-                  <span class="config-value">{{ record.group_wait || '-' }}</span>
+                  <span class="config-value">{{ record.group_wait }}</span>
                 </div>
                 <div class="config-item">
                   <span class="config-label">间隔:</span>
-                  <span class="config-value">{{ record.group_interval || '-' }}</span>
+                  <span class="config-value">{{ record.group_interval }}</span>
                 </div>
               </div>
             </template>
 
+            <template v-if="column.key === 'receiver'">
+              <a-tag color="blue" class="receiver-tag">{{ record.receiver }}</a-tag>
+            </template>
+
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }">
+                <a-avatar 
+                  size="small" 
+                  :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                >
                   {{ getInitials(record.create_user_name) }}
                 </a-avatar>
                 <span class="creator-name">{{ record.create_user_name }}</span>
@@ -140,14 +153,10 @@
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
-                      <a-menu-item key="clone">
-                        <Icon icon="carbon:copy" /> 克隆
-                      </a-menu-item>
-                      <a-menu-divider />
                       <a-menu-item key="delete" danger>删除</a-menu-item>
                     </a-menu>
                   </template>
-                  <a-button size="small">
+                  <a-button size="small" style="margin-left: 8px;">
                     更多
                     <DownOutlined />
                   </a-button>
@@ -243,7 +252,10 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="兜底接收者" name="receiver">
-                <a-input v-model:value="addForm.receiver" placeholder="请输入兜底接收者" />
+                <a-input-group compact>
+                  <a-input v-model:value="addForm.receiver" placeholder="请选择兜底接收者" style="width: calc(100% - 100px)" />
+                  <a-button type="primary" @click="showUserModal('add')">选择用户</a-button>
+                </a-input-group>
               </a-form-item>
             </a-col>
           </a-row>
@@ -335,7 +347,10 @@
           <a-row :gutter="16">
             <a-col :span="24">
               <a-form-item label="兜底接收者" name="receiver">
-                <a-input v-model:value="editForm.receiver" placeholder="请输入兜底接收者" />
+                <a-input-group compact>
+                  <a-input v-model:value="editForm.receiver" placeholder="请选择兜底接收者" style="width: calc(100% - 100px)" />
+                  <a-button type="primary" @click="showUserModal('edit')">选择用户</a-button>
+                </a-input-group>
               </a-form-item>
             </a-col>
           </a-row>
@@ -361,7 +376,7 @@
           <a-descriptions-item label="分组等待间隔">{{ detailDialog.form.group_interval || '未配置' }}</a-descriptions-item>
           <a-descriptions-item label="重复发送时间">{{ detailDialog.form.repeat_interval || '未配置' }}</a-descriptions-item>
           <a-descriptions-item label="兜底接收者">{{ detailDialog.form.receiver || '未配置' }}</a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.form.creator_name || '未知' }}</a-descriptions-item>
+          <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name || '未知' }}</a-descriptions-item>
           <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at) }}</a-descriptions-item>
         </a-descriptions>
 
@@ -369,6 +384,46 @@
           <a-button @click="closeDetailDialog">关闭</a-button>
           <a-button type="primary" @click="showEditModal(detailDialog.form)">编辑</a-button>
         </div>
+      </div>
+      
+      <!-- 加载状态 -->
+      <div v-else class="loading-container">
+        <a-spin size="large" />
+        <p style="margin-top: 16px; text-align: center;">正在加载详情...</p>
+      </div>
+    </a-modal>
+
+    <!-- 用户选择模态框 -->
+    <a-modal 
+      :open="isUserModalVisible" 
+      title="选择兜底接收者" 
+      @cancel="closeUserModal"
+      :width="600"
+      :footer="null"
+    >
+      <div class="user-selection-content">
+        <a-input-search
+          v-model:value="userSearchText"
+          placeholder="搜索用户..."
+          @search="handleUserSearch"
+          style="margin-bottom: 16px;"
+          allow-clear
+        />
+        <a-table
+          :columns="userColumns"
+          :data-source="userList"
+          :loading="userLoading"
+          :pagination="userPagination"
+          @change="handleUserTableChange"
+          row-key="id"
+          size="small"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'action'">
+              <a-button type="primary" size="small" @click="handleSelectUser(record)">选择</a-button>
+            </template>
+          </template>
+        </a-table>
       </div>
     </a-modal>
   </div>
@@ -388,11 +443,14 @@ import {
   createAlertManagerPoolApi,
   updateAlertManagerPoolApi,
   deleteAlertManagerPoolApi,
+  getAlertManagerPoolDetailApi,
   type MonitorAlertManagerPool,
   type GetAlertManagerPoolListParams,
   type createAlertManagerPoolReq,
-  type updateAlertManagerPoolReq
+  type updateAlertManagerPoolReq,
 } from '#/api/core/prometheus_alert_pool';
+
+import { getUserList, type GetUserListReq } from '#/api/core/user';
 
 // 动态表单项接口
 interface DynamicItem {
@@ -429,13 +487,13 @@ const previewDialogWidth = computed(() => {
 
 // 列定义
 const columns = [
-  { title: '实例池名称', dataIndex: 'name', key: 'name', width: 180, fixed: 'left' },
-  { title: 'AlertManager实例', dataIndex: 'alert_manager_instances', key: 'alert_manager_instances', width: 200 },
-  { title: '分组标签', dataIndex: 'group_by', key: 'group_by', width: 200 },
-  { title: '时间配置', dataIndex: 'timing_config', key: 'timing_config', width: 180 },
-  { title: '兜底接收者', dataIndex: 'receiver', key: 'receiver', width: 120 },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
-  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
+  { title: '实例池名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
+  { title: 'AlertManager实例', dataIndex: 'alert_manager_instances', key: 'alert_manager_instances', width: 220 },
+  { title: '分组标签', dataIndex: 'group_by', key: 'group_by', width: 180 },
+  { title: '时间配置', dataIndex: 'timing_config', key: 'timing_config', width: 160 },
+  { title: '接收器', dataIndex: 'receiver', key: 'receiver', width: 120 },
+  { title: '创建人', dataIndex: 'create_user_name', key: 'create_user_name', width: 120 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
   { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
 ];
 
@@ -500,6 +558,26 @@ const detailDialog = reactive({
   form: null as MonitorAlertManagerPool | null
 });
 
+// 用户选择模态框状态
+const isUserModalVisible = ref(false);
+const userList = ref<any[]>([]);
+const userLoading = ref(false);
+const userPagination = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: false,
+});
+const userSearchText = ref('');
+const activeForm = ref<'add' | 'edit' | null>(null);
+
+const userColumns = [
+  { title: '用户名', dataIndex: 'username', key: 'username' },
+  { title: '昵称', dataIndex: 'nickname', key: 'nickname' },
+  { title: '邮箱', dataIndex: 'email', key: 'email' },
+  { title: '操作', key: 'action', width: 80, align: 'center' as const },
+];
+
 // 表单验证规则
 const formRules = {
   name: [
@@ -510,12 +588,12 @@ const formRules = {
 
 // 辅助方法
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  const colors = ['#f56a00', '#7265e6', '#ffbf00', '#00a2ae', '#87d068', '#108ee9'];
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
+  for (let i = 0; i <name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return colors[Math.abs(hash) % colors.length]!;
+  return colors[Math.abs(hash) % colors.length] || '#1890ff';
 };
 
 const getInitials = (name: string): string => {
@@ -524,18 +602,18 @@ const getInitials = (name: string): string => {
 };
 
 const formatDate = (timestamp: number): string => {
-  if (!timestamp) return '';
+  if (!timestamp || isNaN(timestamp)) return '-';
   return new Date(timestamp * 1000).toLocaleDateString('zh-CN');
 };
 
 const formatTime = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  if (!timestamp || isNaN(timestamp)) return '-';
+  return new Date(timestamp * 1000).toLocaleTimeString('zh-CN');
 };
 
 const formatFullDateTime = (timestamp: number): string => {
   if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleString('zh-CN');
+  return new Date(timestamp).toLocaleString('zh-CN');
 };
 
 // 更新统计数据
@@ -591,9 +669,8 @@ const handleSearchChange = (): void => {
     clearTimeout(searchTimeout);
   }
   searchTimeout = setTimeout(() => {
-    paginationConfig.current = 1;
-    fetchAlertManagerPools();
-  }, 500);
+    handleSearch();
+  }, 300);
 };
 
 const handleReset = (): void => {
@@ -608,9 +685,47 @@ const showAddModal = (): void => {
   isAddModalVisible.value = true;
 };
 
-const handleViewPool = (record: MonitorAlertManagerPool): void => {
-  detailDialog.form = record;
-  detailDialogVisible.value = true;
+const handleViewPool = async (record: MonitorAlertManagerPool): Promise<void> => {
+  try {
+    // 显示加载提示
+    const loadingMessage = message.loading('正在获取详情...', 0);
+    
+    try {
+      // 调用详情API获取完整数据
+      const response = await getAlertManagerPoolDetailApi(record.id);
+      loadingMessage();
+      
+      if (response) {
+        // API调用成功后再显示对话框
+        detailDialog.form = response;
+        detailDialogVisible.value = true;
+      } else {
+        console.error('API响应异常:', response);
+        message.error(response?.message || '获取详情失败，服务器响应异常');
+      }
+    } catch (apiError: any) {
+      loadingMessage();
+      console.error('API调用失败:', apiError);
+      
+      // 更详细的错误信息
+      let errorMessage = '获取详情失败';
+      if (apiError.response) {
+        // 服务器响应了错误状态码
+        errorMessage = `获取详情失败 ${apiError.response?.message || '服务器错误'}`;
+      } else if (apiError.request) {
+        // 请求发出但没有收到响应
+        errorMessage = '获取详情失败: 网络连接异常，请检查网络连接';
+      } else {
+        // 其他错误
+        errorMessage = `获取详情失败: ${apiError.message || '未知错误'}`;
+      }
+      
+      message.error(errorMessage);
+    }
+  } catch (error) {
+    console.error('处理查看详情时发生未知错误:', error);
+    message.error('系统错误，请稍后重试');
+  }
 };
 
 const handleMenuClick = (command: string, record: MonitorAlertManagerPool): void => {
@@ -642,6 +757,58 @@ const confirmDelete = (record: MonitorAlertManagerPool): void => {
       }
     }
   });
+};
+
+// 用户选择相关
+const fetchUsers = async () => {
+  userLoading.value = true;
+  try {
+    const params: GetUserListReq = {
+      page: userPagination.current,
+      size: userPagination.pageSize,
+      search: userSearchText.value,
+    };
+    const response = await getUserList(params);
+    if (response) {
+      userList.value = response.items || [];
+      userPagination.total = response.total || 0;
+    }
+  } catch (error: any) {
+    message.error(error.message || '加载用户列表失败');
+  } finally {
+    userLoading.value = false;
+  }
+};
+
+const handleUserTableChange = (pagination: any) => {
+  userPagination.current = pagination.current;
+  fetchUsers();
+};
+
+const handleUserSearch = () => {
+  userPagination.current = 1;
+  fetchUsers();
+};
+
+const showUserModal = (formType: 'add' | 'edit') => {
+  activeForm.value = formType;
+  userPagination.current = 1;
+  userSearchText.value = '';
+  fetchUsers();
+  isUserModalVisible.value = true;
+};
+
+const closeUserModal = () => {
+  isUserModalVisible.value = false;
+};
+
+const handleSelectUser = (user: any) => {
+  if (activeForm.value === 'add') {
+    addForm.receiver = user.username;
+  } else if (activeForm.value === 'edit') {
+    editForm.receiver = user.username;
+  }
+  closeUserModal();
 };
 
 // 表单相关
@@ -759,25 +926,29 @@ const handleAdd = async (): Promise<void> => {
 
 const showEditModal = (record: MonitorAlertManagerPool): void => {
   editForm.id = record.id;
-  editForm.name = record.name;
-  editForm.alert_manager_instances = record.alert_manager_instances.map(value => ({
+  editForm.name = record.name ?? '';
+  editForm.alert_manager_instances = (record.alert_manager_instances ?? []).map((value) => ({
     value,
-    key: Date.now() + Math.random()
+    key: Date.now() + Math.random(),
   }));
-  editForm.resolve_timeout = record.resolve_timeout;
-  editForm.group_wait = record.group_wait;
-  editForm.group_interval = record.group_interval;
-  editForm.repeat_interval = record.repeat_interval;
-  editForm.group_by = record.group_by ?
-    record.group_by.map((value: string) => {
+  editForm.resolve_timeout = record.resolve_timeout ?? '';
+  editForm.group_wait = record.group_wait ?? '';
+  editForm.group_interval = record.group_interval ?? '';
+  editForm.repeat_interval = record.repeat_interval ?? '';
+  const groupBy = record.group_by ?? [];
+  if (groupBy.length > 0) {
+    editForm.group_by = groupBy.map((value: string) => {
       const [labelKey, labelValue] = value.split(',');
       return {
-        labelKey: labelKey || '',
-        labelValue: labelValue || '',
-        key: Date.now() + Math.random()
+        labelKey: labelKey ?? '',
+        labelValue: labelValue ?? '',
+        key: Date.now() + Math.random(),
       };
-    }) : [{ labelKey: '', labelValue: '', key: Date.now() }];
-  editForm.receiver = record.receiver;
+    });
+  } else {
+    editForm.group_by = [{ labelKey: '', labelValue: '', key: Date.now() }];
+  }
+  editForm.receiver = record.receiver ?? '';
   isEditModalVisible.value = true;
   detailDialogVisible.value = false;
 };
@@ -830,6 +1001,15 @@ onMounted(() => {
   align-items: center;
 }
 
+.header-tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .btn-create {
   background: linear-gradient(135deg, #1890ff 0%);
   border: none;
@@ -841,12 +1021,20 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   flex: 1;
-  min-width: 0;
+  min-width: 200px;
 }
 
 .search-input {
-  width: 250px;
-  min-width: 200px;
+  width: 280px;
+  border-radius: 6px;
+}
+
+.search-input .ant-input {
+  border-radius: 6px;
+}
+
+.search-input .ant-input-search-button {
+  border-radius: 0 6px 6px 0;
 }
 
 .reset-btn {
@@ -870,7 +1058,7 @@ onMounted(() => {
 .pool-name-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pool-badge {
@@ -884,9 +1072,13 @@ onMounted(() => {
   background-color: #52c41a;
 }
 
+.status-inactive {
+  background-color: #d9d9d9;
+}
+
 .pool-name-text {
   font-weight: 500;
-  word-break: break-all;
+  color: #262626;
 }
 
 .tag-container {
@@ -896,68 +1088,90 @@ onMounted(() => {
 }
 
 .tech-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
+  margin: 2px;
   border-radius: 4px;
   font-size: 12px;
-  font-weight: 500;
-  border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .alert-tag {
-  background-color: #fff7e6;
-  color: #d46b08;
-  border-left: 3px solid #fa8c16;
+  background-color: #fff2e8;
+  border-color: #ffbb96;
+  color: #d4380d;
+}
+
+.group-tag {
+  background-color: #f6ffed;
+  border-color: #b7eb8f;
+  color: #389e0d;
+}
+
+.receiver-tag {
+  font-weight: 500;
+}
+
+.prometheus-tag {
+  background-color: #e6f7ff;
+  border-color: #91d5ff;
+  color: #0958d9;
 }
 
 .label-tag {
-  background-color: #f6ffed;
-  color: #389e0d;
-  border-left: 3px solid #52c41a;
-}
-
-.empty-text {
-  color: #999;
-  font-style: italic;
-  font-size: 12px;
+  background-color: #f0f5ff;
+  border-color: #adc6ff;
+  color: #2f54eb;
 }
 
 .label-key {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .label-separator {
-  margin: 0 4px;
+  margin: 0 2px;
   color: #8c8c8c;
 }
 
 .label-value {
-  color: #555;
+  color: #595959;
+}
+
+.empty-text {
+  color: #bfbfbf;
+  font-style: italic;
+  font-size: 12px;
+  padding: 2px 6px;
 }
 
 .config-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  font-size: 12px;
 }
 
 .config-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  line-height: 1.4;
 }
 
 .config-label {
-  font-size: 12px;
-  color: #666;
+  color: #8c8c8c;
+  margin-right: 4px;
+  min-width: 32px;
+  font-size: 11px;
 }
 
 .config-value {
-  font-size: 12px;
+  color: #262626;
   font-weight: 500;
-  color: #333;
+  font-size: 12px;
 }
 
 .creator-info {
@@ -1107,50 +1321,62 @@ onMounted(() => {
 
   .header-actions {
     flex-direction: column;
-    align-items: stretch;
+    gap: 12px;
   }
 
   .search-filters {
+    flex-direction: column;
     width: 100%;
+    gap: 8px;
   }
 
   .search-input {
     width: 100%;
-    min-width: auto;
+  }
+
+  .filter-select {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .reset-btn {
+    width: 100%;
+  }
+
+  .stats-row .ant-col {
+    margin-bottom: 8px;
   }
 
   .btn-text {
     display: none;
   }
 
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
-
-  .stats-card :deep(.ant-statistic-title) {
-    font-size: 12px;
-  }
-
-  .stats-card :deep(.ant-statistic-content) {
-    font-size: 16px;
-  }
-
   .action-buttons {
-    gap: 2px;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
+    width: 100%;
+    margin: 0;
   }
 
-  .detail-footer {
-    justify-content: center;
+  .tech-tag {
+    max-width: 80px;
+    font-size: 11px;
   }
 
-  .detail-footer .ant-btn {
-    flex: 1;
+  .config-info {
+    font-size: 11px;
+  }
+
+  .config-label {
+    min-width: 28px;
+    font-size: 10px;
+  }
+
+  .config-value {
+    font-size: 11px;
     max-width: 120px;
   }
 }
@@ -1185,6 +1411,22 @@ onMounted(() => {
   .time {
     font-size: 10px;
   }
+}
+
+/* 加载容器样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  min-height: 200px;
+}
+
+.loading-container p {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
 }
 
 /* 表格滚动优化 */
