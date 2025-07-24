@@ -2,9 +2,9 @@ import { requestClient } from '#/api/request';
 
 export interface MonitorSendGroup {
   id: number;
-  created_at: number;
-  updated_at: number;
-  deleted_at: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
   name: string;
   name_zh: string;
   enable: number;
@@ -78,7 +78,6 @@ export interface updateSendGroupReq {
   name: string;
   name_zh: string;
   enable: number;
-  user_id?: number;
   pool_id: number;
   on_duty_group_id: number;
   static_receive_users: {

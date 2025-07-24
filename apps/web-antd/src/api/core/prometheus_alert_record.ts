@@ -6,8 +6,7 @@ export interface AlertRecordItem {
   pool_id: number;
   pool_name: string;
   ip_address: string;
-  port: string;
-  enable: boolean;
+  enable: 1 | 2;
   for_time: string;
   expr: string;
   labels: string[];
@@ -28,8 +27,7 @@ export interface createAlertManagerRecordReq {
   name: string;
   pool_id: number;
   ip_address?: string;
-  port?: string;
-  enable?: boolean;
+  enable?: 1 | 2;
   for_time?: string;
   expr: string;
   labels?: string[];
@@ -41,8 +39,7 @@ export interface updateAlertManagerRecordReq {
   name: string;
   pool_id: number;
   ip_address?: string;
-  port?: string;
-  enable?: boolean;
+  enable?: 1 | 2;
   for_time?: string;
   expr: string;
   labels?: string[];
