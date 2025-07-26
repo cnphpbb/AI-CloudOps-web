@@ -104,7 +104,7 @@
           :loading="loading"
           row-key="id" 
           bordered 
-          :scroll="{ x: 1400 }" 
+          :scroll="{ x: 1500 }" 
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
@@ -125,6 +125,14 @@
                 </a-tag>
                 <span v-else class="empty-text">无关联池</span>
               </div>
+            </template>
+
+            <template v-if="column.key === 'ip_address'">
+              <span>{{ record.ip_address?.split(':')[0] || '' }}</span>
+            </template>
+
+            <template v-if="column.key === 'port'">
+              <span>{{ record.ip_address?.split(':')[1] || '' }}</span>
             </template>
 
             <template v-if="column.key === 'enable'">
@@ -256,12 +264,23 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item 
-                label="IP地址和端口" 
-                name="ip_address"
+                label="IP地址" 
+                name="ip"
               >
                 <a-input 
-                  v-model:value="addForm.ip_address" 
-                  placeholder="例如: localhost:9090 或 192.168.1.100:9090" 
+                  v-model:value="addForm.ip" 
+                  placeholder="例如: localhost 或 192.168.1.100" 
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="端口" 
+                name="port"
+              >
+                <a-input 
+                  v-model:value="addForm.port" 
+                  placeholder="例如: 9090" 
                 />
               </a-form-item>
             </a-col>
@@ -397,12 +416,23 @@
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
               <a-form-item 
-                label="IP地址和端口" 
-                name="ip_address"
+                label="IP地址" 
+                name="ip"
               >
                 <a-input 
-                  v-model:value="editForm.ip_address" 
-                  placeholder="例如: localhost:9090 或 192.168.1.100:9090" 
+                  v-model:value="editForm.ip" 
+                  placeholder="例如: localhost 或 192.168.1.100" 
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="端口" 
+                name="port"
+              >
+                <a-input 
+                  v-model:value="editForm.port" 
+                  placeholder="例如: 9090" 
                 />
               </a-form-item>
             </a-col>
@@ -491,7 +521,8 @@
           <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
           <a-descriptions-item label="记录名称">{{ detailDialog.form.name }}</a-descriptions-item>
           <a-descriptions-item label="关联实例池">{{ detailDialog.form.pool_name || '无关联池' }}</a-descriptions-item>
-          <a-descriptions-item label="IP地址和端口">{{ detailDialog.form.ip_address }}</a-descriptions-item>
+          <a-descriptions-item label="IP地址">{{ detailDialog.form.ip_address?.split(':')[0] || '' }}</a-descriptions-item>
+          <a-descriptions-item label="端口">{{ detailDialog.form.ip_address?.split(':')[1] || '' }}</a-descriptions-item>
           <a-descriptions-item label="持续时间">{{ detailDialog.form.for_time }}</a-descriptions-item>
           <a-descriptions-item label="是否启用">{{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}</a-descriptions-item>
           <a-descriptions-item label="表达式">
@@ -568,7 +599,8 @@ const previewDialogWidth = computed(() => {
 const columns = [
   { title: '记录名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
   { title: '关联实例池', dataIndex: 'pool_name', key: 'pool_name', width: 180 },
-  { title: 'IP地址和端口', dataIndex: 'ip_address', key: 'ip_address', width: 180 },
+  { title: 'IP地址', dataIndex: 'ip_address', key: 'ip_address', width: 150 },
+  { title: '端口', dataIndex: 'ip_address', key: 'port', width: 80 },
   { title: '是否启用', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
   { title: '持续时间', dataIndex: 'for_time', key: 'for_time', width: 100 },
   { title: '表达式', dataIndex: 'expr', key: 'expr', width: 250 },
@@ -631,7 +663,8 @@ const editFormRef = ref<FormInstance>();
 const addForm = reactive({
   name: '',
   pool_id: 0,
-  ip_address: '',
+  ip: '',
+  port: '',
   enable: 2 as 1 | 2,
   for_time: '15s',
   expr: '',
@@ -644,7 +677,8 @@ const editForm = reactive({
   id: 0,
   name: '',
   pool_id: 0,
-  ip_address: '',
+  ip: '',
+  port: '',
   enable: 1 as 1 | 2,
   for_time: '',
   expr: '',
@@ -666,9 +700,20 @@ const formRules = {
   pool_id: [
     { required: true, message: '请选择实例池', trigger: 'change' }
   ],
-  ip_address: [
-    { required: true, message: '请输入IP地址和端口', trigger: 'blur' },
-    { pattern: /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])(:[0-9]+)?$/, message: '请输入有效的地址，如localhost:9090或192.168.1.100:9090', trigger: 'blur' }
+  ip: [
+    { required: true, message: '请输入IP地址', trigger: 'blur' },
+    { pattern: /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/, message: '请输入有效的IP地址，如localhost或192.168.1.100', trigger: 'blur' }
+  ],
+  port: [
+    { required: true, message: '请输入端口', trigger: 'blur' },
+    { pattern: /^[0-9]+$/, message: '端口必须为数字', trigger: 'blur' },
+    { validator: (rule: any, value: string) => {
+      const port = parseInt(value);
+      if (port < 1 || port > 65535) {
+        return Promise.reject('端口必须在1-65535之间');
+      }
+      return Promise.resolve();
+    }, trigger: 'blur' }
   ],
   expr: [
     { required: true, message: '请输入表达式', trigger: 'blur' }
@@ -886,11 +931,15 @@ const closeAddModal = (): void => {
 };
 
 const showEditModal = (record: AlertRecordItem): void => {
+  // 将 ip_address 拆分为 ip 和 port
+  const [ip, port] = record.ip_address?.split(':') || ['', ''];
+  
   Object.assign(editForm, {
     id: record.id,
     name: record.name,
     pool_id: record.pool_id,
-    ip_address: record.ip_address,
+    ip: ip,
+    port: port,
     enable: record.enable,
     for_time: record.for_time,
     expr: record.expr,
@@ -913,7 +962,8 @@ const closeDetailDialog = (): void => {
 const resetAddForm = (): void => {
   addForm.name = '';
   addForm.pool_id = 0;
-  addForm.ip_address = '';
+  addForm.ip = '';
+  addForm.port = '';
   addForm.enable = 2 as 1 | 2;
   addForm.for_time = '15s';
   addForm.expr = '';
@@ -930,7 +980,7 @@ const handleAdd = async (): Promise<void> => {
     const payload = {
       name: addForm.name,
       pool_id: addForm.pool_id,
-      ip_address: addForm.ip_address,
+      ip_address: `${addForm.ip}:${addForm.port}`,
       enable: Number(addForm.enable) as 1 | 2,
       for_time: addForm.for_time,
       expr: addForm.expr,
@@ -960,7 +1010,7 @@ const handleUpdate = async (): Promise<void> => {
       id: editForm.id,
       name: editForm.name,
       pool_id: editForm.pool_id,
-      ip_address: editForm.ip_address,
+      ip_address: `${editForm.ip}:${editForm.port}`,
       enable: Number(editForm.enable) as 1 | 2,
       for_time: editForm.for_time,
       expr: editForm.expr,

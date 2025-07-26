@@ -229,16 +229,9 @@
             </a-col>
             <a-col :xs="24" :sm="12">
               <a-form-item label="关联采集池" name="pool_id" :rules="[{ required: true, message: '请选择关联采集池' }]">
-                <a-select
-                  v-model:value="formDialog.form.pool_id"
-                  placeholder="请搜索并选择关联采集池"
-                  show-search
-                  :filter-option="false"
-                  @search="handleDialogPoolSearch"
-                  @popupScroll="handleDialogPoolScroll"
-                  :loading="dialogPoolLoading"
-                  allow-clear
-                >
+                <a-select v-model:value="formDialog.form.pool_id" placeholder="请搜索并选择关联采集池" show-search
+                  :filter-option="false" @search="handleDialogPoolSearch" @popupScroll="handleDialogPoolScroll"
+                  :loading="dialogPoolLoading" allow-clear>
                   <a-select-option v-for="pool in dialogPools" :key="pool.id" :value="pool.id">
                     {{ pool.name }}
                   </a-select-option>
@@ -345,7 +338,12 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :span="24">
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="Bearer Token文件路径" name="bearer_token_file">
+                <a-input v-model:value="formDialog.form.bearer_token_file" placeholder="请输入Bearer Token文件路径" />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
               <a-form-item label="TLS CA内容" name="tls_ca_content">
                 <a-textarea v-model:value="formDialog.form.tls_ca_content" placeholder="请输入TLS CA证书内容" :rows="4" />
               </a-form-item>
@@ -357,8 +355,43 @@
         <div class="form-section">
           <div class="section-title">高级配置</div>
           <a-form-item label="Relabel配置（YAML）" name="relabel_configs_yaml_string">
-            <a-textarea v-model:value="formDialog.form.relabel_configs_yaml_string" placeholder="请输入Relabel配置（YAML格式）"
-              :rows="6" />
+            <div class="yaml-editor-container">
+              <div class="yaml-toolbar">
+                <a-button size="small" @click="formatYaml" :disabled="!formDialog.form.relabel_configs_yaml_string">
+                  <template #icon>
+                    <Icon icon="carbon:code" />
+                  </template>
+                  格式化
+                </a-button>
+                <a-button size="small" @click="insertYamlTemplate" type="dashed">
+                  <template #icon>
+                    <Icon icon="carbon:add" />
+                  </template>
+                  插入模板
+                </a-button>
+                <a-button size="small" @click="validateYaml" :disabled="!formDialog.form.relabel_configs_yaml_string">
+                  <template #icon>
+                    <Icon icon="carbon:checkmark" />
+                  </template>
+                  验证
+                </a-button>
+              </div>
+              <a-textarea 
+                v-model:value="formDialog.form.relabel_configs_yaml_string" 
+                placeholder="请输入Relabel配置（YAML格式）"
+                :rows="8" 
+                :class="{ 'yaml-error': yamlError }"
+                @blur="validateYamlOnBlur"
+              />
+              <div v-if="yamlError" class="yaml-error-message">
+                <Icon icon="carbon:warning" />
+                {{ yamlError }}
+              </div>
+              <div v-if="yamlSuccess" class="yaml-success-message">
+                <Icon icon="carbon:checkmark" />
+                YAML格式正确
+              </div>
+            </div>
           </a-form-item>
         </div>
       </a-form>
@@ -387,14 +420,14 @@
             <a-descriptions-item label="协议方案">{{ detailDialog.form.scheme }}</a-descriptions-item>
             <a-descriptions-item label="监控路径">{{ detailDialog.form.metrics_path }}</a-descriptions-item>
             <a-descriptions-item label="目标地址">{{ detailDialog.form.ip_address }}:{{ detailDialog.form.port
-            }}</a-descriptions-item>
+              }}</a-descriptions-item>
             <a-descriptions-item label="采集间隔">{{ detailDialog.form.scrape_interval }}秒</a-descriptions-item>
             <a-descriptions-item label="采集超时">{{ detailDialog.form.scrape_timeout }}秒</a-descriptions-item>
             <a-descriptions-item label="刷新间隔">{{ detailDialog.form.refresh_interval }}秒</a-descriptions-item>
             <a-descriptions-item label="关联采集池">{{ getPoolName(detailDialog.form.pool_id) }}</a-descriptions-item>
             <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
             <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '')
-            }}</a-descriptions-item>
+              }}</a-descriptions-item>
             <a-descriptions-item v-if="detailDialog.form.service_discovery_type === 'k8s'" label="Kubernetes角色">
               {{ detailDialog.form.kubernetes_sd_role || '未配置' }}
             </a-descriptions-item>
@@ -554,6 +587,10 @@ const detailDialog = reactive({
   form: null as MonitorScrapeJobItem | null,
   loading: false,
 });
+
+// YAML 验证相关状态
+const yamlError = ref<string>('');
+const yamlSuccess = ref<boolean>(false);
 
 // 表单验证规则
 const formRules = {
@@ -859,6 +896,10 @@ const handleEditScrapeJob = (record: MonitorScrapeJobItem): void => {
     kubernetes_sd_role: record.kubernetes_sd_role || '',
   };
 
+  // 重置 YAML 验证状态
+  yamlError.value = '';
+  yamlSuccess.value = false;
+
   dialogPoolSearch.value = '';
   loadDialogPools(true).then(() => {
     const selectedPoolInList = dialogPools.value.some(p => p.id === record.pool_id);
@@ -1026,11 +1067,151 @@ const resetFormDialog = (): void => {
     bearer_token_file: '',
     kubernetes_sd_role: '',
   };
+  // 重置 YAML 验证状态
+  yamlError.value = '';
+  yamlSuccess.value = false;
+};
+
+// YAML 相关方法
+const validateYaml = (): void => {
+  const yamlContent = formDialog.form.relabel_configs_yaml_string;
+  if (!yamlContent || yamlContent.trim() === '') {
+    yamlError.value = '';
+    yamlSuccess.value = false;
+    return;
+  }
+
+  try {
+    // 简单的 YAML 格式验证
+    const lines = yamlContent.split('\n');
+    let indentLevel = 0;
+    let isValid = true;
+    let errorMessage = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]?.trim() || '';
+      if (line === '' || line.startsWith('#')) continue;
+
+      // 检查是否是列表项
+      if (line.startsWith('-')) {
+        // 验证列表项格式
+        const itemContent = line.substring(1).trim();
+        if (itemContent === '') {
+          isValid = false;
+          errorMessage = `第 ${i + 1} 行：列表项不能为空`;
+          break;
+        }
+      } else if (line.includes(':')) {
+        // 验证键值对格式
+        const parts = line.split(':', 2);
+        const key = parts[0];
+        if (!key || !key.trim()) {
+          isValid = false;
+          errorMessage = `第 ${i + 1} 行：键不能为空`;
+          break;
+        }
+      }
+    }
+
+    if (isValid) {
+      yamlError.value = '';
+      yamlSuccess.value = true;
+      message.success('YAML格式验证通过');
+    } else {
+      yamlError.value = errorMessage;
+      yamlSuccess.value = false;
+    }
+  } catch (error) {
+    yamlError.value = 'YAML格式错误';
+    yamlSuccess.value = false;
+  }
+};
+
+const validateYamlOnBlur = (): void => {
+  if (formDialog.form.relabel_configs_yaml_string) {
+    validateYaml();
+  }
+};
+
+const formatYaml = (): void => {
+  const yamlContent = formDialog.form.relabel_configs_yaml_string;
+  if (!yamlContent || yamlContent.trim() === '') {
+    message.warning('请先输入YAML内容');
+    return;
+  }
+
+  try {
+    // 简单的 YAML 格式化
+    const lines = yamlContent.split('\n');
+    const formattedLines: string[] = [];
+    let currentIndent = 0;
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine === '') {
+        formattedLines.push('');
+        continue;
+      }
+
+      if (trimmedLine.startsWith('#')) {
+        formattedLines.push(trimmedLine);
+        continue;
+      }
+
+      if (trimmedLine.startsWith('-')) {
+        // 列表项，使用当前缩进
+        formattedLines.push('  '.repeat(currentIndent) + trimmedLine);
+        currentIndent++;
+      } else if (trimmedLine.includes(':')) {
+        // 键值对
+        const parts = trimmedLine.split(':', 2);
+        const key = parts[0];
+        const value = parts[1];
+        if (key) {
+          if (value && value.trim() !== '') {
+            // 有值的键值对
+            formattedLines.push('  '.repeat(currentIndent) + key.trim() + ':' + value);
+          } else {
+            // 没有值的键，可能是嵌套对象的开始
+            formattedLines.push('  '.repeat(currentIndent) + key.trim() + ':');
+            currentIndent++;
+          }
+        }
+      } else {
+        // 其他内容
+        formattedLines.push('  '.repeat(currentIndent) + trimmedLine);
+      }
+    }
+
+    formDialog.form.relabel_configs_yaml_string = formattedLines.join('\n');
+    yamlError.value = '';
+    yamlSuccess.value = true;
+    message.success('YAML格式化完成');
+  } catch (error) {
+    message.error('YAML格式化失败');
+  }
+};
+
+const insertYamlTemplate = (): void => {
+  const template = `- action: replace
+  source_labels: [__meta_kubernetes_pod_label_app]
+  target_label: app
+- action: replace
+  source_labels: [__meta_kubernetes_namespace]
+  target_label: namespace`;
+  
+  formDialog.form.relabel_configs_yaml_string = template;
+  yamlError.value = '';
+  yamlSuccess.value = true;
+  message.success('YAML模板已插入');
 };
 
 // 对话框关闭
 const closeFormDialog = (): void => {
   formDialogVisible.value = false;
+  // 重置 YAML 验证状态
+  yamlError.value = '';
+  yamlSuccess.value = false;
 };
 
 const closeDetailDialog = (): void => {
@@ -1401,6 +1582,49 @@ onMounted(() => {
   word-break: break-word;
 }
 
+/* YAML 编辑器样式 */
+.yaml-editor-container {
+  position: relative;
+}
+
+.yaml-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.yaml-toolbar .ant-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  height: 28px;
+  padding: 0 8px;
+}
+
+.yaml-error {
+  border-color: #ff4d4f !important;
+}
+
+.yaml-error-message {
+  margin-top: 4px;
+  color: #ff4d4f;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.yaml-success-message {
+  margin-top: 4px;
+  color: #52c41a;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* 对话框响应式优化 */
 .responsive-modal :deep(.ant-modal) {
   max-width: calc(100vw - 16px);
@@ -1412,6 +1636,15 @@ onMounted(() => {
     padding: 16px;
     max-height: calc(100vh - 160px);
     overflow-y: auto;
+  }
+  
+  .yaml-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .yaml-toolbar .ant-btn {
+    justify-content: center;
   }
 }
 </style>

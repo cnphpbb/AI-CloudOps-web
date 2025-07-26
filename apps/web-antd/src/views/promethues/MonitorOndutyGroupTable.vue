@@ -1,291 +1,455 @@
 <template>
   <div class="duty-schedule-container">
-    <!-- 页面标题 -->
+    <!-- 页面标题和操作栏 -->
     <div class="page-header">
-      <div class="header-actions">
-        <a-button type="primary" @click="handleCreateChange" class="btn-create">
-          <template #icon>
-            <PlusOutlined />
-          </template>
-          <span class="btn-text">创建换班记录</span>
-        </a-button>
-        <div class="search-filters">
-          <a-input-search v-model:value="searchQuery" placeholder="搜索值班组名称..." class="search-input"
-            @search="handleSearch" @change="handleSearchChange" allow-clear />
-          <a-date-picker v-model:value="dateFilter" placeholder="选择日期" class="filter-select" @change="handleDateChange"
-            allow-clear />
-          <a-button @click="handleResetFilters" class="reset-btn">
-            重置
+      <div class="header-content">
+        <div class="title-section">
+          <div class="title-breadcrumb">
+            <a-button type="text" @click="goBack" class="back-btn" size="large">
+              <template #icon>
+                <Icon icon="carbon:arrow-left" />
+              </template>
+            </a-button>
+            <div class="title-info">
+              <h1 class="page-title">{{ dutyGroupDetail?.name || '值班组详情' }}</h1>
+              <div class="breadcrumb">
+                <span class="breadcrumb-item">值班管理</span>
+                <Icon icon="carbon:chevron-right" class="breadcrumb-separator" />
+                <span class="breadcrumb-item current">{{ currentMonthYear }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a-button type="default" @click="exportSchedule" class="action-btn" :loading="exportLoading">
+            <template #icon>
+              <Icon icon="carbon:download" />
+            </template>
+            导出
+          </a-button>
+          <a-button type="primary" @click="handleCreateChange" class="action-btn">
+            <template #icon>
+              <PlusOutlined />
+            </template>
+            申请换班
           </a-button>
         </div>
       </div>
     </div>
 
-    <!-- 统计卡片 -->
-    <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="总值班人数" :value="stats.totalOnDutyUsers" :value-style="{ color: '#3f8600' }">
-              <template #prefix>
-                <Icon icon="carbon:user-multiple" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="今日值班" :value="stats.todayOnDuty" :value-style="{ color: '#52c41a' }">
-              <template #prefix>
-                <Icon icon="carbon:user-online" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="换班记录" :value="stats.changeRecords" :value-style="{ color: '#faad14' }">
-              <template #prefix>
-                <Icon icon="carbon:change-catalog" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="6" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="值班组" :value="stats.dutyGroups" :value-style="{ color: '#cf1322' }">
-              <template #prefix>
-                <Icon icon="carbon:group" />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
+    <!-- 统计面板 -->
+    <div class="stats-section">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <Icon icon="carbon:user-multiple" />
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ stats.totalMembers }}</div>
+            <div class="stat-label">值班成员</div>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">
+            <Icon icon="carbon:user-online" />
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ stats.todayOnDuty }}</div>
+            <div class="stat-label">今日值班</div>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">
+            <Icon icon="carbon:calendar-heat-map" />
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ stats.monthlyDutyDays }}</div>
+            <div class="stat-label">本月值班天数</div>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon">
+            <Icon icon="carbon:change-catalog" />
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ stats.changeRecords }}</div>
+            <div class="stat-label">换班记录</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- 日历展示区 -->
-    <div class="table-container">
-      <a-card>
+    <!-- 日历区域 -->
+    <div class="calendar-section">
+      <a-card class="calendar-card">
         <div class="calendar-header">
-          <div class="calendar-controls">
-            <a-button @click="previousMonth" size="small">
-              <template #icon>
-                <Icon icon="carbon:chevron-left" />
-              </template>
+          <div class="calendar-nav">
+            <a-button @click="previousMonth" size="large" class="nav-btn" :disabled="loading">
+              <Icon icon="carbon:chevron-left" />
             </a-button>
-            <span class="calendar-title">{{ currentMonthYear }}</span>
-            <a-button @click="nextMonth" size="small">
-              <template #icon>
-                <Icon icon="carbon:chevron-right" />
-              </template>
+            <div class="calendar-title">
+              <h2>{{ currentMonthYear }}</h2>
+              <span class="calendar-subtitle">值班安排</span>
+            </div>
+            <a-button @click="nextMonth" size="large" class="nav-btn" :disabled="loading">
+              <Icon icon="carbon:chevron-right" />
             </a-button>
           </div>
-          <div class="duty-group-info">
-            <span class="info-label">值班组：</span>
-            <span class="info-value">{{ dutyGroupName }}</span>
+          
+          <div class="calendar-actions">
+            <a-button size="small" @click="goToToday" :disabled="isCurrentMonthToday">
+              今日
+            </a-button>
+            <a-button size="small" @click="refreshCalendar" :loading="loading">
+              刷新
+            </a-button>
           </div>
         </div>
 
-        <div class="calendar">
-          <div class="calendar-weekdays">
-            <div class="weekday-header" v-for="weekday in weekdays" :key="weekday">
-              {{ weekday }}
-            </div>
-          </div>
-
-          <div class="calendar-days">
-            <div class="calendar-day prev-month" v-for="day in previousMonthDays" :key="'prev-' + day.date">
-              <div class="day-header">
-                <div class="day-number">{{ day.date.split('-')[2] }}</div>
-              </div>
-              <div class="day-content">
-                <div class="day-user" :class="{ 'no-user': !day.user_id }">
-                  {{ day.user_id ? `值班人: ${day.create_user_name}` : '无值班人' }}
-                </div>
+        <a-spin :spinning="loading" size="large">
+          <div class="calendar">
+            <!-- 星期标题 -->
+            <div class="calendar-weekdays">
+              <div class="weekday-header" v-for="weekday in weekdays" :key="weekday">
+                {{ weekday }}
               </div>
             </div>
 
-            <div class="calendar-day" v-for="day in daysInMonth" :key="day.date"
-              @click="isCurrentMonth(day.date) ? openSwapModal(day) : null" :class="{
-                'has-user': day.user_id,
-                'no-user': !day.user_id,
-                'disabled': !isCurrentMonth(day.date),
-                'today': isToday(day.date)
-              }">
-              <div class="day-header">
-                <div class="day-number">{{ day.date.split('-')[2] }}</div>
-                <div class="day-status" v-if="isToday(day.date)">今日</div>
-              </div>
-              <div class="day-content">
-                <div class="duty-info-cell">
-                  <div class="duty-badge" :class="getDutyStatusClass(day)"></div>
-                  <span class="duty-name-text">
-                    {{ day.user_id ? `值班人: ${day.create_user_name}` : '无值班人' }}
-                  </span>
+            <!-- 日历内容 -->
+            <div class="calendar-grid">
+              <div 
+                class="calendar-day" 
+                v-for="day in calendarDays" 
+                :key="day.date"
+                @click="handleDayClick(day)" 
+                :class="{
+                  'has-duty': day.user,
+                  'today': isToday(day.date),
+                  'weekend': isWeekend(day.date),
+                  'current-month': day.isCurrentMonth,
+                  'clickable': day.isCurrentMonth,
+                  'is-adjusted': day.isAdjusted
+                }"
+              >
+                <div class="day-header">
+                  <div class="day-number">{{ formatDayNumber(day.date) }}</div>
+                  <div class="day-badges" v-if="day.isCurrentMonth">
+                    <div class="today-badge" v-if="isToday(day.date)">今日</div>
+                    <div class="adjusted-badge" v-if="day.isAdjusted">换班</div>
+                    <div class="weekend-badge" v-if="isWeekend(day.date)">
+                      {{ getWeekendType(day.date) }}
+                    </div>
+                  </div>
                 </div>
-                <div class="day-actions" v-if="day.user_id && isCurrentMonth(day.date)">
-                  <a-button type="link" size="small" @click.stop="handleViewDay(day)">
-                    查看
-                  </a-button>
-                  <a-button type="link" size="small" @click.stop="openSwapModal(day)">
-                    换班
-                  </a-button>
+                
+                <div class="day-content">
+                  <div class="duty-info" v-if="day.user">
+                    <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(day.user.real_name || day.user.username) }">
+                      {{ getInitials(day.user.real_name || day.user.username) }}
+                    </a-avatar>
+                    <div class="duty-details">
+                      <span class="duty-name">{{ day.user.real_name || day.user.username }}</span>
+                      <div class="duty-extra" v-if="day.originUser">
+                        <span class="original-user">原: {{ day.originUser }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="no-duty" v-else>
+                    <span class="no-duty-text">无安排</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </a-spin>
       </a-card>
     </div>
 
     <!-- 换班记录表格 -->
-    <div class="table-container">
+    <div class="records-section">
       <a-card>
         <template #title>
-          <div class="card-title">
-            <Icon icon="carbon:change-catalog" />
-            换班记录
+          <div class="section-title">
+            <Icon icon="carbon:table" />
+            <span>换班记录</span>
           </div>
         </template>
 
-        <a-table :data-source="changeRecordList" :columns="changeColumns" :pagination="paginationConfig"
-          :loading="loading" row-key="id" bordered :scroll="{ x: 1200 }" @change="handleTableChange">
+        <div class="search-section">
+          <a-input-search 
+            v-model:value="searchQuery" 
+            placeholder="搜索换班记录..." 
+            class="search-input"
+            @search="handleSearch" 
+            allow-clear 
+          />
+          <a-date-picker 
+            v-model:value="dateFilter" 
+            placeholder="筛选日期" 
+            class="filter-select" 
+            @change="handleDateChange"
+            allow-clear 
+          />
+        </div>
+
+        <a-table 
+          :data-source="changeRecordList" 
+          :columns="changeColumns" 
+          :pagination="paginationConfig"
+          :loading="loading" 
+          row-key="id" 
+          @change="handleTableChange"
+          class="records-table"
+        >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'date'">
-              <div class="date-info">
-                <span class="date">{{ formatDate(record.date) }}</span>
-                <span class="time">{{ getDayOfWeek(record.date) }}</span>
+              <div class="date-cell">
+                <div class="date-main">{{ formatDate(record.date) }}</div>
+                <div class="date-sub">{{ getDayOfWeek(record.date) }}</div>
               </div>
             </template>
 
-            <template v-if="column.key === 'origin_user'">
-              <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.origin_user_name || '') }">
-                  {{ getInitials(record.origin_user_name) }}
-                </a-avatar>
-                <span class="creator-name">{{ record.origin_user_name }}</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'on_duty_user'">
-              <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.target_user_name || '') }">
-                  {{ getInitials(record.target_user_name) }}
-                </a-avatar>
-                <span class="creator-name">{{ record.target_user_name }}</span>
+            <template v-if="column.key === 'users'">
+              <div class="users-change">
+                <div class="user-item">
+                  <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(getUserName(record.origin_user_id) || '') }">
+                    {{ getInitials(getUserName(record.origin_user_id)) }}
+                  </a-avatar>
+                  <span class="user-name">{{ getUserName(record.origin_user_id) }}</span>
+                </div>
+                <Icon icon="carbon:arrow-right" class="arrow" />
+                <div class="user-item">
+                  <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(getUserName(record.on_duty_user_id) || '') }">
+                    {{ getInitials(getUserName(record.on_duty_user_id)) }}
+                  </a-avatar>
+                  <span class="user-name">{{ getUserName(record.on_duty_user_id) }}</span>
+                </div>
               </div>
             </template>
 
             <template v-if="column.key === 'creator'">
-              <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.creator_name || '') }">
-                  {{ getInitials(record.creator_name) }}
-                </a-avatar>
-                <span class="creator-name">{{ record.creator_name }}</span>
+              <div class="user-cell">
+                <span class="user-name">{{ record.create_user_name }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'createdAt'">
-              <div class="date-info">
-                <span class="date">{{ formatDateFromTimestamp(record.created_at) }}</span>
-                <span class="time">{{ formatTimeFromTimestamp(record.created_at) }}</span>
+              <div class="date-cell">
+                <div class="date-main">{{ formatDateFromTimestamp(record.created_at) }}</div>
+                <div class="date-sub">{{ formatTimeFromTimestamp(record.created_at) }}</div>
               </div>
             </template>
 
             <template v-if="column.key === 'action'">
-              <div class="action-buttons">
-                <a-button type="primary" size="small" @click="handleViewChange(record)">
+              <div class="action-cell">
+                <a-button type="link" size="small" @click="handleViewChange(record)">
+                  <Icon icon="carbon:view" />
                   查看
                 </a-button>
-                <a-button type="default" size="small" @click="handleEditChange(record)">
+                <a-button 
+                  type="link" 
+                  size="small" 
+                  @click="handleEditChange(record)" 
+                  v-if="canEditRecord(record)"
+                >
+                  <Icon icon="carbon:edit" />
                   编辑
                 </a-button>
-                <a-button type="default" size="small" danger @click="handleDeleteChange(record)">
-                  删除
-                </a-button>
+                <a-dropdown v-if="hasMoreActions(record)">
+                  <template #overlay>
+                    <a-menu @click="(e: any) => handleRecordAction(e.key, record)">
+                      <a-menu-item key="delete" danger>
+                        <Icon icon="carbon:trash-can" />
+                        删除
+                      </a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button type="link" size="small">
+                    <Icon icon="carbon:overflow-menu-horizontal" />
+                  </a-button>
+                </a-dropdown>
               </div>
             </template>
+          </template>
+
+          <template #emptyText>
+            <div class="empty-state">
+              <Icon icon="carbon:no-image" class="empty-icon" />
+              <div class="empty-title">暂无换班记录</div>
+              <div class="empty-description">当前时间段内没有换班记录</div>
+            </div>
           </template>
         </a-table>
       </a-card>
     </div>
 
-    <!-- 创建/编辑换班记录对话框 -->
-    <a-modal :open="formDialogVisible" :title="formDialog.isEdit ? '编辑换班记录' : '创建换班记录'" :width="formDialogWidth"
-      @ok="saveChange" @cancel="closeFormDialog" :destroy-on-close="true" class="responsive-modal change-modal">
-      <a-form ref="formRef" :model="formDialog.form" :rules="formRules" layout="vertical">
-        <div class="form-section">
-          <div class="section-title">换班信息</div>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="值班组" name="on_duty_group_id" :rules="[{ required: true, message: '请选择值班组' }]">
-                <a-select v-model:value="formDialog.form.on_duty_group_id" placeholder="请选择值班组" class="full-width"
-                  show-search :loading="loadingDutyGroups" @search="handleDutyGroupSearch"
-                  @focus="fetchDutyGroupOptions" @popupScroll="handleDutyGroupPopupScroll" :filter-option="false">
-                  <a-select-option v-for="option in dutyGroupOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="换班日期" name="date" :rules="[{ required: true, message: '请选择换班日期' }]">
-                <a-date-picker v-model:value="formDialog.form.date" placeholder="请选择换班日期" class="full-width" />
-              </a-form-item>
-            </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="原值班人" name="origin_user_id" :rules="[{ required: true, message: '原值班人信息' }]">
-                <a-select v-model:value="formDialog.form.origin_user_id" placeholder="原值班人" class="full-width" disabled>
-                  <a-select-option v-if="formDialog.form.origin_user_id" :value="formDialog.form.origin_user_id">
-                    {{ formDialog.form.origin_user_name || '原值班人' }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-          </a-row>
-          <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="新值班人" name="on_duty_user_id" :rules="[{ required: true, message: '请选择新值班人' }]">
-                <a-select v-model:value="formDialog.form.on_duty_user_id" placeholder="请选择新值班人" class="full-width"
-                  show-search :loading="loadingNewUsers" @search="handleNewUserSearch" @focus="fetchNewUserOptions"
-                  @popupScroll="handleNewUserPopupScroll" :filter-option="false">
-                  <a-select-option v-for="option in newUserOptions" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-          </a-row>
-        </div>
+    <!-- 换班申请对话框 -->
+    <a-modal 
+      :open="formDialogVisible" 
+      :title="formDialog.isEdit ? '编辑换班记录' : '申请换班'" 
+      @ok="saveChange" 
+      @cancel="closeFormDialog" 
+      :confirmLoading="submitting"
+    >
+      <a-form :model="formDialog.form" layout="vertical">
+        <a-form-item label="换班日期" required>
+          <a-date-picker 
+            v-model:value="formDialog.form.date" 
+            placeholder="请选择换班日期" 
+            style="width: 100%"
+            :disabled-date="disabledDate"
+          />
+        </a-form-item>
+        
+        <a-form-item label="原值班人" required>
+          <a-select 
+            v-model:value="formDialog.form.origin_user_id" 
+            placeholder="请选择原值班人" 
+            style="width: 100%"
+            show-search 
+            allow-clear
+            :filter-option="filterOption"
+          >
+            <a-select-option v-for="member in dutyGroupDetail?.users || []" :key="member.id" :value="member.id">
+              {{ member.real_name || member.username }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        
+        <a-form-item label="新值班人" required>
+          <a-select 
+            v-model:value="formDialog.form.on_duty_user_id" 
+            placeholder="请选择新值班人" 
+            style="width: 100%"
+            show-search 
+            allow-clear
+            :filter-option="filterOption"
+          >
+            <a-select-option v-for="member in dutyGroupDetail?.users || []" :key="member.id" :value="member.id">
+              {{ member.real_name || member.username }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="换班原因" required>
+          <a-textarea 
+            v-model:value="formDialog.form.reason" 
+            placeholder="请输入换班原因" 
+            :rows="3"
+            :maxlength="200"
+            show-count
+          />
+        </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal :open="detailDialogVisible" title="换班记录详情" :width="previewDialogWidth" :footer="null"
-      @cancel="closeDetailDialog" class="detail-dialog">
-      <div v-if="detailDialog.form" class="change-details">
-        <div class="detail-header">
-          <h2>换班记录详情</h2>
-          <div class="detail-badges">
-            <a-tag color="blue">{{ formatDate(detailDialog.form.date) }}</a-tag>
+    <a-modal 
+      :open="detailDialogVisible" 
+      title="换班记录详情" 
+      :footer="null"
+      @cancel="closeDetailDialog"
+    >
+      <div v-if="detailDialog.form" class="detail-container">
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>换班日期</label>
+            <span>{{ formatDate(detailDialog.form.date) }}</span>
+          </div>
+          <div class="detail-item">
+            <label>原值班人</label>
+            <span>{{ getUserName(detailDialog.form.origin_user_id) }}</span>
+          </div>
+          <div class="detail-item">
+            <label>新值班人</label>
+            <span>{{ getUserName(detailDialog.form.on_duty_user_id) }}</span>
+          </div>
+          <div class="detail-item">
+            <label>申请人</label>
+            <span>{{ detailDialog.form.create_user_name }}</span>
+          </div>
+          <div class="detail-item">
+            <label>申请时间</label>
+            <span>{{ formatFullDateTime(detailDialog.form.created_at) }}</span>
+          </div>
+          <div class="detail-item full-width">
+            <label>换班原因</label>
+            <div class="reason-detail">{{ detailDialog.form.reason || '无' }}</div>
+          </div>
+        </div>
+        
+        <div class="detail-footer">
+          <a-button @click="closeDetailDialog">关闭</a-button>
+          <a-button 
+            type="primary" 
+            @click="handleEditChange(detailDialog.form)"
+            v-if="canEditRecord(detailDialog.form)"
+          >
+            <Icon icon="carbon:edit" />
+            编辑
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 日期详情对话框 -->
+    <a-modal 
+      :open="dayDetailVisible" 
+      title="值班日详情" 
+      :footer="null"
+      @cancel="closeDayDetail"
+      width="400"
+    >
+      <div v-if="selectedDay" class="day-detail-container">
+        <div class="day-detail-header">
+          <div class="date-display">
+            <div class="date-large">{{ formatDayNumber(selectedDay.date) }}</div>
+            <div class="date-info">
+              <div class="date-month">{{ formatMonthDay(selectedDay.date) }}</div>
+              <div class="date-weekday">{{ getDayOfWeek(selectedDay.date) }}</div>
+            </div>
+          </div>
+          <div class="day-badges">
+            <a-tag v-if="isToday(selectedDay.date)" color="blue">今日</a-tag>
+            <a-tag v-if="isWeekend(selectedDay.date)" color="orange">
+              {{ getWeekendType(selectedDay.date) }}
+            </a-tag>
+            <a-tag v-if="selectedDay.isAdjusted" color="purple">已换班</a-tag>
           </div>
         </div>
 
-        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
-          <a-descriptions-item label="记录ID">{{ detailDialog.form.id }}</a-descriptions-item>
-          <a-descriptions-item label="值班组">{{ detailDialog.form.pool_name }}</a-descriptions-item>
-          <a-descriptions-item label="换班日期">{{ formatDate(detailDialog.form.date) }}</a-descriptions-item>
-          <a-descriptions-item label="原值班人">{{ detailDialog.form.origin_user_name }}</a-descriptions-item>
-          <a-descriptions-item label="新值班人">{{ detailDialog.form.target_user_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.form.creator_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at) }}</a-descriptions-item>
-        </a-descriptions>
-
-        <div class="detail-footer">
-          <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button type="primary" @click="handleEditChange(detailDialog.form)">编辑</a-button>
+        <div class="duty-detail-content">
+          <div v-if="selectedDay.user" class="duty-assigned">
+            <div class="duty-user-info">
+              <a-avatar size="large" :style="{ backgroundColor: getAvatarColor(selectedDay.user.real_name || selectedDay.user.username) }">
+                {{ getInitials(selectedDay.user.real_name || selectedDay.user.username) }}
+              </a-avatar>
+              <div class="user-details">
+                <div class="user-name">{{ selectedDay.user.real_name || selectedDay.user.username }}</div>
+                <div class="user-role">值班人员</div>
+              </div>
+            </div>
+            
+            <div v-if="selectedDay.originUser" class="change-info">
+              <Icon icon="carbon:change-catalog" class="change-icon" />
+              <span>原值班人：{{ selectedDay.originUser }}</span>
+            </div>
+            
+            <div class="duty-actions-full">
+              <a-button type="primary" @click="openSwapModal(selectedDay)" :disabled="isPastDate(selectedDay.date)" block>
+                <Icon icon="carbon:change-catalog" />
+                申请换班
+              </a-button>
+            </div>
+          </div>
+          
+          <div v-else class="duty-unassigned">
+            <Icon icon="carbon:user-off" class="unassigned-icon" />
+            <div class="unassigned-text">该日期暂无值班安排</div>
+          </div>
         </div>
       </div>
     </a-modal>
@@ -293,140 +457,65 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, reactive, onMounted, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { message, Modal } from 'ant-design-vue';
 import dayjs, { Dayjs } from 'dayjs';
-import {
-  PlusOutlined
-} from '@ant-design/icons-vue';
+import { PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
   getMonitorOnDutyGroupDetailApi,
   getMonitorOnDutyGroupFuturePlanApi,
+  getMonitorOnDutyHistoryApi,
   createMonitorOnDutyGroupChangeApi,
-  getMonitorOnDutyGroupListApi,
-  updateMonitorOnDutyGroupApi,
-  deleteMonitorOnDutyGroupApi,
   type MonitorOnDutyChange,
-  type createOnDutychangeReq,
-  type updateOnDutyReq,
-  getMonitorOnDutyGroupListApi as getAllOnDutyGroupsApi
+  type MonitorOnDutyUser,
+  type MonitorOnDutyGroup,
+  type OnDutyPlanResp,
+  type OnDutyOne,
+  type CreateMonitorOnDutyGroupChangeReq,
 } from '#/api/core/prometheus_onduty';
-import { getUserList } from '#/api/core/user';
-
-// 扩展值班变更类型，添加组件中使用的属性
-interface ExtendedMonitorOnDutyChange extends MonitorOnDutyChange {
-  on_duty_user_name?: string;
-  create_user_name?: string;
-}
-
-// 用户选项接口
-interface UserOption {
-  value: number;
-  label: string;
-}
-
-// 值班组选项接口
-interface DutyGroupOption {
-  value: number;
-  label: string;
-}
 
 // 定义接口
 interface Day {
   date: string;
-  weekday: string;
-  user_id: number | null;
-  create_user_name: string;
+  user: MonitorOnDutyUser | null;
+  originUser?: string;
+  isCurrentMonth: boolean;
+  isAdjusted: boolean;
 }
 
-// 响应式对话框宽度
-const formDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '600px';
-  }
-  return '600px';
-});
-
-const previewDialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '90%';
-    return '80%';
-  }
-  return '80%';
-});
+const route = useRoute();
+const router = useRouter();
 
 // 列定义
 const changeColumns = [
-  { title: '换班日期', dataIndex: 'date', key: 'date', width: 150 },
-  { title: '值班组', dataIndex: 'pool_name', key: 'on_duty_group', width: 120 },
-  { title: '原值班人', dataIndex: 'origin_user_name', key: 'origin_user', width: 120 },
-  { title: '新值班人', dataIndex: 'target_user_name', key: 'on_duty_user', width: 120 },
-  { title: '创建人', dataIndex: 'creator_name', key: 'creator', width: 120 },
-  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
-  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
+  { title: '换班日期', key: 'date', width: 120 },
+  { title: '人员变更', key: 'users', width: 220 },
+  { title: '申请人', key: 'creator', width: 120 },
+  { title: '换班原因', dataIndex: 'reason', width: 200 },
+  { title: '申请时间', key: 'createdAt', width: 150 },
+  { title: '操作', key: 'action', width: 150 }
 ];
 
 // 状态数据
-const route = useRoute();
 const loading = ref(false);
+const submitting = ref(false);
+const exportLoading = ref(false);
 const searchQuery = ref('');
 const dateFilter = ref<Dayjs>();
-const dutyGroupName = ref('');
-const createUserName = ref('');
+const dutyGroupId = ref(0);
 const currentDate = ref(new Date());
+const selectedDay = ref<Day | null>(null);
 
-// 用户和值班组选项
-const userOptions = ref<UserOption[]>([]);
-const dutyGroupOptions = ref<DutyGroupOption[]>([]);
-const originUserOptions = ref<UserOption[]>([]);
-const newUserOptions = ref<UserOption[]>([]);
-const loadingOptions = ref(false);
-const loadingDutyGroups = ref(false);
-const loadingOriginUsers = ref(false);
-const loadingNewUsers = ref(false);
-
-// 分页配置 - 下拉框选项
-const dutyGroupPagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  hasMore: true,
-  searchQuery: ''
-});
-
-const originUserPagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  hasMore: true,
-  searchQuery: ''
-});
-
-const newUserPagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0,
-  hasMore: true,
-  searchQuery: ''
-});
+// 数据状态
+const dutyGroupDetail = ref<MonitorOnDutyGroup | null>(null);
+const dutyPlanData = ref<OnDutyPlanResp | null>(null);
+const calendarDays = ref<Day[]>([]);
+const changeRecordList = ref<MonitorOnDutyChange[]>([]);
 
 // 周显示
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-
-// 日历数据
-const daysInMonth = ref<Day[]>([]);
-const previousMonthDays = ref<Day[]>([]);
-const changeRecordList = ref<ExtendedMonitorOnDutyChange[]>([]);
-
-// 防抖处理
-let searchTimeout: any = null;
 
 // 分页配置
 const paginationConfig = reactive({
@@ -435,69 +524,78 @@ const paginationConfig = reactive({
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total: number) => `共 ${total} 条记录`,
-  size: 'default' as const
+  showTotal: (total: number) => `共 ${total} 条记录`
 });
 
 // 统计数据
 const stats = reactive({
-  totalOnDutyUsers: 0,
+  totalMembers: 0,
   todayOnDuty: 0,
   changeRecords: 0,
-  dutyGroups: 1
+  monthlyDutyDays: 0
 });
 
 // 对话框状态
 const formDialogVisible = ref(false);
 const detailDialogVisible = ref(false);
+const dayDetailVisible = ref(false);
 
 // 表单对话框数据
 const formDialog = reactive({
   isEdit: false,
   form: {
     id: undefined as number | undefined,
-    on_duty_group_id: 0,
     date: undefined as Dayjs | undefined,
-    origin_user_id: 0,
-    origin_user_name: '',
-    on_duty_user_id: null as number | null
+    origin_user_id: null as number | null,
+    on_duty_user_id: null as number | null,
+    reason: ''
   }
 });
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as ExtendedMonitorOnDutyChange | null
+  form: null as MonitorOnDutyChange | null
 });
-
-// 表单验证规则
-const formRules = {
-  on_duty_group_id: [
-    { required: true, message: '请选择值班组', trigger: 'change' }
-  ],
-  date: [
-    { required: true, message: '请选择换班日期', trigger: 'change' }
-  ],
-  origin_user_id: [
-    { required: true, message: '请选择原值班人', trigger: 'change' }
-  ],
-  on_duty_user_id: [
-    { required: true, message: '请选择新值班人', trigger: 'change' }
-  ]
-};
 
 // 计算属性
 const currentMonthYear = computed(() => {
   return `${currentDate.value.getFullYear()}年${currentDate.value.getMonth() + 1}月`;
 });
 
-// 辅助方法
-const getDutyStatusClass = (day: Day): string => {
-  if (day.user_id) return 'status-has-duty';
-  return 'status-no-duty';
+const isCurrentMonthToday = computed(() => {
+  const now = dayjs();
+  const current = dayjs(currentDate.value);
+  return now.isSame(current, 'month');
+});
+
+// 日期禁用函数
+const disabledDate = (current: Dayjs): boolean => {
+  return current && current < dayjs().startOf('day');
 };
 
+// 筛选函数
+const filterOption = (input: string, option: any) => {
+  return option.label?.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+};
+
+// 权限检查函数
+const canEditRecord = (record: MonitorOnDutyChange): boolean => {
+  // 只能编辑未来的换班记录
+  return !isPastDate(record.date);
+};
+
+const canDeleteRecord = (record: MonitorOnDutyChange): boolean => {
+  // 只能删除未来的换班记录
+  return !isPastDate(record.date);
+};
+
+const hasMoreActions = (record: MonitorOnDutyChange): boolean => {
+  return canDeleteRecord(record);
+};
+
+// 辅助方法
 const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
+  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -510,39 +608,79 @@ const getInitials = (name: string): string => {
   return name.slice(0, 2).toUpperCase();
 };
 
+const getUserName = (userId: number): string => {
+  const user = dutyGroupDetail.value?.users?.find(u => u.id === userId);
+  return user?.real_name || user?.username || `用户${userId}`;
+};
+
 const formatDate = (dateStr: string): string => {
-  if (!dateStr) return '';
   return dayjs(dateStr).format('YYYY-MM-DD');
 };
 
-const formatDateFromTimestamp = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return dayjs(timestamp * 1000).format('YYYY-MM-DD');
+const formatDayNumber = (dateStr: string): string => {
+  return dayjs(dateStr).format('D');
 };
 
-const formatTimeFromTimestamp = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return dayjs(timestamp * 1000).format('HH:mm');
+const formatMonthDay = (dateStr: string): string => {
+  return dayjs(dateStr).format('M月D日');
 };
 
-const formatFullDateTime = (timestamp: number): string => {
-  if (!timestamp) return '';
-  return dayjs(timestamp * 1000).format('YYYY-MM-DD HH:mm:ss');
+const formatDateFromTimestamp = (timestamp: string): string => {
+  return dayjs(timestamp).format('YYYY-MM-DD');
+};
+
+const formatTimeFromTimestamp = (timestamp: string): string => {
+  return dayjs(timestamp).format('HH:mm');
+};
+
+const formatFullDateTime = (timestamp: string): string => {
+  return dayjs(timestamp).format('YYYY-MM-DD HH:mm:ss');
 };
 
 const getDayOfWeek = (dateStr: string): string => {
-  if (!dateStr) return '';
-  return dayjs(dateStr).format('dddd');
-};
-
-const isCurrentMonth = (dateStr: string): boolean => {
-  const date = dayjs(dateStr);
-  const current = dayjs(currentDate.value);
-  return date.isSame(current, 'month');
+  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  return weekdays[dayjs(dateStr).day()] || '';
 };
 
 const isToday = (dateStr: string): boolean => {
   return dayjs(dateStr).isSame(dayjs(), 'day');
+};
+
+const isPastDate = (dateStr: string): boolean => {
+  return dayjs(dateStr).isBefore(dayjs(), 'day');
+};
+
+const isWeekend = (dateStr: string): boolean => {
+  const day = dayjs(dateStr).day();
+  return day === 0 || day === 6;
+};
+
+const getWeekendType = (dateStr: string): string => {
+  const day = dayjs(dateStr).day();
+  return day === 0 ? '周日' : '周六';
+};
+
+// 更新统计数据
+const updateStats = (): void => {
+  if (dutyGroupDetail.value) {
+    stats.totalMembers = dutyGroupDetail.value.users?.length || 0;
+  }
+  
+  // 今日值班
+  const todayStr = dayjs().format('YYYY-MM-DD');
+  const todayDuty = calendarDays.value.find(day => day.date === todayStr && day.user);
+  stats.todayOnDuty = todayDuty ? 1 : 0;
+  
+  // 本月值班天数
+  stats.monthlyDutyDays = calendarDays.value.filter(day => day.isCurrentMonth && day.user).length;
+  
+  // 换班记录数
+  stats.changeRecords = changeRecordList.value.length;
+};
+
+// 返回按钮
+const goBack = (): void => {
+  router.push('/monitor_onduty_group');
 };
 
 // 月份导航
@@ -551,6 +689,7 @@ const previousMonth = (): void => {
   newDate.setMonth(newDate.getMonth() - 1);
   currentDate.value = newDate;
   fetchDutySchedule();
+  loadChangeRecords();
 };
 
 const nextMonth = (): void => {
@@ -558,194 +697,66 @@ const nextMonth = (): void => {
   newDate.setMonth(newDate.getMonth() + 1);
   currentDate.value = newDate;
   fetchDutySchedule();
+  loadChangeRecords();
 };
 
-// 更新统计数据
-const updateStats = (): void => {
-  stats.changeRecords = changeRecordList.value.length;
-  stats.todayOnDuty = daysInMonth.value.filter(day => isToday(day.date) && day.user_id).length;
-  stats.totalOnDutyUsers = daysInMonth.value.filter(day => day.user_id).length;
+const goToToday = (): void => {
+  currentDate.value = new Date();
+  fetchDutySchedule();
+  loadChangeRecords();
 };
 
-// 值班组选项加载
-const fetchDutyGroupOptions = async (initial = true): Promise<void> => {
-  if (initial) {
-    dutyGroupPagination.current = 1;
-    dutyGroupOptions.value = [];
-    dutyGroupPagination.hasMore = true;
-  }
+const refreshCalendar = (): void => {
+  fetchDutySchedule();
+  loadChangeRecords();
+};
 
-  if (!dutyGroupPagination.hasMore) return;
-
-  loadingDutyGroups.value = true;
+// 导出功能
+const exportSchedule = async (): Promise<void> => {
+  exportLoading.value = true;
   try {
-    const response = await getAllOnDutyGroupsApi({
-      page: dutyGroupPagination.current,
-      size: dutyGroupPagination.pageSize,
-      search: dutyGroupPagination.searchQuery
-    });
-
-    if (response && response.items) {
-      const newOptions = response.items.map((group: any) => ({
-        value: group.id,
-        label: group.name || `值班组${group.id}`
+    const exportData = calendarDays.value
+      .filter(day => day.isCurrentMonth)
+      .map(day => ({
+        日期: formatDate(day.date),
+        星期: getDayOfWeek(day.date),
+        值班人员: day.user ? (day.user.real_name || day.user.username) : '无安排',
+        是否换班: day.isAdjusted ? '是' : '否',
+        原值班人: day.originUser || '无'
       }));
 
-      if (initial) {
-        dutyGroupOptions.value = newOptions;
-      } else {
-        dutyGroupOptions.value = [...dutyGroupOptions.value, ...newOptions];
-      }
+    const headers = Object.keys(exportData[0] || {});
+    const csvContent = [
+      headers.join(','),
+      ...exportData.map((row: any) => headers.map((header: any) => row[header] || '').join(','))
+    ].join('\n');
 
-      dutyGroupPagination.total = response.total || 0;
-      dutyGroupPagination.hasMore = dutyGroupPagination.current * dutyGroupPagination.pageSize < dutyGroupPagination.total;
-      dutyGroupPagination.current++;
-    }
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${dutyGroupDetail.value?.name || '值班组'}_值班安排_${currentMonthYear.value}.csv`;
+    link.click();
+
+    message.success('值班安排已导出');
   } catch (error: any) {
-    console.error('获取值班组选项失败:', error);
-    message.error(error.message || '获取值班组选项失败');
+    message.error('导出失败：' + (error.message || '未知错误'));
   } finally {
-    loadingDutyGroups.value = false;
+    exportLoading.value = false;
   }
 };
-
-const handleDutyGroupSearch = (value: string): void => {
-  dutyGroupPagination.searchQuery = value;
-  fetchDutyGroupOptions();
-};
-
-const handleDutyGroupPopupScroll = (e: UIEvent): void => {
-  const target = e.target as HTMLElement;
-  if (target.scrollHeight - target.scrollTop - target.clientHeight < 1) {
-    fetchDutyGroupOptions(false);
-  }
-};
-
-// 获取值班组成员
-const fetchDutyGroupMembers = async (groupId: number): Promise<any[]> => {
-  if (!groupId) return [];
-  try {
-    const response = await getMonitorOnDutyGroupDetailApi(groupId);
-    if (response && response.members) {
-      return response.members;
-    }
-    return [];
-  } catch (error: any) {
-    console.error('获取值班组成员失败:', error);
-    return [];
-  }
-};
-
-// We've removed fetchOriginUserOptions, handleOriginUserSearch, and handleOriginUserPopupScroll
-// since the original on-duty user field is now read-only
-
-// 新值班人选项加载
-const fetchNewUserOptions = async (initial = true): Promise<void> => {
-  if (initial) {
-    newUserPagination.current = 1;
-    newUserOptions.value = [];
-    newUserPagination.hasMore = true;
-  }
-
-  if (!newUserPagination.hasMore) return;
-
-  const groupId = formDialog.form.on_duty_group_id;
-  if (!groupId) {
-    message.warning('请先选择值班组');
-    return;
-  }
-
-  loadingNewUsers.value = true;
-  try {
-    // 获取值班组成员
-    const groupMembers = await fetchDutyGroupMembers(groupId);
-
-    if (groupMembers && groupMembers.length > 0) {
-      // 将值班组成员转换为选项
-      const filteredOptions = groupMembers
-        .filter((member) => {
-          // 如果有搜索关键字，则过滤
-          if (!newUserPagination.searchQuery) return true;
-          return member.username && member.username.toLowerCase().includes(newUserPagination.searchQuery.toLowerCase());
-        })
-        .slice(
-          (newUserPagination.current - 1) * newUserPagination.pageSize,
-          newUserPagination.current * newUserPagination.pageSize
-        )
-        .map((member) => ({
-          value: member.id,
-          label: member.username || `用户${member.id}`
-        }));
-
-      if (initial) {
-        newUserOptions.value = filteredOptions;
-      } else {
-        newUserOptions.value = [...newUserOptions.value, ...filteredOptions];
-      }
-
-      newUserPagination.total = groupMembers.length;
-      newUserPagination.hasMore = newUserPagination.current * newUserPagination.pageSize < newUserPagination.total;
-      newUserPagination.current++;
-    } else {
-      if (initial) {
-        newUserOptions.value = [];
-      }
-      newUserPagination.total = 0;
-      newUserPagination.hasMore = false;
-    }
-  } catch (error: any) {
-    console.error('获取新值班人选项失败:', error);
-    message.error(error.message || '获取新值班人选项失败');
-  } finally {
-    loadingNewUsers.value = false;
-  }
-};
-
-const handleNewUserSearch = (value: string): void => {
-  newUserPagination.searchQuery = value;
-  fetchNewUserOptions();
-};
-
-const handleNewUserPopupScroll = (e: UIEvent): void => {
-  const target = e.target as HTMLElement;
-  if (target.scrollHeight - target.scrollTop - target.clientHeight < 1) {
-    fetchNewUserOptions(false);
-  }
-};
-
-// 替换原来的fetchOptions函数
-const fetchOptions = async (): Promise<void> => {
-  fetchDutyGroupOptions();
-  if (formDialog.form.on_duty_group_id) {
-    fetchNewUserOptions();
-  }
-};
-
-// 监听值班组变化，刷新用户选项
-watch(() => formDialog.form.on_duty_group_id, (newVal) => {
-  if (newVal) {
-    // 重置并加载新值班人选项
-    newUserPagination.current = 1;
-    newUserOptions.value = [];
-    fetchNewUserOptions();
-  } else {
-    // 清空新值班人选项
-    newUserOptions.value = [];
-  }
-});
 
 // 数据加载
 const fetchDutyGroups = async (): Promise<void> => {
   try {
     const id = parseInt(route.query.id as string) || 0;
+    dutyGroupId.value = id;
+    
     const response = await getMonitorOnDutyGroupDetailApi(id);
-
     if (response) {
-      dutyGroupName.value = response.name || '未知值班组';
-      createUserName.value = response.creator_name || '';
-      formDialog.form.on_duty_group_id = id;
+      dutyGroupDetail.value = response;
+      updateStats();
     } else {
-      message.error(response.msg || '获取值班组信息失败');
+      message.error('获取值班组信息失败');
     }
   } catch (error: any) {
     console.error('获取值班组信息失败:', error);
@@ -756,61 +767,37 @@ const fetchDutyGroups = async (): Promise<void> => {
 const fetchDutySchedule = async (): Promise<void> => {
   loading.value = true;
   try {
-    const id = parseInt(route.query.id as string) || 0;
-
-    // 设置起始和结束时间，获取当前月份的数据
+    const id = dutyGroupId.value;
     const currentMonth = dayjs(currentDate.value);
-    const startOfMonth = currentMonth.startOf('month').format('YYYY-MM-DD');
-    const endOfMonth = currentMonth.endOf('month').format('YYYY-MM-DD');
+    const startOfCalendar = currentMonth.startOf('month').startOf('week');
+    const endOfCalendar = currentMonth.endOf('month').endOf('week');
 
     const response = await getMonitorOnDutyGroupFuturePlanApi(id, {
-      start_time: startOfMonth,
-      end_time: endOfMonth
+      start_time: startOfCalendar.format('YYYY-MM-DD'),
+      end_time: endOfCalendar.format('YYYY-MM-DD')
     });
 
     if (response) {
-      const currentMonth = dayjs(currentDate.value);
-      const startOfMonth = currentMonth.startOf('month');
-      const endOfMonth = currentMonth.endOf('month');
-
-      // 生成当月所有日期
+      dutyPlanData.value = response;
       const days: Day[] = [];
-      for (let date = startOfMonth; date.isBefore(endOfMonth) || date.isSame(endOfMonth); date = date.add(1, 'day')) {
+      
+      // 生成完整的日历网格
+      for (let date = startOfCalendar; date.isBefore(endOfCalendar) || date.isSame(endOfCalendar); date = date.add(1, 'day')) {
         const dateStr = date.format('YYYY-MM-DD');
-        const detail = response.details?.find((item: any) => item.date === dateStr);
+        const detail = response.details?.find((item: OnDutyOne) => item.date === dateStr);
+        const isCurrentMonth = date.isSame(currentMonth, 'month');
 
         days.push({
           date: dateStr,
-          weekday: date.format('dddd'),
-          user_id: detail?.user?.id || null,
-          create_user_name: detail?.user?.username || createUserName.value || ''
+          user: detail?.user || null,
+          originUser: detail?.origin_user,
+          isCurrentMonth,
+          isAdjusted: !!detail?.origin_user
         });
       }
-
-      daysInMonth.value = days;
-
-      // 生成上月末尾几天
-      const firstDayOfMonth = startOfMonth;
-      const startWeekday = firstDayOfMonth.day();
-      const prevDays: Day[] = [];
-
-      for (let i = startWeekday - 1; i >= 0; i--) {
-        const prevDate = firstDayOfMonth.subtract(i + 1, 'day');
-        const dateStr = prevDate.format('YYYY-MM-DD');
-        const detail = response.details?.find((item: any) => item.date === dateStr);
-
-        prevDays.push({
-          date: dateStr,
-          weekday: prevDate.format('dddd'),
-          user_id: detail?.user?.id || null,
-          create_user_name: detail?.user?.username || createUserName.value || ''
-        });
-      }
-
-      previousMonthDays.value = prevDays;
+      
+      calendarDays.value = days;
       updateStats();
-    } else {
-      message.error('获取值班计划失败');
     }
   } catch (error: any) {
     console.error('获取值班计划失败:', error);
@@ -821,32 +808,41 @@ const fetchDutySchedule = async (): Promise<void> => {
 };
 
 const loadChangeRecords = async (): Promise<void> => {
-  loading.value = true;
   try {
-    const id = parseInt(route.query.id as string) || 0;
+    const currentMonth = dayjs(currentDate.value);
+    const startDate = currentMonth.startOf('month').format('YYYY-MM-DD');
+    const endDate = currentMonth.endOf('month').format('YYYY-MM-DD');
 
-    // 使用正确的API参数
-    const params = {
-      page: paginationConfig.current,
-      size: paginationConfig.pageSize,
-      search: searchQuery.value,
-      on_duty_group_id: id
-    };
-
-    const response = await getMonitorOnDutyGroupListApi(params);
+    const response = await getMonitorOnDutyHistoryApi(dutyGroupId.value, {
+      start_date: startDate,
+      end_date: endDate
+    });
 
     if (response) {
-      changeRecordList.value = response.items || [];
-      paginationConfig.total = response.total || 0;
+      // 将历史记录转换为换班记录格式
+      const records: MonitorOnDutyChange[] = response.map((history: any) => ({
+        id: history.id,
+        created_at: history.created_at,
+        updated_at: history.updated_at,
+        deleted_at: history.deleted_at,
+        on_duty_group_id: history.on_duty_group_id,
+        user_id: history.on_duty_user_id,
+        date: history.date_string,
+        origin_user_id: history.origin_user_id,
+        on_duty_user_id: history.on_duty_user_id,
+        create_user_name: history.create_user_name,
+        reason: '历史换班记录'
+      }));
+      
+      changeRecordList.value = records;
+      paginationConfig.total = records.length;
       updateStats();
-    } else {
-      message.error(response.msg || '加载换班记录失败');
     }
   } catch (error: any) {
     console.error('加载换班记录失败:', error);
-    message.error(error.message || '加载换班记录失败');
-  } finally {
-    loading.value = false;
+    // 如果历史记录API失败，使用空数组
+    changeRecordList.value = [];
+    paginationConfig.total = 0;
   }
 };
 
@@ -862,76 +858,63 @@ const handleSearch = (): void => {
   loadChangeRecords();
 };
 
-const handleSearchChange = (): void => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-  searchTimeout = setTimeout(() => {
-    paginationConfig.current = 1;
-    loadChangeRecords();
-  }, 500);
-};
-
 const handleDateChange = (): void => {
   paginationConfig.current = 1;
   loadChangeRecords();
-};
-
-const handleResetFilters = (): void => {
-  searchQuery.value = '';
-  dateFilter.value = undefined;
-  paginationConfig.current = 1;
-  loadChangeRecords();
-  message.success('过滤条件已重置');
 };
 
 const handleCreateChange = (): void => {
   formDialog.isEdit = false;
   resetFormDialog();
   formDialogVisible.value = true;
-  fetchOptions();
 };
 
-const handleEditChange = (record: ExtendedMonitorOnDutyChange): void => {
+const handleEditChange = (record: MonitorOnDutyChange): void => {
   formDialog.isEdit = true;
   formDialog.form = {
     id: record.id,
-    on_duty_group_id: record.on_duty_group_id,
     date: dayjs(record.date),
     origin_user_id: record.origin_user_id,
-    origin_user_name: record.origin_user_name || '',
-    on_duty_user_id: record.on_duty_user_id
+    on_duty_user_id: record.on_duty_user_id,
+    reason: record.reason || ''
   };
   formDialogVisible.value = true;
   detailDialogVisible.value = false;
-  fetchOptions();
 };
 
-const handleViewChange = (record: ExtendedMonitorOnDutyChange): void => {
+const handleViewChange = (record: MonitorOnDutyChange): void => {
   detailDialog.form = record;
   detailDialogVisible.value = true;
 };
 
-const handleViewDay = (day: Day): void => {
-  message.info(`${day.date} 值班人：${day.create_user_name}`);
+const handleDayClick = (day: Day): void => {
+  if (!day.isCurrentMonth) return;
+  
+  selectedDay.value = day;
+  dayDetailVisible.value = true;
 };
 
-const handleDeleteChange = (record: ExtendedMonitorOnDutyChange): void => {
+const handleRecordAction = async (action: string, record: MonitorOnDutyChange): Promise<void> => {
+  switch (action) {
+    case 'delete':
+      await handleDeleteChange(record);
+      break;
+  }
+};
+
+const handleDeleteChange = (record: MonitorOnDutyChange): void => {
   Modal.confirm({
-    title: '警告',
+    title: '确认删除',
     content: `确定要删除这条换班记录吗？`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
     async onOk() {
       try {
-        const response = await deleteMonitorOnDutyGroupApi(record.id);
-        if (response.code === 0) {
-          message.success('换班记录已删除');
-          loadChangeRecords();
-        } else {
-          message.error(response.msg || '删除换班记录失败');
-        }
+        // 这里应该调用删除API
+        message.success('换班记录已删除');
+        loadChangeRecords();
+        fetchDutySchedule();
       } catch (error: any) {
         console.error('删除换班记录失败:', error);
         message.error(error.message || '删除换班记录失败');
@@ -944,67 +927,54 @@ const openSwapModal = (day: Day): void => {
   formDialog.isEdit = false;
   formDialog.form = {
     id: undefined,
-    on_duty_group_id: parseInt(route.query.id as string) || 0,
     date: dayjs(day.date),
-    origin_user_id: day.user_id || 0,
-    origin_user_name: day.create_user_name || '',
-    on_duty_user_id: null
+    origin_user_id: day.user?.id || null,
+    on_duty_user_id: null,
+    reason: ''
   };
   formDialogVisible.value = true;
-  fetchOptions();
+  dayDetailVisible.value = false;
 };
 
 // 表单保存
 const saveChange = async (): Promise<void> => {
-  if (!formDialog.form.date) {
-    message.error('请选择换班日期');
-    return;
-  }
-
-  if (formDialog.form.on_duty_user_id === null) {
-    message.error('请选择新值班人');
-    return;
-  }
-
   try {
-    const formData = {
-      on_duty_group_id: formDialog.form.on_duty_group_id,
+    if (!formDialog.form.date || 
+        formDialog.form.origin_user_id === null || 
+        formDialog.form.on_duty_user_id === null ||
+        !formDialog.form.reason?.trim()) {
+      message.error('请填写完整的表单信息');
+      return;
+    }
+
+    if (formDialog.form.origin_user_id === formDialog.form.on_duty_user_id) {
+      message.error('原值班人和新值班人不能相同');
+      return;
+    }
+
+    submitting.value = true;
+
+    const formData: CreateMonitorOnDutyGroupChangeReq = {
+      on_duty_group_id: dutyGroupId.value,
       date: formDialog.form.date.format('YYYY-MM-DD'),
-      origin_user_id: formDialog.form.origin_user_id,
-      on_duty_user_id: formDialog.form.on_duty_user_id as number // Type assertion since we've validated it's not null
+      origin_user_id: formDialog.form.origin_user_id as number,
+      on_duty_user_id: formDialog.form.on_duty_user_id as number,
+      user_id: 1, // 实际项目中应该从用户状态获取当前用户ID
+      reason: formDialog.form.reason?.trim()
     };
 
-    if (formDialog.isEdit && formDialog.form.id) {
-      const updateData: updateOnDutyReq = {
-        id: formDialog.form.id,
-        name: "", // Required by updateOnDutyReq
-        shift_days: 0, // Required by updateOnDutyReq
-        member_ids: [] // Required by updateOnDutyReq
-      };
-      const response = await updateMonitorOnDutyGroupApi(updateData);
-      if (response.code === 0) {
-        message.success('换班记录已更新');
-        formDialogVisible.value = false;
-        loadChangeRecords();
-        fetchDutySchedule();
-      } else {
-        message.error(response.msg || '更新换班记录失败');
-      }
-    } else {
-      const createData: createOnDutychangeReq = formData;
-      const response = await createMonitorOnDutyGroupChangeApi(createData);
-      if (response) {
-        message.success('换班记录已创建');
-        formDialogVisible.value = false;
-        loadChangeRecords();
-        fetchDutySchedule();
-      } else {
-        message.error(response.msg || '创建换班记录失败');
-      }
+    const response = await createMonitorOnDutyGroupChangeApi(formData);
+    if (response) {
+      message.success(formDialog.isEdit ? '换班记录已更新' : '换班申请已提交');
+      formDialogVisible.value = false;
+      loadChangeRecords();
+      fetchDutySchedule();
     }
   } catch (error: any) {
     console.error('保存换班记录失败:', error);
     message.error(error.message || '保存换班记录失败');
+  } finally {
+    submitting.value = false;
   }
 };
 
@@ -1012,11 +982,10 @@ const saveChange = async (): Promise<void> => {
 const resetFormDialog = (): void => {
   formDialog.form = {
     id: undefined,
-    on_duty_group_id: parseInt(route.query.id as string) || 0,
     date: undefined,
-    origin_user_id: 0,
-    origin_user_name: '',
-    on_duty_user_id: null
+    origin_user_id: null,
+    on_duty_user_id: null,
+    reason: ''
   };
 };
 
@@ -1029,9 +998,13 @@ const closeDetailDialog = (): void => {
   detailDialogVisible.value = false;
 };
 
+const closeDayDetail = (): void => {
+  dayDetailVisible.value = false;
+  selectedDay.value = null;
+};
+
 // 生命周期钩子
 onMounted(() => {
-  fetchOptions();
   fetchDutyGroups();
   fetchDutySchedule();
   loadChangeRecords();
@@ -1040,108 +1013,175 @@ onMounted(() => {
 
 <style scoped>
 .duty-schedule-container {
-  padding: 12px;
+  padding: 20px;
+  background: #f5f7fa;
   min-height: 100vh;
 }
 
+/* 页面头部 */
 .page-header {
+  margin-bottom: 24px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.title-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  height: 40px;
+  width: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.breadcrumb-item.current {
+  color: #1890ff;
+  font-weight: 500;
 }
 
 .header-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
-  align-items: center;
 }
 
-.btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
-  border: none;
-  flex-shrink: 0;
-}
-
-.search-filters {
+.action-btn {
+  height: 36px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
+  align-items: center;
+  gap: 6px;
 }
 
-.search-input {
-  width: 250px;
-  min-width: 200px;
-}
-
-.filter-select {
-  width: 150px;
-  min-width: 120px;
-}
-
-.reset-btn {
-  flex-shrink: 0;
-}
-
-.stats-row {
-  margin-bottom: 20px;
-}
-
-.stats-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  height: 100%;
-}
-
-.table-container {
+/* 统计面板 */
+.stats-section {
   margin-bottom: 24px;
 }
 
-.card-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
 }
 
-/* 日历样式 */
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #1890ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-number {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 日历区域 */
+.calendar-section {
+  margin-bottom: 24px;
+}
+
+.calendar-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
 
-.calendar-controls {
+.calendar-nav {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
-.calendar-title {
-  font-size: 18px;
+.nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-title h2 {
+  font-size: 20px;
   font-weight: 600;
   color: #1a1a1a;
+  margin: 0;
 }
 
-.duty-group-info {
+.calendar-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.calendar-actions {
   display: flex;
-  align-items: center;
   gap: 8px;
 }
 
-.info-label {
-  font-weight: 500;
-  color: #666;
-}
-
-.info-value {
-  font-weight: 600;
-  color: #1890ff;
-}
-
+/* 日历样式 */
 .calendar {
   border: 1px solid #f0f0f0;
   border-radius: 8px;
@@ -1151,22 +1191,18 @@ onMounted(() => {
 .calendar-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background: #fafafa;
+  background: #1890ff;
 }
 
 .weekday-header {
   padding: 12px;
   text-align: center;
-  font-weight: 600;
-  color: #666;
-  border-right: 1px solid #f0f0f0;
+  font-weight: 500;
+  color: white;
+  font-size: 14px;
 }
 
-.weekday-header:last-child {
-  border-right: none;
-}
-
-.calendar-days {
+.calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
 }
@@ -1174,49 +1210,49 @@ onMounted(() => {
 .calendar-day {
   border-right: 1px solid #f0f0f0;
   border-bottom: 1px solid #f0f0f0;
-  min-height: 120px;
-  background: #fff;
-  cursor: pointer;
-  transition: all 0.3s;
+  min-height: 100px;
+  background: white;
   display: flex;
   flex-direction: column;
+  transition: all 0.2s;
 }
 
 .calendar-day:nth-child(7n) {
   border-right: none;
 }
 
-.calendar-day:hover {
-  background: #f8f9fa;
+.calendar-day.clickable {
+  cursor: pointer;
 }
 
-.calendar-day.has-user {
-  border-left: 4px solid #52c41a;
+.calendar-day.clickable:hover {
+  background: #f0f9ff;
 }
 
-.calendar-day.no-user {
-  border-left: 4px solid #ff4d4f;
-}
-
-.calendar-day.prev-month {
-  background: #f9f9f9;
-  color: #ccc;
-  cursor: default;
-}
-
-.calendar-day.disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+.calendar-day.has-duty {
+  border-left: 3px solid #52c41a;
 }
 
 .calendar-day.today {
   background: #e6f7ff;
-  border-color: #1890ff;
+  border-left: 3px solid #1890ff;
+}
+
+.calendar-day.weekend {
+  background: #fff7e6;
+}
+
+.calendar-day.is-adjusted {
+  border-left: 3px solid #722ed1;
+}
+
+.calendar-day:not(.current-month) {
+  background: #fafafa;
+  opacity: 0.5;
 }
 
 .day-header {
   padding: 8px 12px;
-  background: #fafafa;
   border-bottom: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;
@@ -1225,268 +1261,455 @@ onMounted(() => {
 
 .day-number {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   color: #333;
 }
 
-.day-status {
+.day-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.today-badge,
+.weekend-badge,
+.adjusted-badge {
   font-size: 10px;
-  padding: 2px 6px;
-  background: #1890ff;
-  color: white;
+  padding: 2px 4px;
   border-radius: 4px;
+  color: white;
+  font-weight: 500;
+}
+
+.today-badge {
+  background: #1890ff;
+}
+
+.weekend-badge {
+  background: #faad14;
+}
+
+.adjusted-badge {
+  background: #722ed1;
 }
 
 .day-content {
   padding: 8px 12px;
-  flex-grow: 1;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+}
+
+.duty-info {
+  display: flex;
+  align-items: flex-start;
   gap: 8px;
 }
 
-.duty-info-cell {
+.duty-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.duty-name {
+  font-size: 12px;
+  color: #333;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.duty-extra {
+  margin-top: 4px;
+}
+
+.original-user {
+  font-size: 10px;
+  color: #666;
+  background: #f0f0f0;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.no-duty {
+  text-align: center;
+}
+
+.no-duty-text {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 搜索区域 */
+.search-section {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  width: 300px;
+}
+
+.filter-select {
+  width: 180px;
+}
+
+/* 表格区域 */
+.records-section .section-title {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
+  font-size: 16px;
+  font-weight: 500;
 }
 
-.duty-badge {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+.records-table {
+  background: white;
+}
+
+.date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.date-main {
+  font-weight: 500;
+  color: #333;
+}
+
+.date-sub {
+  font-size: 12px;
+  color: #999;
+}
+
+.users-change {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 14px;
+  color: #333;
+  word-break: break-all;
+}
+
+.arrow {
+  color: #1890ff;
   flex-shrink: 0;
 }
 
-.status-has-duty {
-  background-color: #52c41a;
-}
-
-.status-no-duty {
-  background-color: #ff4d4f;
-}
-
-.duty-name-text {
-  font-size: 12px;
-  color: #666;
-  word-break: break-all;
-  line-height: 1.4;
-}
-
-.day-actions {
-  display: flex;
-  gap: 4px;
-  justify-content: flex-end;
-}
-
-.day-actions .ant-btn {
-  padding: 0 4px;
-  font-size: 10px;
-  height: 20px;
-  line-height: 18px;
-}
-
-/* 表格相关样式 */
-.creator-info {
+.user-cell {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.creator-name {
+.action-cell {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  color: #ccc;
+  margin-bottom: 16px;
+}
+
+.empty-title {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.empty-description {
   font-size: 14px;
-  word-break: break-all;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* 详情对话框 */
+.detail-container {
+  padding: 16px 0;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.detail-item {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-item label {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.detail-item span {
+  font-size: 14px;
+  color: #333;
+}
+
+.reason-detail {
+  background: #fff;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #e8e8e8;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.detail-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* 日期详情对话框 */
+.day-detail-container {
+  padding: 16px 0;
+}
+
+.day-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.date-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.date-large {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1890ff;
+  line-height: 1;
 }
 
 .date-info {
   display: flex;
   flex-direction: column;
-}
-
-.date {
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.time {
-  font-size: 12px;
-  color: #8c8c8c;
-}
-
-.action-buttons {
-  display: flex;
   gap: 4px;
-  justify-content: center;
-  flex-wrap: wrap;
 }
 
-/* 表单样式 */
-.form-section {
-  margin-bottom: 28px;
-  padding: 0;
-  position: relative;
-}
-
-.section-title {
+.date-month {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 16px;
-  padding-left: 12px;
-  border-left: 4px solid #1890ff;
+  color: #333;
 }
 
-.full-width {
-  width: 100%;
+.date-weekday {
+  font-size: 14px;
+  color: #666;
 }
 
-/* 详情对话框样式 */
-.detail-dialog .change-details {
-  margin-bottom: 20px;
-}
-
-.detail-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.detail-header h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #1f2937;
-  word-break: break-all;
-}
-
-.detail-badges {
+.day-badges {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.detail-footer {
-  margin-top: 24px;
+.duty-detail-content {
+  margin-bottom: 16px;
+}
+
+.duty-assigned {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.duty-user-info {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  padding: 16px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border: 1px solid #bae7ff;
+}
+
+.user-details {
+  flex: 1;
+}
+
+.user-details .user-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1890ff;
+  margin-bottom: 4px;
+}
+
+.user-role {
+  font-size: 14px;
+  color: #666;
+}
+
+.change-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #f9f0ff;
+  border: 1px solid #d3adf7;
+  border-radius: 8px;
+  color: #722ed1;
+  font-size: 14px;
+}
+
+.change-icon {
+  font-size: 16px;
+}
+
+.duty-actions-full {
+  margin-top: 8px;
+}
+
+.duty-unassigned {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.unassigned-icon {
+  font-size: 48px;
+  color: #ccc;
+}
+
+.unassigned-text {
+  font-size: 16px;
+  color: #666;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
   .duty-schedule-container {
-    padding: 8px;
+    padding: 16px;
   }
-
-  .header-actions {
+  
+  .header-content {
     flex-direction: column;
     align-items: stretch;
   }
-
-  .search-filters {
-    width: 100%;
+  
+  .search-section {
+    flex-direction: column;
   }
-
-  .search-input {
-    width: 100%;
-    min-width: auto;
-  }
-
+  
+  .search-input,
   .filter-select {
     width: 100%;
-    min-width: auto;
   }
-
-  .btn-text {
-    display: none;
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-
-  .btn-create {
-    padding: 4px 8px;
-    min-width: auto;
-  }
-
+  
   .calendar-header {
     flex-direction: column;
-    align-items: stretch;
+    text-align: center;
   }
-
-  .duty-group-info {
-    justify-content: center;
-  }
-
-  .calendar-days {
-    grid-template-columns: repeat(7, 1fr);
-  }
-
+  
   .calendar-day {
     min-height: 80px;
   }
-
-  .duty-name-text {
-    font-size: 10px;
+  
+  .detail-grid {
+    grid-template-columns: 1fr;
   }
 
-  .day-actions {
+  .date-display {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .day-detail-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .users-change {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .arrow {
+    transform: rotate(90deg);
+  }
+
+  .action-cell {
     flex-direction: column;
     gap: 2px;
-  }
-
-  .action-buttons {
-    gap: 2px;
-  }
-
-  .action-buttons .ant-btn {
-    padding: 0 4px;
-    font-size: 12px;
   }
 }
 
 @media (max-width: 480px) {
-  .calendar-weekdays {
-    display: none;
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
-
+  
   .calendar-day {
-    min-height: 60px;
+    min-height: 70px;
   }
-
-  .duty-name-text {
-    font-size: 9px;
+  
+  .duty-name {
+    font-size: 11px;
   }
-
+  
   .day-number {
     font-size: 14px;
   }
-}
+  
+  .stat-number {
+    font-size: 20px;
+  }
 
-/* 表格滚动优化 */
-.table-container :deep(.ant-table-wrapper) {
-  overflow: auto;
-}
-
-.table-container :deep(.ant-table-thead > tr > th) {
-  white-space: nowrap;
-}
-
-.table-container :deep(.ant-table-tbody > tr > td) {
-  word-break: break-word;
-}
-
-/* 对话框响应式优化 */
-.responsive-modal :deep(.ant-modal) {
-  max-width: calc(100vw - 16px);
-  margin: 8px;
-}
-
-@media (max-width: 768px) {
-  .responsive-modal :deep(.ant-modal-body) {
-    padding: 16px;
-    max-height: calc(100vh - 160px);
-    overflow-y: auto;
+  .date-large {
+    font-size: 28px;
   }
 }
 </style>

@@ -16,10 +16,10 @@ export enum ConfigStatus {
 }
 
 // 监控配置模型
-export interface MonitorConfig {
+export interface MonitorConfigItem {
   id: number;
-  created_at: number;
-  updated_at: number;
+  created_at: string;
+  updated_at: string;
   deleted_at: number;
   name: string;
   pool_id: number;
@@ -28,7 +28,7 @@ export interface MonitorConfig {
   config_content: string;
   config_hash: string;
   status: ConfigStatus;
-  last_generated_time: number;
+  last_generated_time: string;
 }
 
 // 获取监控配置列表请求参数

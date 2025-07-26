@@ -257,7 +257,6 @@
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
-                      <a-menu-item key="clone"> <Icon icon="carbon:copy" /> 克隆 </a-menu-item>
                       <a-menu-divider />
                       <a-menu-item key="delete" danger> 删除 </a-menu-item>
                     </a-menu>
@@ -324,13 +323,21 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="目标地址" name="ip_address">
-                <div class="ip-port-container">
-                  <a-input v-model:value="addForm.ip" placeholder="请输入IP地址" class="ip-input" />
-                  <span class="separator">:</span>
-                  <a-input v-model:value="addForm.port" placeholder="端口" class="port-input" />
-                </div>
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="IP地址" name="ip">
+                <a-input v-model:value="addForm.ip" placeholder="请输入IP地址" class="ip-input" />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="端口" name="port">
+                <a-input v-model:value="addForm.port" placeholder="端口" class="port-input" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="Grafana链接" name="grafana_link">
+                <a-input v-model:value="addForm.grafana_link" placeholder="请输入Grafana链接" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -469,13 +476,21 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :span="24">
-              <a-form-item label="目标地址" name="ip_address">
-                <div class="ip-port-container">
-                  <a-input v-model:value="editForm.ip" placeholder="请输入IP地址" class="ip-input" />
-                  <span class="separator">:</span>
-                  <a-input v-model:value="editForm.port" placeholder="端口" class="port-input" />
-                </div>
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="IP地址" name="ip">
+                <a-input v-model:value="editForm.ip" placeholder="请输入IP地址" class="ip-input" />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="端口" name="port">
+                <a-input v-model:value="editForm.port" placeholder="端口" class="port-input" />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item label="Grafana链接" name="grafana_link">
+                <a-input v-model:value="editForm.grafana_link" placeholder="请输入Grafana链接" />
               </a-form-item>
             </a-col>
           </a-row>
@@ -686,6 +701,7 @@ const createInitialForm = () => ({
   for_time: '10s',
   labels: [{ key: Date.now(), labelKey: '', labelValue: '' }] as LabelOrAnnotationItem[],
   annotations: [{ key: Date.now(), labelKey: '', labelValue: '' }] as LabelOrAnnotationItem[],
+  grafana_link: '',
 });
 
 const handleApiError = (error: any, defaultMessage: string) => {
@@ -748,6 +764,7 @@ const editForm = reactive({
   for_time: '',
   labels: [] as LabelOrAnnotationItem[],
   annotations: [] as LabelOrAnnotationItem[],
+  grafana_link: '',
 });
 
 const formRules = {
@@ -933,11 +950,7 @@ const handleReset = () => {
 };
 
 const handleMenuClick = (key: string, record: MonitorAlertRuleItem) => {
-  if (key === 'clone') {
-    const { name, ...rest } = record;
-    showEditModal({ ...rest, name: `${name}_clone` } as MonitorAlertRuleItem, true);
-    message.info('已克隆规则，请修改后保存');
-  } else if (key === 'delete') {
+  if (key === 'delete') {
     handleDelete(record.id);
   }
 };
@@ -970,7 +983,7 @@ const closeAddModal = () => {
   isAddModalVisible.value = false;
 };
 
-const showEditModal = async (record: MonitorAlertRuleItem, isClone = false) => {
+const showEditModal = async (record: MonitorAlertRuleItem) => {
   // --- 确保关联数据显示 ---
   // 确保关联的实例池在选项列表中，以便正确显示名称
   if (record.pool_id && !scrapePools.value.some((p) => p.id === record.pool_id)) {
@@ -1007,7 +1020,7 @@ const showEditModal = async (record: MonitorAlertRuleItem, isClone = false) => {
       : [{ key: Date.now(), labelKey: '', labelValue: '' }];
 
   Object.assign(editForm, {
-    id: isClone ? 0 : record.id,
+    id: record.id,
     name: record.name,
     pool_id: record.pool_id,
     send_group_id: record.send_group_id,
@@ -1019,6 +1032,7 @@ const showEditModal = async (record: MonitorAlertRuleItem, isClone = false) => {
     for_time: record.for_time,
     labels: parseItems(record.labels),
     annotations: parseItems(record.annotations),
+    grafana_link: record.grafana_link || '',
   });
   isEditModalVisible.value = true;
   detailModalVisible.value = false;
@@ -1060,6 +1074,7 @@ const handleAdd = async () => {
       severity: addForm.severity!,
       labels: formatItemsForApi(addForm.labels),
       annotations: formatItemsForApi(addForm.annotations),
+      grafana_link: addForm.grafana_link,
     };
     await createAlertRuleApi(apiData);
     message.success('新增成功');
@@ -1082,6 +1097,7 @@ const handleEdit = async () => {
       severity: editForm.severity!,
       labels: formatItemsForApi(editForm.labels),
       annotations: formatItemsForApi(editForm.annotations),
+      grafana_link: editForm.grafana_link,
     };
     await updateAlertRuleApi(apiData);
     message.success('更新成功');

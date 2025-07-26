@@ -1,416 +1,516 @@
 <template>
   <div class="config-container">
-    <!-- 页面标题和操作 -->
+    <!-- 页面标题 -->
     <div class="page-header">
       <div class="header-actions">
-        <button @click="showAddModal" class="btn-create">
-          <PlusCircle :size="20" />
+        <a-button type="primary" @click="showAddModal" class="btn-create">
+          <template #icon>
+            <PlusOutlined />
+          </template>
           <span class="btn-text">新增监控配置</span>
-        </button>
-
+        </a-button>
         <div class="search-filters">
-          <div class="search-input-wrapper">
-            <Search class="search-icon" />
-            <input v-model="searchText" type="text" placeholder="搜索配置名称..." class="search-input"
-              @input="handleSearchInput" />
-          </div>
-
-          <select v-model="searchPoolId" class="filter-select" @change="handleFilterChange">
-            <option value="">全部实例池</option>
-            <option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
+          <a-input-search 
+            v-model:value="searchText" 
+            placeholder="搜索配置名称..." 
+            class="search-input" 
+            @search="handleSearch"
+            @change="handleSearchChange" 
+            allow-clear 
+          />
+          <a-select 
+            v-model:value="searchPoolId" 
+            placeholder="全部实例池" 
+            class="filter-select"
+            @change="handleFilterChange" 
+            allow-clear
+          >
+            <a-select-option :value="undefined">全部实例池</a-select-option>
+            <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
               {{ pool.name }}
-            </option>
-          </select>
-
-          <select v-model="searchConfigType" class="filter-select" @change="handleFilterChange">
-            <option value="">全部类型</option>
-            <option :value="ConfigType.Prometheus">Prometheus配置</option>
-            <option :value="ConfigType.AlertManager">AlertManager配置</option>
-            <option :value="ConfigType.AlertRule">告警规则配置</option>
-            <option :value="ConfigType.RecordRule">预聚合规则配置</option>
-            <option :value="ConfigType.WebhookFile">Webhook文件</option>
-          </select>
-
-          <select v-model="searchStatus" class="filter-select" @change="handleFilterChange">
-            <option value="">全部状态</option>
-            <option :value="ConfigStatus.Active">激活</option>
-            <option :value="ConfigStatus.Inactive">非激活</option>
-          </select>
-
-          <button @click="handleReset" class="reset-btn">
-            <RefreshCw :size="16" />
+            </a-select-option>
+          </a-select>
+          <a-select 
+            v-model:value="searchConfigType" 
+            placeholder="全部类型" 
+            class="filter-select"
+            @change="handleFilterChange" 
+            allow-clear
+          >
+            <a-select-option :value="undefined">全部类型</a-select-option>
+            <a-select-option :value="ConfigType.Prometheus">Prometheus配置</a-select-option>
+            <a-select-option :value="ConfigType.AlertManager">AlertManager配置</a-select-option>
+            <a-select-option :value="ConfigType.AlertRule">告警规则配置</a-select-option>
+            <a-select-option :value="ConfigType.RecordRule">预聚合规则配置</a-select-option>
+            <a-select-option :value="ConfigType.WebhookFile">Webhook文件</a-select-option>
+          </a-select>
+          <a-select 
+            v-model:value="searchStatus" 
+            placeholder="全部状态" 
+            class="filter-select"
+            @change="handleFilterChange" 
+            allow-clear
+          >
+            <a-select-option :value="undefined">全部状态</a-select-option>
+            <a-select-option :value="ConfigStatus.Active">激活</a-select-option>
+            <a-select-option :value="ConfigStatus.Inactive">非激活</a-select-option>
+          </a-select>
+          <a-button @click="handleReset" class="reset-btn">
             重置
-          </button>
+          </a-button>
         </div>
       </div>
     </div>
 
     <!-- 统计卡片 -->
     <div class="stats-row">
-      <div class="stats-grid">
-        <div class="stats-card">
-          <div class="stats-content">
-            <div class="stats-info">
-              <p class="stats-label">总配置数</p>
-              <p class="stats-value stats-value-green">{{ stats.total }}</p>
-            </div>
-            <Settings class="stats-icon stats-icon-green" />
-          </div>
-        </div>
-
-        <div class="stats-card">
-          <div class="stats-content">
-            <div class="stats-info">
-              <p class="stats-label">激活配置</p>
-              <p class="stats-value stats-value-blue">{{ stats.active }}</p>
-            </div>
-            <CheckCircle class="stats-icon stats-icon-blue" />
-          </div>
-        </div>
-
-        <div class="stats-card">
-          <div class="stats-content">
-            <div class="stats-info">
-              <p class="stats-label">告警规则</p>
-              <p class="stats-value stats-value-yellow">{{ stats.alertRules }}</p>
-            </div>
-            <AlertTriangle class="stats-icon stats-icon-yellow" />
-          </div>
-        </div>
-
-        <div class="stats-card">
-          <div class="stats-content">
-            <div class="stats-info">
-              <p class="stats-label">实例数</p>
-              <p class="stats-value stats-value-purple">{{ stats.instances }}</p>
-            </div>
-            <Server class="stats-icon stats-icon-purple" />
-          </div>
-        </div>
-      </div>
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="总配置数" 
+              :value="stats.total" 
+              :value-style="{ color: '#3f8600' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:settings" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="激活配置" 
+              :value="stats.active" 
+              :value-style="{ color: '#52c41a' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:checkmark-filled" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="告警规则" 
+              :value="stats.alertRules" 
+              :value-style="{ color: '#faad14' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:warning-alt" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+        <a-col :xs="12" :sm="6" :md="6" :lg="6">
+          <a-card class="stats-card">
+            <a-statistic 
+              title="实例数" 
+              :value="stats.instances" 
+              :value-style="{ color: '#cf1322' }"
+            >
+              <template #prefix>
+                <Icon icon="carbon:server" />
+              </template>
+            </a-statistic>
+          </a-card>
+        </a-col>
+      </a-row>
     </div>
 
     <!-- 表格容器 -->
     <div class="table-container">
-      <div class="table-card">
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>配置名称</th>
-                <th>配置类型</th>
-                <th>实例信息</th>
-                <th>状态</th>
-                <th>最后生成时间</th>
-                <th>创建时间</th>
-                <th class="text-center">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loading">
-                <td colspan="7" class="loading-cell">
-                  <div class="loading-content">
-                    <div class="spinner"></div>
-                    <span>加载中...</span>
-                  </div>
-                </td>
-              </tr>
-              <tr v-else-if="data.length === 0">
-                <td colspan="7" class="empty-cell">暂无数据</td>
-              </tr>
-              <tr v-else v-for="record in data" :key="record.id" class="table-row">
-                <td>
-                  <div class="config-name-cell">
-                    <div class="status-dot"
-                      :class="record.status === ConfigStatus.Active ? 'status-dot-active' : 'status-dot-inactive'">
-                    </div>
-                    <span class="config-name">{{ record.name }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="tech-tag" :class="getConfigTypeColor(record.config_type)">
-                    {{ getConfigTypeName(record.config_type) }}
-                  </span>
-                </td>
-                <td>
-                  <div class="instance-info">
-                    <div class="instance-item">实例池: {{ getPoolName(record.pool_id) }}</div>
-                    <div class="instance-item instance-ip">IP: {{ record.instance_ip }}</div>
-                  </div>
-                </td>
-                <td>
-                  <span class="status-tag"
-                    :class="record.status === ConfigStatus.Active ? 'status-tag-active' : 'status-tag-inactive'">
-                    {{ record.status === ConfigStatus.Active ? '激活' : '非激活' }}
-                  </span>
-                </td>
-                <td>
-                  <div class="date-info">
-                    <div class="date">{{ formatDate(record.last_generated_time) }}</div>
-                    <div class="time">{{ formatTime(record.last_generated_time) }}</div>
-                  </div>
-                </td>
-                <td>
-                  <div class="date-info">
-                    <div class="date">{{ formatDate(record.created_at) }}</div>
-                    <div class="time">{{ formatTime(record.created_at) }}</div>
-                  </div>
-                </td>
-                <td class="text-center">
-                  <div class="action-buttons">
-                    <button @click="handleViewDetail(record)" class="action-btn action-btn-blue" title="查看详情">
-                      <Eye :size="16" />
-                    </button>
-                    <button @click="showEditModal(record)" class="action-btn action-btn-gray" title="编辑">
-                      <Edit :size="16" />
-                    </button>
-                    <button @click="showPreviewModal(record)" class="action-btn action-btn-green" title="预览配置">
-                      <FileText :size="16" />
-                    </button>
-                    <button @click="handleDelete(record)" class="action-btn action-btn-red" title="删除">
-                      <Trash2 :size="16" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <a-card>
+        <a-table 
+          :data-source="data" 
+          :columns="columns" 
+          :pagination="paginationConfig" 
+          :loading="loading"
+          row-key="id" 
+          bordered 
+          :scroll="{ x: 1400 }" 
+          @change="handleTableChange"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'name'">
+              <div class="config-name-cell">
+                <div class="status-dot" :class="record.status === ConfigStatus.Active ? 'status-dot-active' : 'status-dot-inactive'"></div>
+                <span class="config-name">{{ record.name }}</span>
+              </div>
+            </template>
 
-        <!-- 分页 -->
-        <div v-if="!loading && data.length > 0" class="pagination-container">
-          <div class="pagination-info">
-            <p class="pagination-text">
-              显示第 <span class="font-medium">{{ (pagination.current - 1) * pagination.pageSize + 1 }}</span>
-              到 <span class="font-medium">{{ Math.min(pagination.current * pagination.pageSize, pagination.total)
-                }}</span>
-              条，共 <span class="font-medium">{{ pagination.total }}</span> 条记录
-            </p>
-          </div>
-          <div class="pagination-controls">
-            <select v-model="pagination.pageSize" @change="handlePageSizeChange" class="page-size-select">
-              <option value="10">10条/页</option>
-              <option value="20">20条/页</option>
-              <option value="50">50条/页</option>
-              <option value="100">100条/页</option>
-            </select>
-            <div class="pagination-buttons">
-              <button @click="handlePageChange(pagination.current - 1)" :disabled="pagination.current <= 1"
-                class="pagination-btn pagination-btn-prev">
-                上一页
-              </button>
-              <button v-for="page in visiblePages" :key="page" @click="handlePageChange(page)" class="pagination-btn"
-                :class="page === pagination.current ? 'pagination-btn-active' : 'pagination-btn-normal'">
-                {{ page }}
-              </button>
-              <button @click="handlePageChange(pagination.current + 1)" :disabled="pagination.current >= totalPages"
-                class="pagination-btn pagination-btn-next">
-                下一页
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+            <template v-if="column.key === 'config_type'">
+              <a-tag 
+                class="tech-tag" 
+                :class="getConfigTypeColor(record.config_type)"
+              >
+                {{ getConfigTypeName(record.config_type) }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'instance_info'">
+              <div class="instance-info">
+                <div class="instance-item">实例池: {{ getPoolName(record.pool_id) }}</div>
+                <div class="instance-item instance-ip">IP: {{ record.instance_ip }}</div>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'status'">
+              <a-tag :color="record.status === ConfigStatus.Active ? 'success' : 'default'">
+                {{ record.status === ConfigStatus.Active ? '激活' : '非激活' }}
+              </a-tag>
+            </template>
+
+            <template v-if="column.key === 'last_generated_time'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.last_generated_time) }}</span>
+                <span class="time">{{ formatTime(record.last_generated_time) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'created_at'">
+              <div class="date-info">
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'action'">
+              <div class="action-buttons">
+                <a-button type="primary" size="small" @click="handleViewDetail(record)">
+                  查看
+                </a-button>
+                <a-button type="default" size="small" @click="showEditModal(record)">
+                  编辑
+                </a-button>
+                <a-dropdown>
+                  <template #overlay>
+                    <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
+                      <a-menu-item key="preview">预览配置</a-menu-item>
+                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                    </a-menu>
+                  </template>
+                  <a-button size="small">
+                    更多
+                    <DownOutlined />
+                  </a-button>
+                </a-dropdown>
+              </div>
+            </template>
+          </template>
+        </a-table>
+      </a-card>
     </div>
 
     <!-- 新增配置模态框 -->
-    <a-modal v-model:visible="isAddModalVisible" title="新增监控配置" :width="700" @cancel="closeAddModal" @ok="handleAdd"
-      okText="确定" cancelText="取消">
-      <div class="form-section">
-        <div class="section-title">基本信息</div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label">配置名称</label>
-            <input v-model="addForm.name" type="text" class="form-input" placeholder="请输入配置名称" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">配置类型</label>
-            <select v-model="addForm.config_type" class="form-select">
-              <option value="">请选择配置类型</option>
-              <option :value="ConfigType.Prometheus">Prometheus配置</option>
-              <option :value="ConfigType.AlertManager">AlertManager配置</option>
-              <option :value="ConfigType.AlertRule">告警规则配置</option>
-              <option :value="ConfigType.RecordRule">预聚合规则配置</option>
-              <option :value="ConfigType.WebhookFile">Webhook文件</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">实例池</label>
-            <select v-model="addForm.pool_id" class="form-select">
-              <option value="">请选择实例池</option>
-              <option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
-                {{ pool.name }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">实例IP</label>
-            <input v-model="addForm.instance_ip" type="text" class="form-input" placeholder="请输入实例IP" />
-          </div>
+    <a-modal 
+      :open="isAddModalVisible" 
+      title="新增监控配置" 
+      :width="formDialogWidth"
+      @ok="handleAdd" 
+      @cancel="closeAddModal" 
+      :destroy-on-close="true" 
+      class="responsive-modal config-modal"
+    >
+      <a-form 
+        ref="addFormRef" 
+        :model="addForm" 
+        :rules="formRules" 
+        layout="vertical"
+      >
+        <div class="form-section">
+          <div class="section-title">基本信息</div>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="配置名称" 
+                name="name" 
+                :rules="[{ required: true, message: '请输入配置名称' }]"
+              >
+                <a-input 
+                  v-model:value="addForm.name" 
+                  placeholder="请输入配置名称" 
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="配置类型" 
+                name="config_type"
+                :rules="[{ required: true, message: '请选择配置类型' }]"
+              >
+                <a-select 
+                  v-model:value="addForm.config_type" 
+                  placeholder="请选择配置类型"
+                >
+                  <a-select-option :value="ConfigType.Prometheus">Prometheus配置</a-select-option>
+                  <a-select-option :value="ConfigType.AlertManager">AlertManager配置</a-select-option>
+                  <a-select-option :value="ConfigType.AlertRule">告警规则配置</a-select-option>
+                  <a-select-option :value="ConfigType.RecordRule">预聚合规则配置</a-select-option>
+                  <a-select-option :value="ConfigType.WebhookFile">Webhook文件</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="实例池" 
+                name="pool_id"
+                :rules="[{ required: true, message: '请选择实例池' }]"
+              >
+                <a-select 
+                  v-model:value="addForm.pool_id" 
+                  placeholder="请选择实例池"
+                >
+                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
+                    {{ pool.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="实例IP" 
+                name="instance_ip"
+                :rules="[{ required: true, message: '请输入实例IP' }]"
+              >
+                <a-input 
+                  v-model:value="addForm.instance_ip" 
+                  placeholder="请输入实例IP" 
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
         </div>
-      </div>
 
-      <div class="form-section">
-        <div class="section-title">配置内容</div>
-        <textarea v-model="addForm.config_content" rows="12" class="form-textarea" placeholder="请输入配置内容"></textarea>
-      </div>
-
-      <div class="form-section">
-        <div class="section-title">状态设置</div>
-        <div class="radio-group">
-          <label class="radio-item">
-            <input v-model="addForm.status" type="radio" :value="ConfigStatus.Active" class="radio-input" />
-            <span class="radio-label">激活</span>
-          </label>
-          <label class="radio-item">
-            <input v-model="addForm.status" type="radio" :value="ConfigStatus.Inactive" class="radio-input" />
-            <span class="radio-label">非激活</span>
-          </label>
+        <div class="form-section">
+          <div class="section-title">配置内容</div>
+          <a-form-item 
+            label="配置内容" 
+            name="config_content"
+            :rules="[{ required: true, message: '请输入配置内容' }]"
+          >
+            <a-textarea 
+              v-model:value="addForm.config_content" 
+              :rows="12" 
+              placeholder="请输入配置内容"
+            />
+          </a-form-item>
         </div>
-      </div>
+
+        <div class="form-section">
+          <div class="section-title">状态设置</div>
+          <a-form-item label="状态" name="status">
+            <a-switch 
+              v-model:checked="addForm.status" 
+              :checked-value="ConfigStatus.Active"
+              :un-checked-value="ConfigStatus.Inactive"
+              checked-children="激活"
+              un-checked-children="非激活"
+              class="tech-switch" 
+            />
+          </a-form-item>
+        </div>
+      </a-form>
     </a-modal>
 
     <!-- 编辑配置模态框 -->
-    <a-modal v-model:visible="isEditModalVisible" title="编辑监控配置" :width="700" @cancel="closeEditModal" @ok="handleEdit"
-      okText="确定" cancelText="取消">
-      <div class="form-section">
-        <div class="section-title">基本信息</div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label">配置名称</label>
-            <input v-model="editForm.name" type="text" class="form-input" placeholder="请输入配置名称" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">配置类型</label>
-            <select v-model="editForm.config_type" class="form-select">
-              <option value="">请选择配置类型</option>
-              <option :value="ConfigType.Prometheus">Prometheus配置</option>
-              <option :value="ConfigType.AlertManager">AlertManager配置</option>
-              <option :value="ConfigType.AlertRule">告警规则配置</option>
-              <option :value="ConfigType.RecordRule">预聚合规则配置</option>
-              <option :value="ConfigType.WebhookFile">Webhook文件</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">实例池</label>
-            <select v-model="editForm.pool_id" class="form-select">
-              <option value="">请选择实例池</option>
-              <option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
-                {{ pool.name }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">实例IP</label>
-            <input v-model="editForm.instance_ip" type="text" class="form-input" placeholder="请输入实例IP" />
-          </div>
+    <a-modal 
+      :open="isEditModalVisible" 
+      title="编辑监控配置" 
+      :width="formDialogWidth"
+      @ok="handleEdit" 
+      @cancel="closeEditModal" 
+      :destroy-on-close="true" 
+      class="responsive-modal config-modal"
+    >
+      <a-form 
+        ref="editFormRef" 
+        :model="editForm" 
+        :rules="formRules" 
+        layout="vertical"
+      >
+        <div class="form-section">
+          <div class="section-title">基本信息</div>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="配置名称" 
+                name="name" 
+                :rules="[{ required: true, message: '请输入配置名称' }]"
+              >
+                <a-input 
+                  v-model:value="editForm.name" 
+                  placeholder="请输入配置名称" 
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="配置类型" 
+                name="config_type"
+                :rules="[{ required: true, message: '请选择配置类型' }]"
+              >
+                <a-select 
+                  v-model:value="editForm.config_type" 
+                  placeholder="请选择配置类型"
+                >
+                  <a-select-option :value="ConfigType.Prometheus">Prometheus配置</a-select-option>
+                  <a-select-option :value="ConfigType.AlertManager">AlertManager配置</a-select-option>
+                  <a-select-option :value="ConfigType.AlertRule">告警规则配置</a-select-option>
+                  <a-select-option :value="ConfigType.RecordRule">预聚合规则配置</a-select-option>
+                  <a-select-option :value="ConfigType.WebhookFile">Webhook文件</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+          <a-row :gutter="16">
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="实例池" 
+                name="pool_id"
+                :rules="[{ required: true, message: '请选择实例池' }]"
+              >
+                <a-select 
+                  v-model:value="editForm.pool_id" 
+                  placeholder="请选择实例池"
+                >
+                  <a-select-option v-for="pool in poolOptions" :key="pool.id" :value="pool.id">
+                    {{ pool.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :sm="12">
+              <a-form-item 
+                label="实例IP" 
+                name="instance_ip"
+                :rules="[{ required: true, message: '请输入实例IP' }]"
+              >
+                <a-input 
+                  v-model:value="editForm.instance_ip" 
+                  placeholder="请输入实例IP" 
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
         </div>
-      </div>
 
-      <div class="form-section">
-        <div class="section-title">配置内容</div>
-        <textarea v-model="editForm.config_content" rows="12" class="form-textarea" placeholder="请输入配置内容"></textarea>
-      </div>
-
-      <div class="form-section">
-        <div class="section-title">状态设置</div>
-        <div class="radio-group">
-          <label class="radio-item">
-            <input v-model="editForm.status" type="radio" :value="ConfigStatus.Active" class="radio-input" />
-            <span class="radio-label">激活</span>
-          </label>
-          <label class="radio-item">
-            <input v-model="editForm.status" type="radio" :value="ConfigStatus.Inactive" class="radio-input" />
-            <span class="radio-label">非激活</span>
-          </label>
+        <div class="form-section">
+          <div class="section-title">配置内容</div>
+          <a-form-item 
+            label="配置内容" 
+            name="config_content"
+            :rules="[{ required: true, message: '请输入配置内容' }]"
+          >
+            <a-textarea 
+              v-model:value="editForm.config_content" 
+              :rows="12" 
+              placeholder="请输入配置内容"
+            />
+          </a-form-item>
         </div>
-      </div>
+
+        <div class="form-section">
+          <div class="section-title">状态设置</div>
+          <a-form-item label="状态" name="status">
+            <a-switch 
+              v-model:checked="editForm.status" 
+              :checked-value="ConfigStatus.Active"
+              :un-checked-value="ConfigStatus.Inactive"
+              checked-children="激活"
+              un-checked-children="非激活"
+              class="tech-switch" 
+            />
+          </a-form-item>
+        </div>
+      </a-form>
     </a-modal>
 
     <!-- 配置预览模态框 -->
-    <a-modal v-model:visible="isPreviewModalVisible" title="配置内容预览" :width="900" @cancel="closePreviewModal"
-      :footer="null">
-      <template #title v-if="previewConfig">
+    <a-modal 
+      :open="isPreviewModalVisible" 
+      title="配置内容预览" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="closePreviewModal" 
+      class="detail-dialog"
+    >
+      <div v-if="previewConfig" class="config-preview">
         <div class="preview-header">
-          <h3 class="modal-title">配置内容预览</h3>
-          <span class="tech-tag" :class="getConfigTypeColor(previewConfig.config_type)">
-            {{ getConfigTypeName(previewConfig.config_type) }}
-          </span>
+          <h3 class="preview-name">{{ previewConfig.name }}</h3>
+          <div class="preview-badges">
+            <a-tag 
+              class="tech-tag" 
+              :class="getConfigTypeColor(previewConfig.config_type)"
+            >
+              {{ getConfigTypeName(previewConfig.config_type) }}
+            </a-tag>
+          </div>
         </div>
-      </template>
 
-      <div v-if="previewConfig">
-        <div class="preview-info">
-          <h4 class="preview-name">{{ previewConfig.name }}</h4>
+        <a-textarea 
+          :value="previewConfig.config_content" 
+          readonly 
+          :rows="20"
+          class="preview-textarea"
+        />
+
+        <div class="detail-footer">
+          <a-button @click="closePreviewModal">关闭</a-button>
         </div>
-
-        <textarea :value="previewConfig.config_content" readonly rows="20"
-          class="form-textarea preview-textarea"></textarea>
-      </div>
-
-      <div class="modal-footer">
-        <a-button @click="closePreviewModal">关闭</a-button>
       </div>
     </a-modal>
 
     <!-- 详情模态框 -->
-    <a-modal v-model:visible="isDetailModalVisible" :width="900" @cancel="closeDetailModal" :footer="null">
-      <template #title v-if="detailConfig">
+    <a-modal 
+      :open="isDetailModalVisible" 
+      title="配置详情" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="closeDetailModal" 
+      class="detail-dialog"
+    >
+      <div v-if="detailConfig" class="config-details">
         <div class="detail-header">
-          <h2 class="detail-title">{{ detailConfig.name }}</h2>
+          <h2>{{ detailConfig.name }}</h2>
           <div class="detail-badges">
-            <span class="tech-tag" :class="getConfigTypeColor(detailConfig.config_type)">
+            <a-tag 
+              class="tech-tag" 
+              :class="getConfigTypeColor(detailConfig.config_type)"
+            >
               {{ getConfigTypeName(detailConfig.config_type) }}
-            </span>
-            <span class="status-tag"
-              :class="detailConfig.status === ConfigStatus.Active ? 'status-tag-active' : 'status-tag-inactive'">
+            </a-tag>
+            <a-tag :color="detailConfig.status === ConfigStatus.Active ? 'success' : 'default'">
               {{ detailConfig.status === ConfigStatus.Active ? '激活' : '非激活' }}
-            </span>
+            </a-tag>
           </div>
         </div>
-      </template>
 
-      <div v-if="detailConfig">
-        <div class="detail-info">
-          <div class="detail-grid">
-            <div class="detail-item">
-              <span class="detail-label">ID:</span>
-              <span class="detail-value">{{ detailConfig.id }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">实例池:</span>
-              <span class="detail-value">{{ getPoolName(detailConfig.pool_id) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">实例IP:</span>
-              <span class="detail-value">{{ detailConfig.instance_ip }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">配置Hash:</span>
-              <span class="detail-value detail-hash">{{ detailConfig.config_hash }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">最后生成时间:</span>
-              <span class="detail-value">{{ formatFullDateTime(detailConfig.last_generated_time) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">创建时间:</span>
-              <span class="detail-value">{{ formatFullDateTime(detailConfig.created_at) }}</span>
-            </div>
-            <div class="detail-item detail-item-full">
-              <span class="detail-label">更新时间:</span>
-              <span class="detail-value">{{ formatFullDateTime(detailConfig.updated_at) }}</span>
-            </div>
-          </div>
-        </div>
+        <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
+          <a-descriptions-item label="ID">{{ detailConfig.id }}</a-descriptions-item>
+          <a-descriptions-item label="实例池">{{ getPoolName(detailConfig.pool_id) }}</a-descriptions-item>
+          <a-descriptions-item label="实例IP">{{ detailConfig.instance_ip }}</a-descriptions-item>
+          <a-descriptions-item label="配置Hash">{{ detailConfig.config_hash }}</a-descriptions-item>
+          <a-descriptions-item label="最后生成时间">{{ formatFullDateTime(detailConfig.last_generated_time) }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailConfig.created_at) }}</a-descriptions-item>
+          <a-descriptions-item label="更新时间">{{ formatFullDateTime(detailConfig.updated_at) }}</a-descriptions-item>
+        </a-descriptions>
 
         <div class="config-content-section">
           <h4 class="content-title">配置内容</h4>
-          <textarea :value="detailConfig.config_content" readonly rows="15"
-            class="form-textarea preview-textarea"></textarea>
+          <a-textarea 
+            :value="detailConfig.config_content" 
+            readonly 
+            :rows="15"
+            class="preview-textarea"
+          />
         </div>
 
-        <div class="modal-footer">
+        <div class="detail-footer">
           <a-button @click="closeDetailModal">关闭</a-button>
           <a-button type="primary" @click="showEditModalFromDetail(detailConfig)">编辑</a-button>
         </div>
@@ -419,24 +519,14 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import {
-  PlusCircle,
-  Search,
-  RefreshCw,
-  Settings,
-  CheckCircle,
-  AlertTriangle,
-  Server,
-  Eye,
-  Edit,
-  FileText,
-  Trash2
-} from 'lucide-vue-next';
-
-// 导入 API 和类型
+  PlusOutlined,
+  DownOutlined
+} from '@ant-design/icons-vue';
+import { Icon } from '@iconify/vue';
 import {
   getMonitorConfigListApi,
   getMonitorConfigApi,
@@ -444,33 +534,109 @@ import {
   updateMonitorConfigApi,
   deleteMonitorConfigApi,
   ConfigType,
-  ConfigStatus
+  ConfigStatus,
+  type MonitorConfigItem,
+  type GetMonitorConfigListParams,
+  type CreateMonitorConfigParams,
+  type UpdateMonitorConfigParams
 } from '#/api/core/prometheus_config';
 
-// 模拟实例池数据
-const poolOptions = ref([
-  { id: 1, name: 'Prometheus-Pool-1' },
-  { id: 2, name: 'AlertManager-Pool-1' },
-  { id: 3, name: 'Mixed-Pool-1' }
-]);
+import {
+  getMonitorScrapePoolListApi,
+  type ScrapePoolItem
+} from '#/api/core/prometheus_scrape_pool';
+
+// 实例池接口
+type PoolOption = Pick<ScrapePoolItem, 'id' | 'name'>;
+
+// 分页接口
+interface PaginationConfig {
+  current: number;
+  pageSize: number;
+  total: number;
+  showSizeChanger: boolean;
+  showQuickJumper: boolean;
+  showTotal: (total: number) => string;
+  size: 'default' | 'small';
+}
+
+// 统计数据接口
+interface Stats {
+  total: number;
+  active: number;
+  alertRules: number;
+  instances: number;
+}
+
+// 表单数据接口
+interface ConfigForm {
+  id?: number;
+  name: string;
+  pool_id: number | undefined;
+  instance_ip: string;
+  config_type: ConfigType | undefined;
+  config_content: string;
+  status: ConfigStatus;
+}
+
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
+});
+
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
+});
+
+// 列定义
+const columns = [
+  { title: '配置名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
+  { title: '配置类型', dataIndex: 'config_type', key: 'config_type', width: 150 },
+  { title: '实例信息', dataIndex: 'instance_info', key: 'instance_info', width: 200 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
+  { title: '最后生成时间', dataIndex: 'last_generated_time', key: 'last_generated_time', width: 180 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
+  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
+];
+
+// 实例池数据
+const poolOptions = ref<PoolOption[]>([]);
 
 // 状态数据
 const loading = ref(false);
-const data = ref([]);
+const data = ref<MonitorConfigItem[]>([]);
 const searchText = ref('');
-const searchPoolId = ref('');
-const searchConfigType = ref('');
-const searchStatus = ref('');
+const searchPoolId = ref<number | undefined>(undefined);
+const searchConfigType = ref<ConfigType | undefined>(undefined);
+const searchStatus = ref<ConfigStatus | undefined>(undefined);
+
+// 防抖处理
+let searchTimeout: any = null;
 
 // 分页配置
-const pagination = reactive({
+const paginationConfig = reactive<PaginationConfig>({
   current: 1,
   pageSize: 10,
-  total: 0
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`,
+  size: 'default'
 });
 
 // 统计数据
-const stats = reactive({
+const stats = reactive<Stats>({
   total: 0,
   active: 0,
   alertRules: 0,
@@ -482,66 +648,52 @@ const isAddModalVisible = ref(false);
 const isEditModalVisible = ref(false);
 const isPreviewModalVisible = ref(false);
 const isDetailModalVisible = ref(false);
-const previewConfig = ref(null);
-const detailConfig = ref(null);
+const previewConfig = ref<MonitorConfigItem | null>(null);
+const detailConfig = ref<MonitorConfigItem | null>(null);
 
 // 表单数据
-const addForm = reactive({
+const addForm = reactive<ConfigForm>({
   name: '',
-  pool_id: '',
+  pool_id: undefined,
   instance_ip: '',
-  config_type: '',
+  config_type: undefined,
   config_content: '',
   status: ConfigStatus.Active
 });
 
-const editForm = reactive({
-  id: 0,
+const editForm = reactive<ConfigForm>({
+  id: undefined,
   name: '',
-  pool_id: '',
+  pool_id: undefined,
   instance_ip: '',
-  config_type: '',
+  config_type: undefined,
   config_content: '',
   status: ConfigStatus.Active
 });
 
-// 防抖搜索
-let searchTimeout = null;
-
-// 计算属性
-const totalPages = computed(() => Math.ceil(pagination.total / pagination.pageSize));
-
-const visiblePages = computed(() => {
-  const current = pagination.current;
-  const total = totalPages.value;
-  const delta = 2;
-  const range = [];
-  const rangeWithDots = [];
-
-  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
-    range.push(i);
-  }
-
-  if (current - delta > 2) {
-    rangeWithDots.push(1, '...');
-  } else {
-    rangeWithDots.push(1);
-  }
-
-  rangeWithDots.push(...range);
-
-  if (current + delta < total - 1) {
-    rangeWithDots.push('...', total);
-  } else {
-    rangeWithDots.push(total);
-  }
-
-  return rangeWithDots.filter((item, index, arr) => arr.indexOf(item) === index && item !== '...' ? true : item === '...');
-});
+// 表单验证规则
+const formRules = {
+  name: [
+    { required: true, message: '请输入配置名称', trigger: 'blur' },
+    { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
+  ],
+  config_type: [
+    { required: true, message: '请选择配置类型', trigger: 'change' }
+  ],
+  pool_id: [
+    { required: true, message: '请选择实例池', trigger: 'change' }
+  ],
+  instance_ip: [
+    { required: true, message: '请输入实例IP', trigger: 'blur' }
+  ],
+  config_content: [
+    { required: true, message: '请输入配置内容', trigger: 'blur' }
+  ]
+};
 
 // 辅助方法
-const getConfigTypeName = (type) => {
-  const typeNames = {
+const getConfigTypeName = (type: ConfigType): string => {
+  const typeNames: Record<ConfigType, string> = {
     [ConfigType.Prometheus]: 'Prometheus',
     [ConfigType.AlertManager]: 'AlertManager',
     [ConfigType.AlertRule]: '告警规则',
@@ -551,8 +703,8 @@ const getConfigTypeName = (type) => {
   return typeNames[type] || '未知';
 };
 
-const getConfigTypeColor = (type) => {
-  const typeColors = {
+const getConfigTypeColor = (type: ConfigType): string => {
+  const typeColors: Record<ConfigType, string> = {
     [ConfigType.Prometheus]: 'prometheus-tag',
     [ConfigType.AlertManager]: 'alert-tag',
     [ConfigType.AlertRule]: 'rule-tag',
@@ -562,128 +714,203 @@ const getConfigTypeColor = (type) => {
   return typeColors[type] || 'default-tag';
 };
 
-const getPoolName = (poolId) => {
+const getPoolName = (poolId: number): string => {
   const pool = poolOptions.value.find(p => p.id === poolId);
   return pool?.name || `Pool-${poolId}`;
 };
 
-const formatDate = (timestamp) => {
-  if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleDateString('zh-CN');
+const formatDate = (input: number | string): string => {
+  if (!input) return '';
+  const date = typeof input === 'number'
+    ? new Date(input * 1000)
+    : new Date(input);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('zh-CN');
 };
 
-const formatTime = (timestamp) => {
-  if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', {
+const formatTime = (input: number | string): string => {
+  if (!input) return '';
+  const date = typeof input === 'number'
+    ? new Date(input * 1000)
+    : new Date(input);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit'
   });
 };
 
-const formatFullDateTime = (timestamp) => {
+const formatFullDateTime = (timestamp: string): string => {
   if (!timestamp) return '';
-  return new Date(timestamp * 1000).toLocaleString('zh-CN');
+  return new Date(timestamp).toLocaleString('zh-CN');
 };
 
 // 更新统计数据
-const updateStats = () => {
-  stats.total = data.value.length;
-  stats.active = data.value.filter(item => item.status === ConfigStatus.Active).length;
-  stats.alertRules = data.value.filter(item => item.config_type === ConfigType.AlertRule).length;
-  stats.instances = new Set(data.value.map(item => item.instance_ip)).size;
+const updateStats = (): void => {
+  stats.total = paginationConfig.total;
+  stats.active = data.value.filter((item: MonitorConfigItem) => item.status === ConfigStatus.Active).length;
+  stats.alertRules = data.value.filter((item: MonitorConfigItem) => item.config_type === ConfigType.AlertRule).length;
+  stats.instances = new Set(data.value.map((item: MonitorConfigItem) => item.instance_ip)).size;
 };
 
 // 数据加载
-const fetchConfigs = async () => {
+const fetchConfigs = async (): Promise<void> => {
   loading.value = true;
   try {
-    const params = {
-      page: pagination.current,
-      size: pagination.pageSize,
+    const params: GetMonitorConfigListParams = {
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize,
       search: searchText.value || undefined,
-      pool_id: searchPoolId.value ? parseInt(searchPoolId.value) : undefined,
-      config_type: searchConfigType.value ? parseInt(searchConfigType.value) : undefined,
-      status: searchStatus.value ? parseInt(searchStatus.value) : undefined
+      pool_id: searchPoolId.value,
+      config_type: searchConfigType.value,
+      status: searchStatus.value
     };
 
     const response = await getMonitorConfigListApi(params);
     if (response) {
       data.value = response.items || [];
-      pagination.total = response.total || 0;
+      paginationConfig.total = response.total || 0;
       updateStats();
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('加载配置列表失败:', error);
+    message.error(error.message || '加载配置列表失败');
   } finally {
     loading.value = false;
   }
 };
 
+// 加载实例池数据
+const loadPoolOptions = async (): Promise<void> => {
+  try {
+    let allPools: ScrapePoolItem[] = [];
+    let currentPage = 1;
+    const pageSize = 10;
+    let hasMore = true;
+
+    while (hasMore) {
+      const res = await getMonitorScrapePoolListApi({ 
+        page: currentPage, 
+        size: pageSize 
+      });
+      
+      if (res?.items && res.items.length > 0) {
+        allPools = allPools.concat(res.items);
+        
+        // 检查是否还有更多数据
+        hasMore = res.items.length === pageSize && allPools.length < (res.total || 0);
+        currentPage++;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    poolOptions.value = allPools.map((item: ScrapePoolItem) => ({
+      id: item.id,
+      name: item.name
+    }));
+  } catch (error: any) {
+    console.error('加载实例池列表失败:', error);
+    poolOptions.value = [];
+  }
+};
+
 // 事件处理
-const handleSearchInput = () => {
+const handleTableChange = (pagination: any): void => {
+  paginationConfig.current = pagination.current;
+  paginationConfig.pageSize = pagination.pageSize;
+  fetchConfigs();
+};
+
+const handleSearch = (): void => {
+  paginationConfig.current = 1;
+  fetchConfigs();
+};
+
+const handleSearchChange = (): void => {
   if (searchTimeout) {
     clearTimeout(searchTimeout);
   }
   searchTimeout = setTimeout(() => {
-    pagination.current = 1;
+    paginationConfig.current = 1;
     fetchConfigs();
   }, 500);
 };
 
-const handleFilterChange = () => {
-  pagination.current = 1;
+const handleFilterChange = (): void => {
+  paginationConfig.current = 1;
   fetchConfigs();
 };
 
-const handleReset = () => {
+const handleReset = (): void => {
   searchText.value = '';
-  searchPoolId.value = '';
-  searchConfigType.value = '';
-  searchStatus.value = '';
-  pagination.current = 1;
+  searchPoolId.value = undefined;
+  searchConfigType.value = undefined;
+  searchStatus.value = undefined;
+  paginationConfig.current = 1;
   fetchConfigs();
+  message.success('过滤条件已重置');
 };
 
-const handlePageChange = (page) => {
-  if (page >= 1 && page <= totalPages.value) {
-    pagination.current = page;
-    fetchConfigs();
+const handleMenuClick = (command: string, record: MonitorConfigItem): void => {
+  switch (command) {
+    case 'preview':
+      showPreviewModal(record);
+      break;
+    case 'delete':
+      confirmDelete(record);
+      break;
   }
 };
 
-const handlePageSizeChange = () => {
-  pagination.current = 1;
-  fetchConfigs();
+const confirmDelete = (record: MonitorConfigItem): void => {
+  Modal.confirm({
+    title: '警告',
+    content: `确定要删除配置 "${record.name}" 吗？`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        await deleteMonitorConfigApi({ id: record.id });
+        message.success(`配置 "${record.name}" 已删除`);
+        fetchConfigs();
+      } catch (error: any) {
+        console.error('删除配置失败:', error);
+        message.error(error.message || '删除配置失败');
+      }
+    }
+  });
 };
 
 // 表单处理
-const resetAddForm = () => {
+const resetAddForm = (): void => {
   Object.assign(addForm, {
     name: '',
-    pool_id: '',
+    pool_id: undefined,
     instance_ip: '',
-    config_type: '',
+    config_type: undefined,
     config_content: '',
     status: ConfigStatus.Active
   });
 };
 
-const showAddModal = () => {
+const showAddModal = (): void => {
   resetAddForm();
   isAddModalVisible.value = true;
 };
 
-const closeAddModal = () => {
+const closeAddModal = (): void => {
   isAddModalVisible.value = false;
 };
 
-const handleAdd = async () => {
+const handleAdd = async (): Promise<void> => {
   try {
-    const params = {
+    const params: CreateMonitorConfigParams = {
       name: addForm.name,
-      pool_id: parseInt(addForm.pool_id),
+      pool_id: addForm.pool_id!,
       instance_ip: addForm.instance_ip,
-      config_type: parseInt(addForm.config_type),
+      config_type: addForm.config_type!,
       config_content: addForm.config_content,
       status: addForm.status
     };
@@ -692,12 +919,12 @@ const handleAdd = async () => {
     closeAddModal();
     fetchConfigs();
     message.success('新增配置成功');
-  } catch (error) {
+  } catch (error: any) {
     message.error('新增配置失败: ' + (error.message || '未知错误'));
   }
 };
 
-const showEditModal = (record) => {
+const showEditModal = (record: MonitorConfigItem): void => {
   editForm.id = record.id;
   editForm.name = record.name;
   editForm.pool_id = record.pool_id;
@@ -708,23 +935,23 @@ const showEditModal = (record) => {
   isEditModalVisible.value = true;
 };
 
-const showEditModalFromDetail = (record) => {
+const showEditModalFromDetail = (record: MonitorConfigItem): void => {
   closeDetailModal();
   showEditModal(record);
 };
 
-const closeEditModal = () => {
+const closeEditModal = (): void => {
   isEditModalVisible.value = false;
 };
 
-const handleEdit = async () => {
+const handleEdit = async (): Promise<void> => {
   try {
-    const params = {
-      id: editForm.id,
+    const params: UpdateMonitorConfigParams = {
+      id: editForm.id!,
       name: editForm.name,
-      pool_id: parseInt(editForm.pool_id),
+      pool_id: editForm.pool_id!,
       instance_ip: editForm.instance_ip,
-      config_type: parseInt(editForm.config_type),
+      config_type: editForm.config_type!,
       config_content: editForm.config_content,
       status: editForm.status
     };
@@ -733,55 +960,40 @@ const handleEdit = async () => {
     closeEditModal();
     fetchConfigs();
     message.success('更新配置成功');
-  } catch (error) {
+  } catch (error: any) {
     message.error('更新配置失败: ' + (error.message || '未知错误'));
   }
 };
 
-const handleDelete = async (record) => {
-  Modal.confirm({
-    title: '确定要删除配置吗？',
-    content: `确定要删除配置 "${record.name}" 吗？`,
-    onOk: async () => {
-      try {
-        await deleteMonitorConfigApi({ id: record.id });
-        fetchConfigs();
-        message.success('删除配置成功');
-      } catch (error) {
-        message.error('删除配置失败: ' + (error.message || '未知错误'));
-      }
-    }
-  });
-};
-
-const handleViewDetail = async (record) => {
+const handleViewDetail = async (record: MonitorConfigItem): Promise<void> => {
   try {
     const detail = await getMonitorConfigApi({ id: record.id });
     detailConfig.value = detail;
     isDetailModalVisible.value = true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('获取配置详情失败:', error);
     message.error('获取配置详情失败: ' + (error.message || '未知错误'));
   }
 };
 
-const showPreviewModal = (record) => {
+const showPreviewModal = (record: MonitorConfigItem): void => {
   previewConfig.value = record;
   isPreviewModalVisible.value = true;
 };
 
-const closePreviewModal = () => {
+const closePreviewModal = (): void => {
   isPreviewModalVisible.value = false;
   previewConfig.value = null;
 };
 
-const closeDetailModal = () => {
+const closeDetailModal = (): void => {
   isDetailModalVisible.value = false;
   detailConfig.value = null;
 };
 
 // 生命周期
 onMounted(() => {
+  loadPoolOptions();
   fetchConfigs();
 });
 </script>
@@ -792,7 +1004,6 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-/* 页面头部 */
 .page-header {
   margin-bottom: 20px;
 }
@@ -805,24 +1016,9 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: #1890ff;
+  background: linear-gradient(135deg, #1890ff 0%);
   border: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  color: white;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
   flex-shrink: 0;
-}
-
-.btn-create:hover {
-  background: #40a9ff;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
 }
 
 .search-filters {
@@ -833,227 +1029,34 @@ onMounted(() => {
   min-width: 0;
 }
 
-.search-input-wrapper {
-  position: relative;
-  flex: 1;
-  min-width: 250px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  color: #9ca3af;
-}
-
 .search-input {
-  width: 100%;
-  padding: 8px 12px 8px 40px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.search-input:focus {
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+  width: 250px;
+  min-width: 200px;
 }
 
 .filter-select {
-  padding: 8px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  background-color: white;
-  min-width: 120px;
-  cursor: pointer;
-}
-
-.filter-select:focus {
-  outline: none;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+  width: 120px;
+  min-width: 100px;
 }
 
 .reset-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background-color: #f5f5f5;
-  color: #595959;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
   flex-shrink: 0;
 }
 
-.reset-btn:hover {
-  background-color: #e6e6e6;
-}
-
-/* 统计卡片 */
 .stats-row {
   margin-bottom: 20px;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-
 .stats-card {
-  background: white;
-  padding: 24px 20px;
-  border-radius: 4px;
+  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f0f0f0;
+  height: 100%;
 }
 
-.stats-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.stats-info {
-  flex: 1;
-}
-
-.stats-label {
-  font-size: 14px;
-  color: #8c8c8c;
-  margin: 0 0 8px 0;
-}
-
-.stats-value {
-  font-size: 28px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.stats-value-green {
-  color: #3f8600;
-}
-
-.stats-value-blue {
-  color: #52c41a;
-}
-
-.stats-value-yellow {
-  color: #faad14;
-}
-
-.stats-value-purple {
-  color: #cf1322;
-}
-
-.stats-icon {
-  width: 28px;
-  height: 28px;
-}
-
-.stats-icon-green {
-  color: #3f8600;
-}
-
-.stats-icon-blue {
-  color: #52c41a;
-}
-
-.stats-icon-yellow {
-  color: #faad14;
-}
-
-.stats-icon-purple {
-  color: #cf1322;
-}
-
-/* 表格容器 */
 .table-container {
   margin-bottom: 24px;
 }
 
-.table-card {
-  background: white;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f0f0f0;
-  overflow: hidden;
-}
-
-.table-wrapper {
-  overflow-x: auto;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.data-table th {
-  background-color: #fafafa;
-  padding: 12px 16px;
-  text-align: left;
-  font-size: 14px;
-  font-weight: 500;
-  color: #595959;
-  border-bottom: 1px solid #f0f0f0;
-  white-space: nowrap;
-}
-
-.data-table td {
-  padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
-  vertical-align: top;
-}
-
-.table-row:hover {
-  background-color: #fafafa;
-}
-
-.loading-cell,
-.empty-cell {
-  text-align: center;
-  padding: 48px 16px;
-  color: #8c8c8c;
-}
-
-.loading-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #1890ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* 表格内容样式 */
 .config-name-cell {
   display: flex;
   align-items: center;
@@ -1077,7 +1080,6 @@ onMounted(() => {
 
 .config-name {
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.85);
   word-break: break-all;
 }
 
@@ -1085,10 +1087,11 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 2px;
+  border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
-  margin-right: 4px;
+  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .prometheus-tag {
@@ -1127,37 +1130,19 @@ onMounted(() => {
   border-left: 3px solid #d9d9d9;
 }
 
-.status-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  font-size: 12px;
-  font-weight: 400;
-  border-radius: 2px;
-}
-
-.status-tag-active {
-  background-color: #f6ffed;
-  color: #389e0d;
-  border: 1px solid #b7eb8f;
-}
-
-.status-tag-inactive {
-  background-color: #f5f5f5;
-  color: #8c8c8c;
-  border: 1px solid #d9d9d9;
-}
-
 .instance-info {
-  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .instance-item {
+  font-size: 14px;
   color: rgba(0, 0, 0, 0.85);
-  margin-bottom: 4px;
 }
 
 .instance-ip {
+  font-size: 12px;
   color: #8c8c8c;
   font-family: monospace;
 }
@@ -1170,475 +1155,84 @@ onMounted(() => {
 .date {
   font-weight: 500;
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.85);
 }
 
 .time {
-  color: #8c8c8c;
   font-size: 12px;
-}
-
-.text-center {
-  text-align: center;
+  color: #8c8c8c;
 }
 
 .action-buttons {
   display: flex;
-  justify-content: center;
   gap: 4px;
+  justify-content: center;
   flex-wrap: wrap;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px;
-  border: none;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.action-btn-blue {
-  background-color: #e6f7ff;
-  color: #1890ff;
-}
-
-.action-btn-gray {
-  background-color: #f5f5f5;
-  color: #595959;
-}
-
-.action-btn-green {
-  background-color: #f6ffed;
-  color: #52c41a;
-}
-
-.action-btn-red {
-  background-color: #fff1f0;
-  color: #ff4d4f;
-}
-
-.action-btn:hover {
-  opacity: 0.8;
-}
-
-/* 分页 */
-.pagination-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
-  background-color: white;
-}
-
-.pagination-info {
-  color: #8c8c8c;
-  font-size: 14px;
-}
-
-.pagination-text .font-medium {
-  font-weight: 500;
-  color: rgba(0, 0, 0, 0.85);
-}
-
-.pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.page-size-select {
-  padding: 4px 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 2px;
-  font-size: 14px;
-}
-
-.pagination-buttons {
-  display: flex;
-  gap: 0;
-}
-
-.pagination-btn {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid #d9d9d9;
-  background: white;
-  color: rgba(0, 0, 0, 0.85);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-right: -1px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.pagination-btn:first-child {
-  border-radius: 2px 0 0 2px;
-}
-
-.pagination-btn:last-child {
-  border-radius: 0 2px 2px 0;
-  margin-right: 0;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  color: #1890ff;
-  border-color: #1890ff;
-  position: relative;
-  z-index: 1;
-}
-
-.pagination-btn:disabled {
-  color: #d9d9d9;
-  cursor: not-allowed;
-}
-
-.pagination-btn-active {
-  background-color: #1890ff;
-  color: white;
-  border-color: #1890ff;
-  z-index: 1;
-}
-
-/* 模态框 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.modal-container {
-  background: white;
-  border-radius: 2px;
-  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
-  width: 100%;
-  max-width: 800px;
-  max-height: calc(100vh - 40px);
-  margin: 40px auto;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.modal-large {
-  max-width: 1000px;
-}
-
-.responsive-modal {
-  max-width: calc(100vw - 32px);
-  margin: 16px auto;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.modal-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: rgba(0, 0, 0, 0.85);
-  margin: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: rgba(0, 0, 0, 0.45);
-  cursor: pointer;
-  padding: 0;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-}
-
-.modal-close:hover {
-  color: rgba(0, 0, 0, 0.75);
-}
-
-.modal-body {
-  padding: 24px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.modal-body .form-group {
-  margin-bottom: 24px;
-}
-
-.modal-body .form-textarea {
-  width: 100%;
-  min-height: 120px;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 10px 16px;
-  border-top: 1px solid #f0f0f0;
-}
-
-/* 按钮样式 */
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 5px 16px;
-  height: 32px;
-  background: #1890ff;
-  color: white;
-  border: none;
-  border-radius: 2px;
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.045);
-}
-
-.btn-primary:hover {
-  background: #40a9ff;
-}
-
-.btn-primary:active {
-  background: #096dd9;
-}
-
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 16px;
-  height: 32px;
-  background-color: white;
-  color: rgba(0, 0, 0, 0.85);
-  border: 1px solid #d9d9d9;
-  border-radius: 2px;
-  font-size: 14px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
-}
-
-.btn-secondary:hover {
-  color: #40a9ff;
-  border-color: #40a9ff;
-}
-
-.btn-secondary:active {
-  color: #096dd9;
-  border-color: #096dd9;
 }
 
 /* 表单样式 */
 .form-section {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   padding: 0;
   position: relative;
 }
 
 .section-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(0, 0, 0, 0.85);
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 3px solid #1890ff;
+  border-left: 4px solid #1890ff;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
+.tech-switch {
+  background-color: rgba(0, 0, 0, 0.25);
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 24px;
-}
-
-.form-label {
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.85);
-  margin-bottom: 8px;
-}
-
-.form-input,
-.form-select {
-  padding: 4px 11px;
-  height: 32px;
-  border: 1px solid #d9d9d9;
-  border-radius: 2px;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.85);
-  background-color: white;
-  transition: all 0.3s;
-}
-
-.form-input:hover,
-.form-select:hover {
-  border-color: #40a9ff;
-}
-
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-}
-
-.form-textarea {
-  padding: 4px 11px;
-  border: 1px solid #d9d9d9;
-  border-radius: 2px;
-  font-size: 14px;
-  font-family: monospace;
-  line-height: 1.5715;
-  resize: vertical;
-  transition: all 0.3s;
-  width: 100%;
-  color: rgba(0, 0, 0, 0.85);
-  box-sizing: border-box;
-}
-
-.form-textarea:hover {
-  border-color: #40a9ff;
-}
-
-.form-textarea:focus {
-  outline: none;
-  border-color: #40a9ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-}
-
-.preview-textarea {
-  background-color: #fafafa;
-  font-family: monospace;
-  cursor: default;
-}
-
-.radio-group {
-  display: flex;
-  gap: 24px;
-}
-
-.radio-item {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-
-.radio-input {
-  margin-right: 8px;
-}
-
-.radio-label {
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.85);
+.tech-switch.ant-switch-checked {
+  background: linear-gradient(45deg, #1890ff, #36cfc9);
 }
 
 /* 预览和详情样式 */
+.config-preview,
+.config-details {
+  margin-bottom: 20px;
+}
+
 .preview-header,
 .detail-header {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
-.detail-title {
-  font-size: 18px;
+.preview-name {
+  font-size: 16px;
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.85);
+  color: #1f2937;
   margin: 0;
+}
+
+.detail-header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #1f2937;
   word-break: break-all;
 }
 
+.preview-badges,
 .detail-badges {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.preview-info {
-  margin-bottom: 16px;
-}
-
-.preview-name {
-  font-size: 16px;
-  font-weight: 500;
-  color: rgba(0, 0, 0, 0.85);
-  margin: 0;
-}
-
-.detail-info {
-  margin-bottom: 24px;
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 2px;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.detail-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.detail-item-full {
-  grid-column: 1 / -1;
-}
-
-.detail-label {
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.45);
-  min-width: 80px;
-  flex-shrink: 0;
-}
-
-.detail-value {
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.85);
-  word-break: break-all;
-}
-
-.detail-hash {
+.preview-textarea {
+  background-color: #fafafa;
   font-family: monospace;
-  font-size: 12px;
-  background: #f5f5f5;
-  padding: 2px 4px;
-  border-radius: 2px;
+  cursor: default;
 }
 
 .config-content-section {
@@ -1650,6 +1244,14 @@ onMounted(() => {
   font-weight: 500;
   color: rgba(0, 0, 0, 0.85);
   margin-bottom: 12px;
+}
+
+.detail-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* 响应式设计 */
@@ -1667,7 +1269,8 @@ onMounted(() => {
     width: 100%;
   }
 
-  .search-input-wrapper {
+  .search-input {
+    width: 100%;
     min-width: auto;
   }
 
@@ -1685,123 +1288,82 @@ onMounted(() => {
     min-width: auto;
   }
 
-  .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
   }
 
-  .stats-value {
-    font-size: 22px;
-  }
-
-  .stats-icon {
-    width: 22px;
-    height: 22px;
-  }
-
-  .pagination-container {
-    flex-direction: column;
-    gap: 16px;
-    text-align: center;
-  }
-
-  .pagination-controls {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .modal-container {
-    margin: 0;
-    max-width: 100%;
-    max-height: 100vh;
-    border-radius: 0;
-  }
-
-  .responsive-modal {
-    max-width: 100%;
-    margin: 0;
-    height: 100vh;
-  }
-
-  .modal-body {
-    padding: 16px;
-    max-height: calc(100vh - 132px);
-    overflow-y: auto;
-  }
-
-  .modal-header,
-  .modal-footer {
-    padding: 12px 16px;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .modal-footer {
-    flex-direction: column-reverse;
-  }
-
-  .modal-footer button {
-    width: 100%;
-    margin-bottom: 8px;
-  }
-
-  .modal-footer button:last-child {
-    margin-bottom: 0;
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
   }
 
   .action-buttons {
     gap: 2px;
   }
 
-  .action-btn {
-    padding: 4px;
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
   }
 
-  .form-section {
-    margin-bottom: 20px;
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
   }
 }
 
 @media (max-width: 480px) {
-  .radio-group {
-    flex-direction: column;
-    gap: 12px;
+  .header-actions {
+    gap: 8px;
   }
 
-  .action-buttons {
-    flex-wrap: wrap;
-    gap: 4px;
+  .stats-card {
+    text-align: center;
+  }
+
+  .instance-info {
+    text-align: center;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
   }
 }
 
 /* 表格滚动优化 */
-.table-wrapper {
+.table-container :deep(.ant-table-wrapper) {
   overflow: auto;
 }
 
-.data-table th {
+.table-container :deep(.ant-table-thead > tr > th) {
   white-space: nowrap;
 }
 
-.data-table td {
+.table-container :deep(.ant-table-tbody > tr > td) {
   word-break: break-word;
 }
 
 /* 对话框响应式优化 */
-.responsive-modal {
+.responsive-modal :deep(.ant-modal) {
   max-width: calc(100vw - 16px);
   margin: 8px;
 }
 
 @media (max-width: 768px) {
-  .responsive-modal .modal-body {
+  .responsive-modal :deep(.ant-modal-body) {
     padding: 16px;
-    max-height: calc(100vh - 132px);
+    max-height: calc(100vh - 160px);
     overflow-y: auto;
   }
 }

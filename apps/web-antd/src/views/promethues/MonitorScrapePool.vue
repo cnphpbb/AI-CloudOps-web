@@ -433,7 +433,7 @@
               <a-form-item label="AlertManager地址" name="alert_manager_url">
                 <a-input 
                   v-model:value="formDialog.form.alert_manager_url" 
-                  placeholder="请输入AlertManager地址" 
+                  placeholder="请输入AlertManager地址，例如：http://localhost:9090" 
                 />
               </a-form-item>
             </a-col>
