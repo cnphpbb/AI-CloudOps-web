@@ -7,7 +7,7 @@ const routes: RouteRecordRaw[] = [
     component: BasicLayout,
     meta: {
       order: 2,
-      title: 'Promethues管理',
+      title: 'Prometheus管理',
     },
     name: 'Prometheus',
     path: '/prometheus',
@@ -15,7 +15,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'MonitorScrapePool',
         path: '/monitor_pool',
-        component: () => import('#/views/promethues/MonitorScrapePool.vue'),
+        component: () => import('#/views/prometheus/MonitorScrapePool.vue'),
         meta: {
           title: '采集池',
           icon: 'lucide:database',
@@ -24,7 +24,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'MonitorScrapeJob',
         path: '/monitor_job',
-        component: () => import('#/views/promethues/MonitorScrapeJob.vue'),
+        component: () => import('#/views/prometheus/MonitorScrapeJob.vue'),
         meta: {
           title: '采集任务',
           icon: 'lucide:list-check',
@@ -33,7 +33,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'MonitorAlertPool',
         path: '/monitor_alert_pool',
-        component: () => import('#/views/promethues/MonitorAlertPool.vue'),
+        component: () => import('#/views/prometheus/MonitorAlertPool.vue'),
         meta: {
           title: 'alert告警池',
           icon: 'lucide:alert-triangle',
@@ -43,7 +43,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'MonitorAlertRule',
         path: '/monitor_alert_rule',
-        component: () => import('#/views/promethues/MonitorAlertRule.vue'),
+        component: () => import('#/views/prometheus/MonitorAlertRule.vue'),
         meta: {
           title: '告警规则',
           icon: 'lucide:badge-alert',
@@ -52,7 +52,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'MonitorAlertEvent',
         path: '/monitor_alert_event',
-        component: () => import('#/views/promethues/MonitorAlertEvent.vue'),
+        component: () => import('#/views/prometheus/MonitorAlertEvent.vue'),
         meta: {
           title: '告警事件',
           icon: 'lucide:bell-ring',
@@ -61,7 +61,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'MonitorAlertRecord',
         path: '/monitor_alert_record',
-        component: () => import('#/views/promethues/MonitorAlertRecord.vue'),
+        component: () => import('#/views/prometheus/MonitorAlertRecord.vue'),
         meta: {
           title: '预聚合',
           icon: 'lucide:box',
@@ -70,7 +70,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'MonitorConfig',
         path: '/monitor_config',
-        component: () => import('#/views/promethues/MonitorConfig.vue'),
+        component: () => import('#/views/prometheus/MonitorConfig.vue'),
         meta: {
           title: '配置文件',
           icon: 'lucide:file-text',
@@ -79,7 +79,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'MonitorOnDutyGroup',
         path: '/monitor_onduty_group',
-        component: () => import('#/views/promethues/MonitorOnDutyGroup.vue'),
+        component: () => import('#/views/prometheus/MonitorOnDutyGroup.vue'),
         meta: {
           title: '值班组',
           icon: 'lucide:user-round-minus',
@@ -89,7 +89,7 @@ const routes: RouteRecordRaw[] = [
         name: 'MonitorOnDutyGroupTable',
         path: '/monitor_onduty_group_table',
         component: () =>
-          import('#/views/promethues/MonitorOnDutyGroupTable.vue'),
+          import('#/views/prometheus/MonitorOnDutyGroupTable.vue'),
         meta: {
           hideInMenu: true,
           title: '排班表',
@@ -99,7 +99,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'MonitorSend',
         path: '/monitor_send',
-        component: () => import('#/views/promethues/MonitorSend.vue'),
+        component: () => import('#/views/prometheus/MonitorSend.vue'),
         meta: {
           title: '发送组',
           icon: 'lucide:send-horizontal',
