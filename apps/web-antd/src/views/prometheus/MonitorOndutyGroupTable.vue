@@ -997,10 +997,6 @@ const formatTimeFromTimestamp = (timestamp: string): string => {
   return dayjs(timestamp).format('HH:mm');
 };
 
-const formatFullDateTime = (timestamp: string): string => {
-  return dayjs(timestamp).format('YYYY-MM-DD HH:mm:ss');
-};
-
 const getDayOfWeek = (dateStr: string): string => {
   const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
   return weekdays[dayjs(dateStr).day()] || '';
@@ -1106,14 +1102,6 @@ const exportSchedule = async (): Promise<void> => {
     message.error('导出失败：' + (error.message || '未知错误'));
   } finally {
     exportLoading.value = false;
-  }
-};
-
-// 加载更多调班记录
-const loadMoreChangeRecords = async (): Promise<void> => {
-  if (changeRecordsPagination.hasMore) {
-    changeRecordsPagination.current += 1;
-    await loadChangeRecords(changeRecordsPagination.current, true);
   }
 };
 
