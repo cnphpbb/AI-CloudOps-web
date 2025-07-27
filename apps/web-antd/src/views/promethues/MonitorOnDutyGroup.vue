@@ -105,7 +105,7 @@
                   :key="user.id" 
                   class="tech-tag user-tag"
                 >
-                  {{ user.username }}
+                  {{ user.real_name || user.username }}
                 </a-tag>
                 <span v-if="!record.users?.length" class="empty-text">无成员</span>
               </div>
@@ -129,11 +129,11 @@
                 <div class="today-duty" v-if="record.today_duty_user">
                   <a-avatar 
                     size="small" 
-                    :style="{ backgroundColor: getAvatarColor(record.today_duty_user.username) }"
+                    :style="{ backgroundColor: getAvatarColor(record.today_duty_user.real_name || record.today_duty_user.username) }"
                   >
-                    {{ getInitials(record.today_duty_user.username) }}
+                    {{ getInitials(record.today_duty_user.real_name || record.today_duty_user.username) }}
                   </a-avatar>
-                  <span class="duty-user-name">{{ record.today_duty_user.username }}</span>
+                  <span class="duty-user-name">{{ record.today_duty_user.real_name || record.today_duty_user.username }}</span>
                   <a-tag color="green" size="small">今日值班</a-tag>
                 </div>
                 <span v-else class="no-duty">暂无值班</span>
@@ -154,9 +154,9 @@
                   size="small" 
                   :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
                 >
-                  {{ getInitials(record.create_user_name) }}
+                  {{ getInitials(record.create_user_name || '') }}
                 </a-avatar>
-                <span class="creator-name">{{ record.create_user_name }}</span>
+                <span class="creator-name">{{ record.create_user_name || '未知' }}</span>
               </div>
             </template>
 
@@ -225,27 +225,13 @@
             </a-col>
           </a-row>
           <a-row :gutter="16">
-            <a-col :span="12">
+            <a-col :span="24">
               <a-form-item label="轮班周期（天）" name="shift_days">
                 <a-input-number 
                   v-model:value="addForm.shift_days" 
                   :min="1" 
                   :max="365" 
                   class="full-width" 
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :span="12">
-              <a-form-item label="负责人" name="user_id">
-                <a-select 
-                  v-model:value="addForm.user_id" 
-                  placeholder="请选择负责人" 
-                  style="width: 100%"
-                  :options="userOptions" 
-                  :loading="usersLoading"
-                  show-search
-                  :filter-option="filterUserOption"
-                  allow-clear
                 />
               </a-form-item>
             </a-col>
@@ -418,7 +404,7 @@
                 :key="user.id" 
                 class="tech-tag user-tag"
               >
-                {{ user.username }}
+                {{ user.real_name || user.username }}
               </a-tag>
               <span v-if="!detailDialog.data.users?.length" class="empty-text">无成员</span>
             </div>
@@ -427,11 +413,11 @@
             <div v-if="detailDialog.data.today_duty_user" class="duty-user-info">
               <a-avatar 
                 size="small" 
-                :style="{ backgroundColor: getAvatarColor(detailDialog.data.today_duty_user.username) }"
+                :style="{ backgroundColor: getAvatarColor(detailDialog.data.today_duty_user.real_name || detailDialog.data.today_duty_user.username) }"
               >
-                {{ getInitials(detailDialog.data.today_duty_user.username) }}
+                {{ getInitials(detailDialog.data.today_duty_user.real_name || detailDialog.data.today_duty_user.username) }}
               </a-avatar>
-              <span>{{ detailDialog.data.today_duty_user.username }}</span>
+              <span>{{ detailDialog.data.today_duty_user.real_name || detailDialog.data.today_duty_user.username }}</span>
             </div>
             <span v-else>暂无</span>
           </a-descriptions-item>
@@ -612,44 +598,73 @@
             <a-button @click="resetHistoryFilters">重置筛选</a-button>
           </div>
 
-          <div class="history-timeline">
-            <a-timeline mode="left">
-              <a-timeline-item 
-                v-for="(history, index) in historyDialog.data" 
-                :key="history.id"
-                :color="getHistoryTimelineColor(index)"
-              >
-                <template #label>
-                  <div class="timeline-date">
-                    <div class="date-main">{{ formatPlanDate(history.date_string) }}</div>
-                    <div class="date-sub">{{ formatPlanWeekday(history.date_string) }}</div>
+          <div class="history-table">
+            <a-table 
+              :data-source="historyDialog.data" 
+              :columns="historyColumns" 
+              :pagination="false"
+              :loading="historyDialog.loading" 
+              row-key="id"
+              size="small"
+            >
+              <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'id'">
+                  <span class="record-id">#{{ record.id }}</span>
+                </template>
+                <template v-if="column.key === 'date'">
+                  <div class="date-info">
+                    <span class="date">{{ record.date_string }}</span>
+                    <span class="weekday">{{ formatPlanWeekday(record.date_string) }}</span>
                   </div>
                 </template>
-                <div class="timeline-content">
-                  <div class="duty-user">
-                    <a-avatar 
-                      size="small" 
-                      :style="{ backgroundColor: getAvatarColor(history.create_user_name || '') }"
-                    >
-                      {{ getInitials(history.create_user_name || '') }}
-                    </a-avatar>
-                    <span class="user-name">值班人员ID: {{ history.on_duty_user_id }}</span>
-                    <a-tag v-if="history.origin_user_id !== history.on_duty_user_id" color="orange" class="changed-tag">
+                <template v-if="column.key === 'users'">
+                  <div class="user-change-info">
+                    <div class="user-item">
+                      <span class="label">原值班:</span>
+                      <span class="user-id">ID {{ record.origin_user_id }}</span>
+                    </div>
+                    <Icon icon="carbon:arrow-right" style="margin: 0 8px;" />
+                    <div class="user-item">
+                      <span class="label">实际值班:</span>
+                      <span class="user-id">ID {{ record.on_duty_user_id }}</span>
+                    </div>
+                    <a-tag v-if="record.origin_user_id !== record.on_duty_user_id" color="orange" size="small" class="changed-tag">
                       已调班
                     </a-tag>
                   </div>
-                  <div class="duty-details">
-                    <span class="duty-type">历史值班</span>
-                    <span class="create-info">记录人: {{ history.create_user_name }}</span>
+                </template>
+                <template v-if="column.key === 'created_at'">
+                  <div class="date-info">
+                    <span class="date">{{ formatDate(record.created_at) }}</span>
+                    <span class="time">{{ formatTime(record.created_at) }}</span>
                   </div>
+                </template>
+              </template>
+              <template #emptyText>
+                <div class="empty-state table-empty">
+                  <Icon icon="carbon:time" class="empty-icon" />
+                  <div class="empty-title">暂无值班历史</div>
+                  <div class="empty-description">该值班组尚未有值班历史记录</div>
                 </div>
-              </a-timeline-item>
-            </a-timeline>
+              </template>
+            </a-table>
           </div>
 
           <div class="detail-footer">
-            <a-button @click="closeHistoryDialog">关闭</a-button>
-            <a-button type="primary" @click="exportHistory">导出历史</a-button>
+            <div class="footer-left">
+              <a-button @click="closeHistoryDialog">关闭</a-button>
+              <a-button type="primary" @click="exportHistory">导出历史</a-button>
+            </div>
+            <div class="footer-right">
+              <a-pagination 
+                v-model:current="historyPaginationConfig.current" 
+                :total="historyPaginationConfig.total"
+                :pageSize="historyPaginationConfig.pageSize"
+                :showTotal="historyPaginationConfig.showTotal"
+                @change="handleHistoryPageChange"
+                size="small"
+              />
+            </div>
           </div>
         </div>
         <div v-else class="empty-state">
@@ -681,12 +696,16 @@
           <a-table 
             :data-source="changeDialog.data" 
             :columns="changeColumns" 
-            :pagination="false"
+            :pagination="changePaginationConfig"
             :loading="changeDialog.loading" 
             row-key="id"
             size="small"
+            @change="handleChangeTableChange"
           >
             <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'id'">
+                <span class="record-id">#{{ record.id }}</span>
+              </template>
               <template v-if="column.key === 'date'">
                 <div class="date-info">
                   <span class="date">{{ record.date }}</span>
@@ -707,12 +726,23 @@
                 </div>
               </template>
               <template v-if="column.key === 'reason'">
-                <span>{{ record.reason || '无' }}</span>
+                <span class="reason-text">{{ record.reason || '无' }}</span>
               </template>
               <template v-if="column.key === 'creator'">
                 <div class="creator-info">
-                  <span>{{ record.create_user_name }}</span>
-                  <div class="create-time">{{ formatFullDateTime(record.created_at) }}</div>
+                  <a-avatar 
+                    size="small" 
+                    :style="{ backgroundColor: getAvatarColor(record.create_user_name || '') }"
+                  >
+                    {{ getInitials(record.create_user_name || '') }}
+                  </a-avatar>
+                  <span class="creator-name">{{ record.create_user_name || '未知' }}</span>
+                </div>
+              </template>
+              <template v-if="column.key === 'created_at'">
+                <div class="date-info">
+                  <span class="date">{{ formatDate(record.created_at) }}</span>
+                  <span class="time">{{ formatTime(record.created_at) }}</span>
                 </div>
               </template>
             </template>
@@ -727,6 +757,14 @@
 
           <div class="detail-footer">
             <a-button @click="closeChangeDialog">关闭</a-button>
+            <a-button 
+              v-if="changePaginationConfig.total > changeDialog.data.length" 
+              type="primary" 
+              @click="loadMoreChangeRecords"
+              :loading="changeDialog.loading"
+            >
+              加载更多
+            </a-button>
           </div>
         </div>
       </a-spin>
@@ -749,22 +787,35 @@
             v-model:value="createChangeForm.date" 
             placeholder="请选择调班日期" 
             style="width: 100%"
+            @change="handleChangeDateSelect"
           />
         </a-form-item>
-        <a-form-item label="原值班人员ID" name="origin_user_id">
-          <a-input-number 
+        <a-form-item label="原值班人员" name="origin_user_id">
+          <a-select 
             v-model:value="createChangeForm.origin_user_id" 
-            placeholder="请输入原值班人员ID" 
+            placeholder="请选择原值班人员" 
             style="width: 100%"
-            :min="1"
+            :options="changeUserOptions" 
+            :loading="changeUsersLoading"
+            @popupScroll="handleChangeUserSelectScroll" 
+            @search="handleChangeUserSearch" 
+            show-search
+            :filter-option="false"
+            allow-clear
           />
         </a-form-item>
-        <a-form-item label="调班后人员ID" name="on_duty_user_id">
-          <a-input-number 
+        <a-form-item label="调班后人员" name="on_duty_user_id">
+          <a-select 
             v-model:value="createChangeForm.on_duty_user_id" 
-            placeholder="请输入调班后人员ID" 
+            placeholder="请选择调班后人员" 
             style="width: 100%"
-            :min="1"
+            :options="changeUserOptions" 
+            :loading="changeUsersLoading"
+            @popupScroll="handleChangeUserSelectScroll" 
+            @search="handleChangeUserSearch" 
+            show-search
+            :filter-option="false"
+            allow-clear
           />
         </a-form-item>
         <a-form-item label="调班原因" name="reason">
@@ -794,15 +845,16 @@ import {
   getMonitorOnDutyGroupFuturePlanApi,
   getMonitorOnDutyHistoryApi,
   createMonitorOnDutyGroupChangeApi,
+  getMonitorOnDutyGroupChangeListApi,
   type MonitorOnDutyGroup,
   type CreateMonitorOnDutyGroupReq,
   type UpdateMonitorOnDutyGroupReq,
-  type OnDutyPlanResp,
   type MonitorOnDutyHistory,
   type MonitorOnDutyChange,
   type CreateMonitorOnDutyGroupChangeReq,
-  type GetOnDutyListParams,
-  type GetMonitorOnDutyHistoryReq
+  type GetMonitorOnDutyHistoryReq,
+  type GetMonitorOnDutyGroupListReq,
+  type GetMonitorOnDutyGroupChangeListReq,
 } from '#/api/core/prometheus_onduty';
 import dayjs, { type Dayjs } from 'dayjs';
 import { getUserList, type GetUserListReq } from '#/api/core/user';
@@ -810,7 +862,7 @@ import { getUserList, type GetUserListReq } from '#/api/core/user';
 
 const router = useRouter();
 
-// 模拟用户接口类型
+// 用户接口类型
 interface User {
   id: number;
   username: string;
@@ -853,10 +905,20 @@ const columns = [
 
 // 调班记录列定义
 const changeColumns = [
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
   { title: '日期', dataIndex: 'date', key: 'date', width: 120 },
   { title: '人员变更', dataIndex: 'users', key: 'users', width: 250 },
   { title: '调班原因', dataIndex: 'reason', key: 'reason', width: 200 },
-  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 150 }
+  { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 150 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 }
+];
+
+// 值班历史列定义
+const historyColumns = [
+  { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
+  { title: '日期', dataIndex: 'date_string', key: 'date', width: 120 },
+  { title: '人员信息', dataIndex: 'users', key: 'users', width: 300 },
+  { title: '记录时间', dataIndex: 'created_at', key: 'created_at', width: 180 }
 ];
 
 // 状态数据
@@ -895,6 +957,9 @@ const userPaginationConfig = reactive({
   hasMore: true
 });
 
+// 用户数据缓存
+const userCache = ref<Map<number, string>>(new Map());
+
 // 计划用户选择相关状态
 const planUserOptions = ref<{ value: string, label: string }[]>([]);
 
@@ -927,7 +992,6 @@ const isCreateChangeModalVisible = ref(false);
 // 表单数据
 const addForm = reactive<CreateMonitorOnDutyGroupReq>({
   name: '',
-  user_id: 0,
   user_ids: [],
   shift_days: 7,
   description: ''
@@ -947,18 +1011,19 @@ const createChangeForm = reactive<{
   date: Dayjs | null;
   origin_user_id: number | null;
   on_duty_user_id: number | null;
-  user_id: number;
   reason: string;
-  create_user_name?: string;
 }>({
   on_duty_group_id: 0,
   date: null,
   origin_user_id: null,
   on_duty_user_id: null,
-  user_id: 1, // 默认当前用户ID
-  reason: '',
-  create_user_name: '当前用户' // 默认当前用户名
+  reason: ''
 });
+
+// 调班记录用户选择相关状态
+const changeUserOptions = ref<{ value: number, label: string }[]>([]);
+const changeUsersLoading = ref(false);
+const changeUserSearchText = ref('');
 
 // 详情对话框数据
 const detailDialog = reactive({
@@ -967,7 +1032,7 @@ const detailDialog = reactive({
 
 // 未来排班计划对话框数据
 const futurePlanDialog = reactive({
-  data: null as OnDutyPlanResp | null,
+  data: null as any | null,
   groupId: 0,
   groupName: '',
   shiftDays: 0,
@@ -983,12 +1048,32 @@ const historyDialog = reactive({
   loading: false
 });
 
+// 值班历史分页配置
+const historyPaginationConfig = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`
+});
+
 // 调班记录对话框数据
 const changeDialog = reactive({
   data: [] as MonitorOnDutyChange[],
   groupId: 0,
   groupName: '',
   loading: false
+});
+
+// 调班记录分页配置
+const changePaginationConfig = reactive({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条记录`
 });
 
 // 排班计划筛选
@@ -1007,9 +1092,6 @@ const formRules = {
   shift_days: [
     { required: true, message: '请输入轮班周期', trigger: 'blur' }
   ],
-  user_id: [
-    { required: true, message: '请选择负责人', trigger: 'change' }
-  ],
   user_ids: [
     { required: true, message: '请选择至少一个值班成员', trigger: 'change' }
   ]
@@ -1020,10 +1102,10 @@ const changeFormRules = {
     { required: true, message: '请选择调班日期', trigger: 'change' }
   ],
   origin_user_id: [
-    { required: true, message: '请输入原值班人员ID', trigger: 'blur' }
+    { required: true, message: '请选择原值班人员', trigger: 'change' }
   ],
   on_duty_user_id: [
-    { required: true, message: '请输入调班后人员ID', trigger: 'blur' }
+    { required: true, message: '请选择调班后人员', trigger: 'change' }
   ]
 };
 
@@ -1153,7 +1235,7 @@ const updateStats = (): void => {
 const fetchOnDutyGroups = async (): Promise<void> => {
   loading.value = true;
   try {
-    const params: GetOnDutyListParams = {
+    const params: GetMonitorOnDutyGroupListReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchText.value.trim() || undefined,
@@ -1188,19 +1270,30 @@ const fetchOnDutyGroups = async (): Promise<void> => {
 const fetchUserList = async (page = 1, search = ''): Promise<void> => {
   try {
     usersLoading.value = true;
-    const req = {
+    const req: GetUserListReq = {
       page,
       size: userPaginationConfig.pageSize,
       search: search || '',
     };
     const res = await getUserList(req);
-    // 兼容后端返回结构
+    
+    // 处理返回数据
     const items = res?.items || res?.list || res?.data || [];
     const total = res?.total || res?.count || 0;
-    const newOptions = items.map((user: any) => ({
-      value: user.id || user.userId || user.user_id,
-      label: user.username || user.real_name || user.realName,
-    }));
+    
+    const newOptions = items.map((user: any) => {
+      const userId = user.id || user.userId || user.user_id;
+      const userName = user.real_name || user.username || user.realName || `用户${userId}`;
+      
+      // 缓存用户信息
+      userCache.value.set(userId, userName);
+      
+      return {
+        value: userId,
+        label: userName,
+      };
+    });
+    
     if (page === 1) {
       userOptions.value = newOptions;
     } else {
@@ -1210,6 +1303,7 @@ const fetchUserList = async (page = 1, search = ''): Promise<void> => {
         ...newOptions.filter((opt: any) => !existingIds.has(opt.value)),
       ];
     }
+    
     userPaginationConfig.total = total;
     userPaginationConfig.hasMore = page * userPaginationConfig.pageSize < total;
   } catch (error: any) {
@@ -1225,8 +1319,8 @@ const handleUserSelectScroll = (e: any): void => {
   const { target } = e;
   if (target.scrollTop + target.offsetHeight >= target.scrollHeight - 20) {
     if (userPaginationConfig.hasMore && !usersLoading.value) {
-      fetchUserList(userPaginationConfig.current + 1, userSearchText.value);
       userPaginationConfig.current += 1;
+      fetchUserList(userPaginationConfig.current, userSearchText.value);
     }
   }
 };
@@ -1235,6 +1329,26 @@ const handleUserSelectScroll = (e: any): void => {
 const handleUserSearch = (value: string): void => {
   userSearchText.value = value;
   userPaginationConfig.current = 1;
+  userPaginationConfig.hasMore = true;
+  fetchUserList(1, value);
+};
+
+// 处理调班记录用户选择下拉框滚动
+const handleChangeUserSelectScroll = (e: any): void => {
+  const { target } = e;
+  if (target.scrollTop + target.offsetHeight >= target.scrollHeight - 20) {
+    if (userPaginationConfig.hasMore && !changeUsersLoading.value) {
+      userPaginationConfig.current += 1;
+      fetchUserList(userPaginationConfig.current, changeUserSearchText.value);
+    }
+  }
+};
+
+// 处理调班记录用户搜索
+const handleChangeUserSearch = (value: string): void => {
+  changeUserSearchText.value = value;
+  userPaginationConfig.current = 1;
+  userPaginationConfig.hasMore = true;
   fetchUserList(1, value);
 };
 
@@ -1298,29 +1412,95 @@ const fetchFuturePlan = async (id: number): Promise<void> => {
 };
 
 // 获取值班历史
-const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: string): Promise<void> => {
+const fetchOnDutyHistory = async (id: number, startDate?: string, endDate?: string, page = 1, append = false): Promise<void> => {
   try {
     historyDialog.loading = true;
-    const params: GetMonitorOnDutyHistoryReq = {
-      on_duty_group_id: id,
-      start_date: startDate || dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
-      end_date: endDate || dayjs().format('YYYY-MM-DD')
+    
+    // 构建API请求参数
+    const apiParams: {
+      start_date?: string;
+      end_date?: string;
+      page?: number;
+      size?: number;
+    } = {
+      page,
+      size: historyPaginationConfig.pageSize
     };
+    
+    if (startDate) apiParams.start_date = startDate;
+    if (endDate) apiParams.end_date = endDate;
 
-    const response = await getMonitorOnDutyHistoryApi(id, params);
+    const response = await getMonitorOnDutyHistoryApi(id, apiParams);
 
-    if (response) {
-      historyDialog.data = Array.isArray(response) ? response : [];
+    if (response && response.items) {
+      if (append) {
+        historyDialog.data = [...historyDialog.data, ...response.items];
+      } else {
+        historyDialog.data = response.items;
+      }
+      historyPaginationConfig.total = response.total || 0;
+      historyPaginationConfig.current = page;
     } else {
-      historyDialog.data = [];
-      message.error('获取值班历史失败');
+      if (!append) {
+        historyDialog.data = [];
+      }
+      historyPaginationConfig.total = 0;
+      if (!response) {
+        message.warning('获取值班历史失败，请稍后重试');
+      }
     }
   } catch (error: any) {
     console.error('获取值班历史失败:', error);
     message.error(error.message || '获取值班历史失败');
-    historyDialog.data = [];
+    if (!append) {
+      historyDialog.data = [];
+    }
+    historyPaginationConfig.total = 0;
   } finally {
     historyDialog.loading = false;
+  }
+};
+
+// 获取调班记录
+const fetchChangeRecords = async (page = 1, append = false): Promise<void> => {
+  try {
+    changeDialog.loading = true;
+    const params: GetMonitorOnDutyGroupChangeListReq = {
+      on_duty_group_id: changeDialog.groupId,
+      page,
+      size: changePaginationConfig.pageSize
+    };
+
+    const response = await getMonitorOnDutyGroupChangeListApi(changeDialog.groupId, {
+      page,
+      size: changePaginationConfig.pageSize
+    });
+
+    if (response && response.items) {
+      if (append) {
+        changeDialog.data = [...changeDialog.data, ...response.items];
+      } else {
+        changeDialog.data = response.items;
+      }
+      changePaginationConfig.total = response.total || 0;
+    } else {
+      if (!append) {
+        changeDialog.data = [];
+      }
+      changePaginationConfig.total = 0;
+      if (!response) {
+        message.warning('获取调班记录失败，请稍后重试');
+      }
+    }
+  } catch (error: any) {
+    console.error('获取调班记录失败:', error);
+    message.error(error.message || '获取调班记录失败');
+    if (!append) {
+      changeDialog.data = [];
+    }
+    changePaginationConfig.total = 0;
+  } finally {
+    changeDialog.loading = false;
   }
 };
 
@@ -1329,6 +1509,12 @@ const handleTableChange = (pagination: any): void => {
   paginationConfig.current = pagination.current;
   paginationConfig.pageSize = pagination.pageSize;
   fetchOnDutyGroups();
+};
+
+const handleChangeTableChange = (pagination: any): void => {
+  changePaginationConfig.current = pagination.current;
+  changePaginationConfig.pageSize = pagination.pageSize;
+  fetchChangeRecords(pagination.current);
 };
 
 const handleSearch = (): void => {
@@ -1417,7 +1603,8 @@ const handleViewFuturePlan = async (record: MonitorOnDutyGroup): Promise<void> =
 const handleViewHistory = async (record: MonitorOnDutyGroup): Promise<void> => {
   historyDialog.groupId = record.id;
   historyDialog.groupName = record.name;
-  await fetchOnDutyHistory(record.id);
+  historyPaginationConfig.current = 1;
+  await fetchOnDutyHistory(record.id, undefined, undefined, 1);
   historyDialogVisible.value = true;
 };
 
@@ -1436,7 +1623,8 @@ const handleViewHistoryFromDetail = async (): Promise<void> => {
   if (detailDialog.data) {
     historyDialog.groupId = detailDialog.data.id;
     historyDialog.groupName = detailDialog.data.name;
-    await fetchOnDutyHistory(detailDialog.data.id);
+    historyPaginationConfig.current = 1;
+    await fetchOnDutyHistory(detailDialog.data.id, undefined, undefined, 1);
     detailDialogVisible.value = false;
     historyDialogVisible.value = true;
   }
@@ -1477,16 +1665,35 @@ const handleHistoryDateChange = (dates: [Dayjs, Dayjs] | null): void => {
   if (dates && historyDialog.groupId) {
     const startDate = dates[0].format('YYYY-MM-DD');
     const endDate = dates[1].format('YYYY-MM-DD');
-    fetchOnDutyHistory(historyDialog.groupId, startDate, endDate);
+    historyPaginationConfig.current = 1;
+    fetchOnDutyHistory(historyDialog.groupId, startDate, endDate, 1);
   }
 };
 
 const resetHistoryFilters = (): void => {
   historyDateRange.value = null;
   if (historyDialog.groupId) {
-    fetchOnDutyHistory(historyDialog.groupId);
+    historyPaginationConfig.current = 1;
+    fetchOnDutyHistory(historyDialog.groupId, undefined, undefined, 1);
   }
   message.success('筛选条件已重置');
+};
+
+// 处理历史记录分页变化
+const handleHistoryTableChange = (pagination: any): void => {
+  historyPaginationConfig.current = pagination.current;
+  historyPaginationConfig.pageSize = pagination.pageSize;
+  const startDate = historyDateRange.value ? historyDateRange.value[0].format('YYYY-MM-DD') : undefined;
+  const endDate = historyDateRange.value ? historyDateRange.value[1].format('YYYY-MM-DD') : undefined;
+  fetchOnDutyHistory(historyDialog.groupId, startDate, endDate, pagination.current);
+};
+
+// 处理历史分页页码变化
+const handleHistoryPageChange = (page: number): void => {
+  historyPaginationConfig.current = page;
+  const startDate = historyDateRange.value ? historyDateRange.value[0].format('YYYY-MM-DD') : undefined;
+  const endDate = historyDateRange.value ? historyDateRange.value[1].format('YYYY-MM-DD') : undefined;
+  fetchOnDutyHistory(historyDialog.groupId, startDate, endDate, page);
 };
 
 // 导出功能
@@ -1513,29 +1720,57 @@ const exportPlan = (): void => {
   message.success('排班计划已导出');
 };
 
-const exportHistory = (): void => {
+const exportHistory = async (): Promise<void> => {
   if (!historyDialog.data.length) return;
+  
+  try {
+    // 导出前获取所有历史记录
+    historyDialog.loading = true;
+    message.loading('正在准备导出数据...');
+    
+    // 获取所有历史记录
+    const apiParams: {
+      start_date?: string;
+      end_date?: string;
+      size?: number;
+    } = {
+      size: 1000 // 设置较大的size以获取尽可能多的记录
+    };
+    
+    // 如果有日期范围筛选，添加到参数中
+    if (historyDateRange.value) {
+      apiParams.start_date = historyDateRange.value[0].format('YYYY-MM-DD');
+      apiParams.end_date = historyDateRange.value[1].format('YYYY-MM-DD');
+    }
+    
+    const response = await getMonitorOnDutyHistoryApi(historyDialog.groupId, apiParams);
+    const exportData = response?.items || historyDialog.data;
+    
+    const headers = ['日期', '星期', '值班人员ID', '原值班人员ID', '创建时间'];
+    const csvContent = [
+      headers.join(','),
+      ...exportData.map((history: MonitorOnDutyHistory) => [
+        history.date_string,
+        formatPlanWeekday(history.date_string),
+        history.on_duty_user_id,
+        history.origin_user_id,
+        formatFullDateTime(history.created_at)
+      ].join(','))
+    ].join('\n');
 
-  const headers = ['日期', '星期', '值班人员ID', '原值班人员ID', '创建人', '创建时间'];
-  const csvContent = [
-    headers.join(','),
-    ...historyDialog.data.map(history => [
-      history.date_string,
-      formatPlanWeekday(history.date_string),
-      history.on_duty_user_id,
-      history.origin_user_id,
-      history.create_user_name,
-      formatFullDateTime(history.created_at)
-    ].join(','))
-  ].join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${historyDialog.groupName}_值班历史_${dayjs().format('YYYY-MM-DD')}.csv`;
+    link.click();
 
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${historyDialog.groupName}_值班历史_${dayjs().format('YYYY-MM-DD')}.csv`;
-  link.click();
-
-  message.success('值班历史已导出');
+    message.success(`值班历史已导出 (${exportData.length}条记录)`);
+  } catch (error: any) {
+    console.error('导出值班历史失败:', error);
+    message.error(error.message || '导出值班历史失败');
+  } finally {
+    historyDialog.loading = false;
+  }
 };
 
 // 模态框控制
@@ -1552,7 +1787,6 @@ const resetAddForm = (): void => {
     addFormRef.value.resetFields();
   }
   addForm.name = '';
-  addForm.user_id = 0;
   addForm.shift_days = 7;
   addForm.user_ids = [];
   addForm.description = '';
@@ -1610,6 +1844,8 @@ const closeFuturePlanDialog = (): void => {
 const closeHistoryDialog = (): void => {
   historyDialogVisible.value = false;
   historyDateRange.value = null;
+  historyDialog.data = [];
+  historyPaginationConfig.current = 1;
 };
 
 const closeChangeDialog = (): void => {
@@ -1622,6 +1858,14 @@ const showCreateChangeModal = (): void => {
   createChangeForm.origin_user_id = null;
   createChangeForm.on_duty_user_id = null;
   createChangeForm.reason = '';
+  
+  // 加载用户列表
+  changeUserSearchText.value = '';
+  userPaginationConfig.current = 1;
+  fetchUserList(1).then(() => {
+    changeUserOptions.value = [...userOptions.value];
+  });
+  
   isCreateChangeModalVisible.value = true;
 };
 
@@ -1640,7 +1884,6 @@ const handleAdd = async (): Promise<void> => {
     loading.value = true;
     const payload: CreateMonitorOnDutyGroupReq = {
       name: addForm.name.trim(),
-      user_id: addForm.user_id,
       user_ids: addForm.user_ids,
       shift_days: addForm.shift_days,
       description: addForm.description?.trim()
@@ -1705,7 +1948,6 @@ const handleCreateChange = async (): Promise<void> => {
       date: createChangeForm.date!.format('YYYY-MM-DD'),
       origin_user_id: createChangeForm.origin_user_id!,
       on_duty_user_id: createChangeForm.on_duty_user_id!,
-      user_id: createChangeForm.user_id,
       reason: createChangeForm.reason?.trim()
     };
 
@@ -1714,7 +1956,10 @@ const handleCreateChange = async (): Promise<void> => {
     if (response) {
       message.success('创建调班记录成功');
       closeCreateChangeModal();
-      // 刷新调班记录列表（这里需要实现获取调班记录的接口）
+      // 刷新调班记录列表
+      if (changeDialogVisible.value) {
+        await fetchChangeRecords(1);
+      }
     } else {
       message.error('创建调班记录失败');
     }
@@ -1723,6 +1968,24 @@ const handleCreateChange = async (): Promise<void> => {
     message.error(error.message || '创建调班记录失败');
   } finally {
     loading.value = false;
+  }
+};
+
+// 加载更多调班记录
+const loadMoreChangeRecords = async (): Promise<void> => {
+  if (changePaginationConfig.total > changeDialog.data.length) {
+    const nextPage = Math.floor(changeDialog.data.length / changePaginationConfig.pageSize) + 1;
+    await fetchChangeRecords(nextPage, true);
+  }
+};
+
+// 加载更多历史记录
+const loadMoreHistoryRecords = async (): Promise<void> => {
+  if (historyPaginationConfig.total > historyDialog.data.length) {
+    const nextPage = Math.floor(historyDialog.data.length / historyPaginationConfig.pageSize) + 1;
+    const startDate = historyDateRange.value ? historyDateRange.value[0].format('YYYY-MM-DD') : undefined;
+    const endDate = historyDateRange.value ? historyDateRange.value[1].format('YYYY-MM-DD') : undefined;
+    await fetchOnDutyHistory(historyDialog.groupId, startDate, endDate, nextPage, true);
   }
 };
 
@@ -1754,36 +2017,18 @@ const handleViewChange = async (record: MonitorOnDutyGroup): Promise<void> => {
   changeDialog.groupId = record.id;
   changeDialog.groupName = record.name;
   changeDialog.loading = true;
+  changePaginationConfig.current = 1;
   
   try {
-    // 这里应该调用获取调班记录的接口，目前使用模拟数据
-    // 实际项目中应该替换为真实的API调用
-    setTimeout(() => {
-      changeDialog.data = [
-        {
-          id: 1,
-          created_at: dayjs().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-          updated_at: dayjs().format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-          deleted_at: 0,
-          on_duty_group_id: record.id,
-          user_id: 1,
-          date: dayjs().format('YYYY-MM-DD'),
-          origin_user_id: 2,
-          on_duty_user_id: 3,
-          create_user_name: '管理员',
-          reason: '临时调班'
-        }
-      ];
-      changeDialog.loading = false;
-    }, 500);
+    await fetchChangeRecords(1);
+    changeDialogVisible.value = true;
   } catch (error: any) {
     console.error('获取调班记录失败:', error);
     message.error(error.message || '获取调班记录失败');
     changeDialog.data = [];
+  } finally {
     changeDialog.loading = false;
   }
-  
-  changeDialogVisible.value = true;
 };
 
 const confirmDelete = (record: MonitorOnDutyGroup): void => {
@@ -1826,6 +2071,27 @@ onMounted(async () => {
     fetchUserList(1)
   ]);
 });
+
+// 处理调班日期选择
+const handleChangeDateSelect = (date: Dayjs | null): void => {
+  if (date && changeDialog.groupId) {
+    // 根据选择的日期，从未来排班计划中查找原值班人
+    const dateStr = date.format('YYYY-MM-DD');
+    
+    // 如果当前有未来排班计划数据，从中查找
+    if (futurePlanDialog.data?.details) {
+      const planDetail = futurePlanDialog.data.details.find((item: any) => item.date === dateStr);
+      if (planDetail && planDetail.user) {
+        createChangeForm.origin_user_id = planDetail.user.id;
+      }
+    }
+    
+    // 如果没有找到，尝试从值班组详情中获取今日值班人作为默认值
+    if (!createChangeForm.origin_user_id && detailDialog.data?.today_duty_user) {
+      createChangeForm.origin_user_id = detailDialog.data.today_duty_user.id;
+    }
+  }
+};
 </script>
 
 <style scoped>
@@ -2072,9 +2338,20 @@ onMounted(async () => {
 .detail-footer {
   margin-top: 24px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.footer-left {
+  display: flex;
+  gap: 8px;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
 }
 
 .future-plan-content,
@@ -2125,6 +2402,19 @@ onMounted(async () => {
 .plan-timeline,
 .history-timeline {
   margin-bottom: 20px;
+}
+
+.history-table {
+  margin-bottom: 20px;
+}
+
+.history-table :deep(.ant-table-thead > tr > th) {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+.history-table :deep(.ant-table-tbody > tr:hover > td) {
+  background-color: #e6f7ff;
 }
 
 .pagination-container {
@@ -2429,5 +2719,46 @@ onMounted(async () => {
 .table-empty .empty-icon {
   font-size: 32px;
   margin-bottom: 10px;
+}
+
+.record-id {
+  font-weight: 600;
+  color: #1890ff;
+  font-family: 'Courier New', monospace;
+}
+
+.reason-text {
+  color: #666;
+  font-style: italic;
+}
+
+.change-dialog .ant-table-wrapper {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.change-dialog .ant-table-thead > tr > th {
+  position: sticky;
+  top: 0;
+  background: #fafafa;
+  z-index: 1;
+}
+
+.change-dialog .detail-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.change-dialog .ant-table-tbody > tr > td {
+  vertical-align: top;
+  padding: 12px 8px;
+}
+
+.change-dialog .ant-table-tbody > tr:hover > td {
+  background-color: #f5f5f5;
 }
 </style>

@@ -23,14 +23,10 @@
         <div class="header-actions">
           <a-button type="default" @click="exportSchedule" class="action-btn" :loading="exportLoading">
             <template #icon>
-              <Icon icon="carbon:download" />
             </template>
             导出
           </a-button>
           <a-button type="primary" @click="handleCreateChange" class="action-btn">
-            <template #icon>
-              <PlusOutlined />
-            </template>
             申请换班
           </a-button>
         </div>
@@ -168,20 +164,20 @@
       </a-card>
     </div>
 
-    <!-- 换班记录表格 -->
+    <!-- 值班历史表格 -->
     <div class="records-section">
       <a-card>
         <template #title>
           <div class="section-title">
             <Icon icon="carbon:table" />
-            <span>换班记录</span>
+            <span>值班历史</span>
           </div>
         </template>
 
         <div class="search-section">
           <a-input-search 
             v-model:value="searchQuery" 
-            placeholder="搜索换班记录..." 
+            placeholder="搜索值班历史..." 
             class="search-input"
             @search="handleSearch" 
             allow-clear 
@@ -196,8 +192,8 @@
         </div>
 
         <a-table 
-          :data-source="changeRecordList" 
-          :columns="changeColumns" 
+          :data-source="historyList" 
+          :columns="historyColumns" 
           :pagination="paginationConfig"
           :loading="loading" 
           row-key="id" 
@@ -207,8 +203,8 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'date'">
               <div class="date-cell">
-                <div class="date-main">{{ formatDate(record.date) }}</div>
-                <div class="date-sub">{{ getDayOfWeek(record.date) }}</div>
+                <div class="date-main">{{ formatDate(record.date_string) }}</div>
+                <div class="date-sub">{{ getDayOfWeek(record.date_string) }}</div>
               </div>
             </template>
 
@@ -230,47 +226,10 @@
               </div>
             </template>
 
-            <template v-if="column.key === 'creator'">
-              <div class="user-cell">
-                <span class="user-name">{{ record.create_user_name }}</span>
-              </div>
-            </template>
-
             <template v-if="column.key === 'createdAt'">
               <div class="date-cell">
                 <div class="date-main">{{ formatDateFromTimestamp(record.created_at) }}</div>
                 <div class="date-sub">{{ formatTimeFromTimestamp(record.created_at) }}</div>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'action'">
-              <div class="action-cell">
-                <a-button type="link" size="small" @click="handleViewChange(record)">
-                  <Icon icon="carbon:view" />
-                  查看
-                </a-button>
-                <a-button 
-                  type="link" 
-                  size="small" 
-                  @click="handleEditChange(record)" 
-                  v-if="canEditRecord(record)"
-                >
-                  <Icon icon="carbon:edit" />
-                  编辑
-                </a-button>
-                <a-dropdown v-if="hasMoreActions(record)">
-                  <template #overlay>
-                    <a-menu @click="(e: any) => handleRecordAction(e.key, record)">
-                      <a-menu-item key="delete" danger>
-                        <Icon icon="carbon:trash-can" />
-                        删除
-                      </a-menu-item>
-                    </a-menu>
-                  </template>
-                  <a-button type="link" size="small">
-                    <Icon icon="carbon:overflow-menu-horizontal" />
-                  </a-button>
-                </a-dropdown>
               </div>
             </template>
           </template>
@@ -278,8 +237,8 @@
           <template #emptyText>
             <div class="empty-state">
               <Icon icon="carbon:no-image" class="empty-icon" />
-              <div class="empty-title">暂无换班记录</div>
-              <div class="empty-description">当前时间段内没有换班记录</div>
+              <div class="empty-title">暂无值班历史</div>
+              <div class="empty-description">当前时间段内没有值班历史记录</div>
             </div>
           </template>
         </a-table>
@@ -346,55 +305,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 详情对话框 -->
-    <a-modal 
-      :open="detailDialogVisible" 
-      title="换班记录详情" 
-      :footer="null"
-      @cancel="closeDetailDialog"
-    >
-      <div v-if="detailDialog.form" class="detail-container">
-        <div class="detail-grid">
-          <div class="detail-item">
-            <label>换班日期</label>
-            <span>{{ formatDate(detailDialog.form.date) }}</span>
-          </div>
-          <div class="detail-item">
-            <label>原值班人</label>
-            <span>{{ getUserName(detailDialog.form.origin_user_id) }}</span>
-          </div>
-          <div class="detail-item">
-            <label>新值班人</label>
-            <span>{{ getUserName(detailDialog.form.on_duty_user_id) }}</span>
-          </div>
-          <div class="detail-item">
-            <label>申请人</label>
-            <span>{{ detailDialog.form.create_user_name }}</span>
-          </div>
-          <div class="detail-item">
-            <label>申请时间</label>
-            <span>{{ formatFullDateTime(detailDialog.form.created_at) }}</span>
-          </div>
-          <div class="detail-item full-width">
-            <label>换班原因</label>
-            <div class="reason-detail">{{ detailDialog.form.reason || '无' }}</div>
-          </div>
-        </div>
-        
-        <div class="detail-footer">
-          <a-button @click="closeDetailDialog">关闭</a-button>
-          <a-button 
-            type="primary" 
-            @click="handleEditChange(detailDialog.form)"
-            v-if="canEditRecord(detailDialog.form)"
-          >
-            <Icon icon="carbon:edit" />
-            编辑
-          </a-button>
-        </div>
-      </div>
-    </a-modal>
-
     <!-- 日期详情对话框 -->
     <a-modal 
       :open="dayDetailVisible" 
@@ -457,26 +367,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, computed, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { message, Modal } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
 import dayjs, { Dayjs } from 'dayjs';
-import { PlusOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
   getMonitorOnDutyGroupDetailApi,
   getMonitorOnDutyGroupFuturePlanApi,
   getMonitorOnDutyHistoryApi,
   createMonitorOnDutyGroupChangeApi,
-  type MonitorOnDutyChange,
+  getMonitorOnDutyGroupChangeListApi,
+  type MonitorOnDutyHistory,
   type MonitorOnDutyUser,
   type MonitorOnDutyGroup,
-  type OnDutyPlanResp,
-  type OnDutyOne,
   type CreateMonitorOnDutyGroupChangeReq,
+  type GetMonitorOnDutyHistoryReq,
 } from '#/api/core/prometheus_onduty';
 
-// 定义接口
+// 定义接口 - 修复API响应结构
 interface Day {
   date: string;
   user: MonitorOnDutyUser | null;
@@ -485,17 +394,29 @@ interface Day {
   isAdjusted: boolean;
 }
 
+// 根据API响应修复数据结构
+interface DutyPlanDetail {
+  date: string;
+  user: MonitorOnDutyUser | null;
+  origin_user?: string;
+}
+
+// 修复API响应结构处理
+interface FuturePlanResponse {
+  details?: DutyPlanDetail[];
+  items?: DutyPlanDetail[];
+  data?: DutyPlanDetail[];
+  list?: DutyPlanDetail[];
+}
+
 const route = useRoute();
 const router = useRouter();
 
 // 列定义
-const changeColumns = [
-  { title: '换班日期', key: 'date', width: 120 },
+const historyColumns = [
+  { title: '值班日期', key: 'date', width: 120 },
   { title: '人员变更', key: 'users', width: 220 },
-  { title: '申请人', key: 'creator', width: 120 },
-  { title: '换班原因', dataIndex: 'reason', width: 200 },
-  { title: '申请时间', key: 'createdAt', width: 150 },
-  { title: '操作', key: 'action', width: 150 }
+  { title: '记录时间', key: 'createdAt', width: 150 }
 ];
 
 // 状态数据
@@ -508,11 +429,15 @@ const dutyGroupId = ref(0);
 const currentDate = ref(new Date());
 const selectedDay = ref<Day | null>(null);
 
+// 用户数据缓存
+const userCache = ref<Map<number, string>>(new Map());
+
 // 数据状态
 const dutyGroupDetail = ref<MonitorOnDutyGroup | null>(null);
-const dutyPlanData = ref<OnDutyPlanResp | null>(null);
+const dutyPlanData = ref<DutyPlanDetail[]>([]);
 const calendarDays = ref<Day[]>([]);
-const changeRecordList = ref<MonitorOnDutyChange[]>([]);
+const historyList = ref<MonitorOnDutyHistory[]>([]);
+const changeRecordsList = ref<any[]>([]);
 
 // 周显示
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
@@ -530,14 +455,13 @@ const paginationConfig = reactive({
 // 统计数据
 const stats = reactive({
   totalMembers: 0,
-  todayOnDuty: 0,
+  todayOnDuty: '',
   changeRecords: 0,
   monthlyDutyDays: 0
 });
 
 // 对话框状态
 const formDialogVisible = ref(false);
-const detailDialogVisible = ref(false);
 const dayDetailVisible = ref(false);
 
 // 表单对话框数据
@@ -552,11 +476,6 @@ const formDialog = reactive({
   }
 });
 
-// 详情对话框数据
-const detailDialog = reactive({
-  form: null as MonitorOnDutyChange | null
-});
-
 // 计算属性
 const currentMonthYear = computed(() => {
   return `${currentDate.value.getFullYear()}年${currentDate.value.getMonth() + 1}月`;
@@ -568,6 +487,454 @@ const isCurrentMonthToday = computed(() => {
   return now.isSame(current, 'month');
 });
 
+// 数据加载函数声明（提前声明避免初始化问题）
+const fetchDutyGroups = async (): Promise<void> => {
+  try {
+    const id = dutyGroupId.value;
+    if (!id) {
+      message.error('无效的值班组ID');
+      return;
+    }
+    
+    console.log('开始获取值班组详情，ID:', id);
+    const response = await getMonitorOnDutyGroupDetailApi(id);
+    console.log('获取值班组详情响应:', response);
+    
+    // 改进的API响应结构处理 - 使用与值班组页面相同的逻辑
+    let groupData = null;
+    
+    if (response) {
+      // 如果response直接包含id和name字段，则说明数据在根级别
+      if (response.id && response.name) {
+        groupData = response;
+      }
+      // 如果response包含data字段
+      else if (response.data && typeof response.data === 'object') {
+        if (response.data.id && response.data.name) {
+          groupData = response.data;
+        }
+      }
+      // 如果response包含result字段
+      else if (response.result && typeof response.result === 'object') {
+        if (response.result.id && response.result.name) {
+          groupData = response.result;
+        }
+      }
+      // 如果response包含items字段且是数组，取第一个
+      else if (response.items && Array.isArray(response.items) && response.items.length > 0) {
+        groupData = response.items[0];
+      }
+    }
+    
+    if (groupData) {
+      dutyGroupDetail.value = groupData;
+      console.log('设置值班组详情数据:', groupData);
+      
+      // 初始化用户缓存
+      if (groupData.users && Array.isArray(groupData.users)) {
+        groupData.users.forEach((user: MonitorOnDutyUser) => {
+          const userName = user.real_name || user.username || `用户${user.id}`;
+          userCache.value.set(user.id, userName);
+        });
+        console.log('初始化用户缓存:', userCache.value);
+      }
+      
+      updateStats();
+      
+      // 在获取到值班组详情后立即加载其他数据
+      await Promise.all([
+        fetchDutySchedule(),
+        loadHistoryRecords(),
+        loadChangeRecords(1)
+      ]);
+    } else {
+      console.error('无法解析API响应数据:', response);
+      message.error('获取值班组信息失败：数据格式异常');
+    }
+  } catch (error: any) {
+    console.error('获取值班组信息失败:', error);
+    
+    // 更详细的错误信息
+    let errorMessage = '获取值班组信息失败';
+    if (error.response) {
+      const status = error.response.status;
+      const responseData = error.response.data;
+      
+      if (status === 404) {
+        errorMessage = '值班组不存在或已被删除';
+      } else if (status === 403) {
+        errorMessage = '无权限访问该值班组';
+      } else if (status === 500) {
+        errorMessage = '服务器内部错误';
+      } else {
+        errorMessage = `请求失败 (${status}): ${responseData?.message || error.message}`;
+      }
+    } else if (error.request) {
+      errorMessage = '网络连接失败，请检查网络连接';
+    } else {
+      errorMessage = error.message || '未知错误';
+    }
+    
+    message.error(errorMessage);
+    
+    // 错误时跳转回列表页
+    setTimeout(() => {
+      router.push('/monitor_onduty_group');
+    }, 2000);
+  }
+};
+
+const fetchDutySchedule = async (): Promise<void> => {
+  if (!dutyGroupId.value) {
+    console.warn('未设置值班组ID，跳过获取值班计划');
+    return;
+  }
+  
+  loading.value = true;
+  try {
+    const id = dutyGroupId.value;
+    const currentMonth = dayjs(currentDate.value);
+    const startOfCalendar = currentMonth.startOf('month').startOf('week');
+    const endOfCalendar = currentMonth.endOf('month').endOf('week');
+
+    console.log('开始获取值班计划，参数:', {
+      id,
+      start_time: startOfCalendar.format('YYYY-MM-DD'),
+      end_time: endOfCalendar.format('YYYY-MM-DD')
+    });
+
+    const response = await getMonitorOnDutyGroupFuturePlanApi(id, {
+      start_time: startOfCalendar.format('YYYY-MM-DD'),
+      end_time: endOfCalendar.format('YYYY-MM-DD')
+    });
+
+    console.log('获取值班计划响应:', response);
+
+    // 改进的响应数据处理 - 兼容多种响应格式
+    let planDetails: DutyPlanDetail[] = [];
+    
+    if (response) {
+      // 直接是数组的情况
+      if (Array.isArray(response)) {
+        planDetails = response;
+      }
+      // 包含details字段的情况
+      else if (response.details && Array.isArray(response.details)) {
+        planDetails = response.details;
+      }
+      // 包含items字段的情况
+      else if (response.items && Array.isArray(response.items)) {
+        planDetails = response.items;
+      }
+      // 包含data字段的情况
+      else if (response.data && Array.isArray(response.data)) {
+        planDetails = response.data;
+      }
+      // 包含list字段的情况
+      else if (response.list && Array.isArray(response.list)) {
+        planDetails = response.list;
+      }
+      // 嵌套结构的情况
+      else if (response.data && response.data.details && Array.isArray(response.data.details)) {
+        planDetails = response.data.details;
+      }
+      else if (response.result && response.result.details && Array.isArray(response.result.details)) {
+        planDetails = response.result.details;
+      }
+    }
+
+    console.log('解析后的计划详情:', planDetails);
+    dutyPlanData.value = planDetails;
+
+    if (planDetails.length > 0) {
+      const days: Day[] = [];
+      
+      // 生成完整的日历网格
+      for (let date = startOfCalendar; date.isBefore(endOfCalendar) || date.isSame(endOfCalendar); date = date.add(1, 'day')) {
+        const dateStr = date.format('YYYY-MM-DD');
+        const detail = planDetails.find((item: DutyPlanDetail) => item.date === dateStr);
+        const isCurrentMonth = date.isSame(currentMonth, 'month');
+
+        // 处理用户信息和换班标识
+        let user: MonitorOnDutyUser | null = null;
+        let originUser: string | undefined = undefined;
+        let isAdjusted = false;
+
+        if (detail) {
+          // 处理用户信息 - 兼容多种数据结构
+          if (detail.user) {
+            if (typeof detail.user === 'object' && detail.user.id) {
+              user = detail.user;
+            } else if (typeof detail.user === 'number') {
+              // 如果user字段只是用户ID，从用户缓存中获取信息
+              const userName = getUserName(detail.user);
+              user = {
+                id: detail.user,
+                username: userName,
+                real_name: userName
+              };
+            }
+          }
+          
+          // 处理原值班人信息（如果有换班）
+          if (detail.origin_user && detail.origin_user.trim()) {
+            originUser = detail.origin_user;
+            isAdjusted = true;
+          }
+        }
+
+        days.push({
+          date: dateStr,
+          user: user,
+          originUser: originUser,
+          isCurrentMonth,
+          isAdjusted: isAdjusted
+        });
+      }
+      
+      calendarDays.value = days;
+      console.log('生成的日历数据:', days);
+    } else {
+      // 如果没有计划数据，仍然生成空的日历网格
+      const days: Day[] = [];
+      for (let date = startOfCalendar; date.isBefore(endOfCalendar) || date.isSame(endOfCalendar); date = date.add(1, 'day')) {
+        const dateStr = date.format('YYYY-MM-DD');
+        const isCurrentMonth = date.isSame(currentMonth, 'month');
+        
+        days.push({
+          date: dateStr,
+          user: null,
+          originUser: undefined,
+          isCurrentMonth,
+          isAdjusted: false
+        });
+      }
+      calendarDays.value = days;
+      console.log('生成空的日历数据');
+    }
+    
+    updateStats();
+  } catch (error: any) {
+    console.error('获取值班计划失败:', error);
+    
+    let errorMessage = '获取值班计划失败';
+    if (error.response?.status === 404) {
+      errorMessage = '未找到值班计划数据';
+    } else if (error.response?.status === 403) {
+      errorMessage = '无权限访问值班计划';
+    } else {
+      errorMessage = error.message || '获取值班计划失败';
+    }
+    
+    message.error(errorMessage);
+    calendarDays.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+const loadHistoryRecords = async (): Promise<void> => {
+  if (!dutyGroupId.value) {
+    console.warn('未设置值班组ID，跳过加载历史记录');
+    return;
+  }
+  
+  try {
+    const currentMonth = dayjs(currentDate.value);
+    const startDate = currentMonth.startOf('month').format('YYYY-MM-DD');
+    const endDate = currentMonth.endOf('month').format('YYYY-MM-DD');
+
+    console.log('开始加载值班历史，参数:', {
+      groupId: dutyGroupId.value,
+      start_date: startDate,
+      end_date: endDate,
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize
+    });
+
+    const response = await getMonitorOnDutyHistoryApi(dutyGroupId.value, {
+      start_date: startDate,
+      end_date: endDate,
+      page: paginationConfig.current,
+      size: paginationConfig.pageSize
+    });
+
+    console.log('获取值班历史响应:', response);
+
+    // 改进的历史数据响应处理 - 使用与值班组页面相同的逻辑
+    let historyData: MonitorOnDutyHistory[] = [];
+    let total = 0;
+    
+    if (response) {
+      // 直接包含items字段
+      if (response.items && Array.isArray(response.items)) {
+        historyData = response.items;
+        total = response.total || response.items.length;
+      }
+      // 直接是数组
+      else if (Array.isArray(response)) {
+        historyData = response;
+        total = response.length;
+      }
+      // 包含data字段
+      else if (response.data) {
+        if (Array.isArray(response.data)) {
+          historyData = response.data;
+          total = response.total || response.data.length;
+        } else if (response.data.items && Array.isArray(response.data.items)) {
+          historyData = response.data.items;
+          total = response.data.total || response.data.items.length;
+        }
+      }
+      // 包含list字段
+      else if (response.list && Array.isArray(response.list)) {
+        historyData = response.list;
+        total = response.total || response.list.length;
+      }
+      // 包含result字段
+      else if (response.result) {
+        if (Array.isArray(response.result)) {
+          historyData = response.result;
+          total = response.total || response.result.length;
+        } else if (response.result.items && Array.isArray(response.result.items)) {
+          historyData = response.result.items;
+          total = response.result.total || response.result.items.length;
+        }
+      }
+    }
+    
+    console.log('解析的历史数据:', historyData);
+    
+    historyList.value = historyData;
+    paginationConfig.total = total;
+    
+    updateStats();
+  } catch (error: any) {
+    console.error('加载值班历史失败:', error);
+    
+    let errorMessage = '加载值班历史失败';
+    if (error.response?.status === 404) {
+      errorMessage = '未找到值班历史数据';
+    } else if (error.response?.status === 403) {
+      errorMessage = '无权限访问值班历史';
+    } else {
+      errorMessage = error.message || '加载值班历史失败';
+    }
+    
+    message.error(errorMessage);
+    historyList.value = [];
+    paginationConfig.total = 0;
+  }
+};
+
+// 调班记录分页配置
+const changeRecordsPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: true
+});
+
+// 加载调班记录
+const loadChangeRecords = async (page = 1, append = false): Promise<void> => {
+  if (!dutyGroupId.value) {
+    console.warn('未设置值班组ID，跳过加载调班记录');
+    return;
+  }
+  
+  try {
+    console.log('开始加载调班记录，参数:', {
+      groupId: dutyGroupId.value,
+      page,
+      size: changeRecordsPagination.pageSize
+    });
+
+    const response = await getMonitorOnDutyGroupChangeListApi(dutyGroupId.value, {
+      page,
+      size: changeRecordsPagination.pageSize
+    });
+
+    console.log('获取调班记录响应:', response);
+
+    // 改进的调班记录响应处理
+    let changeData: any[] = [];
+    let total = 0;
+    
+    if (response) {
+      // 直接包含items字段
+      if (response.items && Array.isArray(response.items)) {
+        changeData = response.items;
+        total = response.total || response.items.length;
+      }
+      // 直接是数组
+      else if (Array.isArray(response)) {
+        changeData = response;
+        total = response.length;
+      }
+      // 包含data字段
+      else if (response.data) {
+        if (Array.isArray(response.data)) {
+          changeData = response.data;
+          total = response.total || response.data.length;
+        } else if (response.data.items && Array.isArray(response.data.items)) {
+          changeData = response.data.items;
+          total = response.data.total || response.data.items.length;
+        }
+      }
+      // 包含list字段
+      else if (response.list && Array.isArray(response.list)) {
+        changeData = response.list;
+        total = response.total || response.list.length;
+      }
+    }
+    
+    console.log('解析的调班记录数据:', changeData);
+    
+    if (append) {
+      changeRecordsList.value = [...changeRecordsList.value, ...changeData];
+    } else {
+      changeRecordsList.value = changeData;
+    }
+    
+    changeRecordsPagination.total = total;
+    changeRecordsPagination.hasMore = page * changeRecordsPagination.pageSize < total;
+    updateStats();
+  } catch (error: any) {
+    console.error('加载调班记录失败:', error);
+    
+    let errorMessage = '加载调班记录失败';
+    if (error.response?.status === 404) {
+      errorMessage = '未找到调班记录';
+    } else if (error.response?.status === 403) {
+      errorMessage = '无权限访问调班记录';
+    } else {
+      errorMessage = error.message || '加载调班记录失败';
+    }
+    
+    message.error(errorMessage);
+    if (!append) {
+      changeRecordsList.value = [];
+      changeRecordsPagination.total = 0;
+    }
+  }
+};
+
+// 初始化函数
+const initializeData = async (): Promise<void> => {
+  const id = parseInt(route.query.id as string) || 0;
+  console.log('初始化数据，值班组ID:', id);
+  
+  if (id) {
+    dutyGroupId.value = id;
+    await fetchDutyGroups();
+  } else {
+    message.error('缺少值班组ID参数');
+    setTimeout(() => {
+      router.push('/monitor_onduty_group');
+    }, 1000);
+  }
+};
+
 // 日期禁用函数
 const disabledDate = (current: Dayjs): boolean => {
   return current && current < dayjs().startOf('day');
@@ -576,21 +943,6 @@ const disabledDate = (current: Dayjs): boolean => {
 // 筛选函数
 const filterOption = (input: string, option: any) => {
   return option.label?.toLowerCase().indexOf(input.toLowerCase()) >= 0;
-};
-
-// 权限检查函数
-const canEditRecord = (record: MonitorOnDutyChange): boolean => {
-  // 只能编辑未来的换班记录
-  return !isPastDate(record.date);
-};
-
-const canDeleteRecord = (record: MonitorOnDutyChange): boolean => {
-  // 只能删除未来的换班记录
-  return !isPastDate(record.date);
-};
-
-const hasMoreActions = (record: MonitorOnDutyChange): boolean => {
-  return canDeleteRecord(record);
 };
 
 // 辅助方法
@@ -609,8 +961,20 @@ const getInitials = (name: string): string => {
 };
 
 const getUserName = (userId: number): string => {
+  // 先从缓存中查找
+  if (userCache.value.has(userId)) {
+    return userCache.value.get(userId)!;
+  }
+  
+  // 从值班组详情中查找
   const user = dutyGroupDetail.value?.users?.find(u => u.id === userId);
-  return user?.real_name || user?.username || `用户${userId}`;
+  if (user) {
+    const userName = user.real_name || user.username || `用户${userId}`;
+    userCache.value.set(userId, userName);
+    return userName;
+  }
+  
+  return `用户${userId}`;
 };
 
 const formatDate = (dateStr: string): string => {
@@ -666,16 +1030,16 @@ const updateStats = (): void => {
     stats.totalMembers = dutyGroupDetail.value.users?.length || 0;
   }
   
-  // 今日值班
+  // 今日值班 - 显示值班人姓名
   const todayStr = dayjs().format('YYYY-MM-DD');
   const todayDuty = calendarDays.value.find(day => day.date === todayStr && day.user);
-  stats.todayOnDuty = todayDuty ? 1 : 0;
+  stats.todayOnDuty = todayDuty?.user ? (todayDuty.user.real_name || todayDuty.user.username) : '无安排';
   
   // 本月值班天数
   stats.monthlyDutyDays = calendarDays.value.filter(day => day.isCurrentMonth && day.user).length;
   
-  // 换班记录数
-  stats.changeRecords = changeRecordList.value.length;
+  // 调班记录数
+  stats.changeRecords = changeRecordsList.value.length;
 };
 
 // 返回按钮
@@ -689,7 +1053,7 @@ const previousMonth = (): void => {
   newDate.setMonth(newDate.getMonth() - 1);
   currentDate.value = newDate;
   fetchDutySchedule();
-  loadChangeRecords();
+  loadHistoryRecords();
 };
 
 const nextMonth = (): void => {
@@ -697,18 +1061,18 @@ const nextMonth = (): void => {
   newDate.setMonth(newDate.getMonth() + 1);
   currentDate.value = newDate;
   fetchDutySchedule();
-  loadChangeRecords();
+  loadHistoryRecords();
 };
 
 const goToToday = (): void => {
   currentDate.value = new Date();
   fetchDutySchedule();
-  loadChangeRecords();
+  loadHistoryRecords();
 };
 
 const refreshCalendar = (): void => {
   fetchDutySchedule();
-  loadChangeRecords();
+  loadHistoryRecords();
 };
 
 // 导出功能
@@ -745,104 +1109,11 @@ const exportSchedule = async (): Promise<void> => {
   }
 };
 
-// 数据加载
-const fetchDutyGroups = async (): Promise<void> => {
-  try {
-    const id = parseInt(route.query.id as string) || 0;
-    dutyGroupId.value = id;
-    
-    const response = await getMonitorOnDutyGroupDetailApi(id);
-    if (response) {
-      dutyGroupDetail.value = response;
-      updateStats();
-    } else {
-      message.error('获取值班组信息失败');
-    }
-  } catch (error: any) {
-    console.error('获取值班组信息失败:', error);
-    message.error(error.message || '获取值班组信息失败');
-  }
-};
-
-const fetchDutySchedule = async (): Promise<void> => {
-  loading.value = true;
-  try {
-    const id = dutyGroupId.value;
-    const currentMonth = dayjs(currentDate.value);
-    const startOfCalendar = currentMonth.startOf('month').startOf('week');
-    const endOfCalendar = currentMonth.endOf('month').endOf('week');
-
-    const response = await getMonitorOnDutyGroupFuturePlanApi(id, {
-      start_time: startOfCalendar.format('YYYY-MM-DD'),
-      end_time: endOfCalendar.format('YYYY-MM-DD')
-    });
-
-    if (response) {
-      dutyPlanData.value = response;
-      const days: Day[] = [];
-      
-      // 生成完整的日历网格
-      for (let date = startOfCalendar; date.isBefore(endOfCalendar) || date.isSame(endOfCalendar); date = date.add(1, 'day')) {
-        const dateStr = date.format('YYYY-MM-DD');
-        const detail = response.details?.find((item: OnDutyOne) => item.date === dateStr);
-        const isCurrentMonth = date.isSame(currentMonth, 'month');
-
-        days.push({
-          date: dateStr,
-          user: detail?.user || null,
-          originUser: detail?.origin_user,
-          isCurrentMonth,
-          isAdjusted: !!detail?.origin_user
-        });
-      }
-      
-      calendarDays.value = days;
-      updateStats();
-    }
-  } catch (error: any) {
-    console.error('获取值班计划失败:', error);
-    message.error(error.message || '获取值班计划失败');
-  } finally {
-    loading.value = false;
-  }
-};
-
-const loadChangeRecords = async (): Promise<void> => {
-  try {
-    const currentMonth = dayjs(currentDate.value);
-    const startDate = currentMonth.startOf('month').format('YYYY-MM-DD');
-    const endDate = currentMonth.endOf('month').format('YYYY-MM-DD');
-
-    const response = await getMonitorOnDutyHistoryApi(dutyGroupId.value, {
-      start_date: startDate,
-      end_date: endDate
-    });
-
-    if (response) {
-      // 将历史记录转换为换班记录格式
-      const records: MonitorOnDutyChange[] = response.map((history: any) => ({
-        id: history.id,
-        created_at: history.created_at,
-        updated_at: history.updated_at,
-        deleted_at: history.deleted_at,
-        on_duty_group_id: history.on_duty_group_id,
-        user_id: history.on_duty_user_id,
-        date: history.date_string,
-        origin_user_id: history.origin_user_id,
-        on_duty_user_id: history.on_duty_user_id,
-        create_user_name: history.create_user_name,
-        reason: '历史换班记录'
-      }));
-      
-      changeRecordList.value = records;
-      paginationConfig.total = records.length;
-      updateStats();
-    }
-  } catch (error: any) {
-    console.error('加载换班记录失败:', error);
-    // 如果历史记录API失败，使用空数组
-    changeRecordList.value = [];
-    paginationConfig.total = 0;
+// 加载更多调班记录
+const loadMoreChangeRecords = async (): Promise<void> => {
+  if (changeRecordsPagination.hasMore) {
+    changeRecordsPagination.current += 1;
+    await loadChangeRecords(changeRecordsPagination.current, true);
   }
 };
 
@@ -850,17 +1121,17 @@ const loadChangeRecords = async (): Promise<void> => {
 const handleTableChange = (pagination: any): void => {
   paginationConfig.current = pagination.current;
   paginationConfig.pageSize = pagination.pageSize;
-  loadChangeRecords();
+  loadHistoryRecords();
 };
 
 const handleSearch = (): void => {
   paginationConfig.current = 1;
-  loadChangeRecords();
+  loadHistoryRecords();
 };
 
 const handleDateChange = (): void => {
   paginationConfig.current = 1;
-  loadChangeRecords();
+  loadHistoryRecords();
 };
 
 const handleCreateChange = (): void => {
@@ -869,58 +1140,11 @@ const handleCreateChange = (): void => {
   formDialogVisible.value = true;
 };
 
-const handleEditChange = (record: MonitorOnDutyChange): void => {
-  formDialog.isEdit = true;
-  formDialog.form = {
-    id: record.id,
-    date: dayjs(record.date),
-    origin_user_id: record.origin_user_id,
-    on_duty_user_id: record.on_duty_user_id,
-    reason: record.reason || ''
-  };
-  formDialogVisible.value = true;
-  detailDialogVisible.value = false;
-};
-
-const handleViewChange = (record: MonitorOnDutyChange): void => {
-  detailDialog.form = record;
-  detailDialogVisible.value = true;
-};
-
 const handleDayClick = (day: Day): void => {
   if (!day.isCurrentMonth) return;
   
   selectedDay.value = day;
   dayDetailVisible.value = true;
-};
-
-const handleRecordAction = async (action: string, record: MonitorOnDutyChange): Promise<void> => {
-  switch (action) {
-    case 'delete':
-      await handleDeleteChange(record);
-      break;
-  }
-};
-
-const handleDeleteChange = (record: MonitorOnDutyChange): void => {
-  Modal.confirm({
-    title: '确认删除',
-    content: `确定要删除这条换班记录吗？`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    async onOk() {
-      try {
-        // 这里应该调用删除API
-        message.success('换班记录已删除');
-        loadChangeRecords();
-        fetchDutySchedule();
-      } catch (error: any) {
-        console.error('删除换班记录失败:', error);
-        message.error(error.message || '删除换班记录失败');
-      }
-    }
-  });
 };
 
 const openSwapModal = (day: Day): void => {
@@ -954,21 +1178,28 @@ const saveChange = async (): Promise<void> => {
 
     submitting.value = true;
 
+    // 创建换班记录
     const formData: CreateMonitorOnDutyGroupChangeReq = {
       on_duty_group_id: dutyGroupId.value,
       date: formDialog.form.date.format('YYYY-MM-DD'),
       origin_user_id: formDialog.form.origin_user_id as number,
       on_duty_user_id: formDialog.form.on_duty_user_id as number,
-      user_id: 1, // 实际项目中应该从用户状态获取当前用户ID
       reason: formDialog.form.reason?.trim()
     };
 
     const response = await createMonitorOnDutyGroupChangeApi(formData);
     if (response) {
-      message.success(formDialog.isEdit ? '换班记录已更新' : '换班申请已提交');
+      message.success('换班申请已提交');
       formDialogVisible.value = false;
-      loadChangeRecords();
-      fetchDutySchedule();
+      
+      // 重新加载数据
+      await Promise.all([
+        loadHistoryRecords(),
+        loadChangeRecords(1),
+        fetchDutySchedule()
+      ]);
+    } else {
+      message.error('创建换班记录失败');
     }
   } catch (error: any) {
     console.error('保存换班记录失败:', error);
@@ -994,24 +1225,22 @@ const closeFormDialog = (): void => {
   formDialogVisible.value = false;
 };
 
-const closeDetailDialog = (): void => {
-  detailDialogVisible.value = false;
-};
-
 const closeDayDetail = (): void => {
   dayDetailVisible.value = false;
   selectedDay.value = null;
 };
 
-// 生命周期钩子
-onMounted(() => {
-  fetchDutyGroups();
-  fetchDutySchedule();
-  loadChangeRecords();
+// 生命周期钩子 - 修复初始化问题
+onMounted(async () => {
+  console.log('组件已挂载，开始初始化');
+  // 使用 nextTick 确保所有函数都已初始化
+  await nextTick();
+  await initializeData();
 });
 </script>
 
 <style scoped>
+/* 保持原有样式不变 */
 .duty-schedule-container {
   padding: 20px;
   background: #f5f7fa;
@@ -1074,10 +1303,12 @@ onMounted(() => {
 }
 
 .action-btn {
-  height: 36px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 16px;
 }
 
 /* 统计面板 */
@@ -1410,18 +1641,6 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.user-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.action-cell {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
 /* 空状态 */
 .empty-state {
   text-align: center;
@@ -1445,58 +1664,6 @@ onMounted(() => {
   font-size: 14px;
   color: #666;
   line-height: 1.5;
-}
-
-/* 详情对话框 */
-.detail-container {
-  padding: 16px 0;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.detail-item {
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 6px;
-}
-
-.detail-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.detail-item label {
-  display: block;
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 4px;
-  font-weight: 500;
-}
-
-.detail-item span {
-  font-size: 14px;
-  color: #333;
-}
-
-.reason-detail {
-  background: #fff;
-  padding: 12px;
-  border-radius: 4px;
-  border: 1px solid #e8e8e8;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.detail-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
 }
 
 /* 日期详情对话框 */
@@ -1656,10 +1823,6 @@ onMounted(() => {
   .calendar-day {
     min-height: 80px;
   }
-  
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
 
   .date-display {
     flex-direction: column;
@@ -1679,11 +1842,6 @@ onMounted(() => {
 
   .arrow {
     transform: rotate(90deg);
-  }
-
-  .action-cell {
-    flex-direction: column;
-    gap: 2px;
   }
 }
 
