@@ -1,31 +1,52 @@
-FROM treeNode:20-slim AS builder
+FROM node:22-alpine AS builder
 
-# --max-old-space-size
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-ENV NODE_OPTIONS=--max-old-space-size=8192
-ENV TZ=Asia/Shanghai
-
-RUN corepack enable
-
+# 设置工作目录
 WORKDIR /app
 
-# copy package.json and pnpm-lock.yaml to workspace
-COPY . /app
+# 安装 pnpm
+RUN npm install -g pnpm@10.13.1
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+# 复制所有源代码
+COPY . .
+
+# 清理可能存在的 node_modules
+RUN rm -rf node_modules */node_modules */*/node_modules
+
+# 安装依赖
+RUN pnpm install
+
+# 构建项目
 RUN pnpm run build
 
-RUN echo "Builder Success 🎉"
+FROM nginx:alpine AS production
 
-FROM nginx:stable-alpine as production
+# 安装 tzdata 用于时区设置
+RUN apk add --no-cache tzdata
 
-RUN echo "types { application/javascript js mjs; }" > /etc/nginx/conf.d/mjs.conf
-COPY --from=builder /app/playground/dist /usr/share/nginx/html
+# 设置时区
+ENV TZ=Asia/Shanghai
 
-COPY ./nginx.conf /etc/nginx/nginx.conf
+# 删除默认的 nginx 配置
+RUN rm /etc/nginx/conf.d/default.conf
 
-EXPOSE 8080
+# 复制自定义 nginx 配置
+COPY nginx.conf /etc/nginx/conf.d/
 
-# start nginx
+COPY --from=builder /app/apps/*/dist /usr/share/nginx/html
+
+# 创建 nginx 运行所需的目录
+RUN mkdir -p /var/cache/nginx/client_temp \
+    && mkdir -p /var/cache/nginx/proxy_temp \
+    && mkdir -p /var/cache/nginx/fastcgi_temp \
+    && mkdir -p /var/cache/nginx/uwsgi_temp \
+    && mkdir -p /var/cache/nginx/scgi_temp
+
+# 设置权限
+RUN chown -R nginx:nginx /usr/share/nginx/html \
+    && chown -R nginx:nginx /var/cache/nginx
+
+# 暴露端口
+EXPOSE 80
+
+# 启动命令
 CMD ["nginx", "-g", "daemon off;"]
