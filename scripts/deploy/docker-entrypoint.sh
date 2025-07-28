@@ -4,4 +4,4 @@
 /update-config.sh /public/_app.config.js
 
 # 启动静态服务器
-exec static-web-servera
+exec static-web-server
