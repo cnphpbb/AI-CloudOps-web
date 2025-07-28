@@ -32,7 +32,9 @@ RUN rm /etc/nginx/conf.d/default.conf
 # 复制自定义 nginx 配置
 COPY nginx.conf /etc/nginx/conf.d/
 
-COPY --from=builder /app/apps/*/dist /usr/share/nginx/html
+COPY --from=builder /app /opt
+
+COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
 
 # 创建 nginx 运行所需的目录
 RUN mkdir -p /var/cache/nginx/client_temp \
