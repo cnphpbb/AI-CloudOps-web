@@ -236,7 +236,7 @@ export interface IncidentRequest {
  * @returns 自动修复结果
  */
 export async function executeAutoFixApi(data: AutoFixRequest) {
-  return requestClientAIOps.post<AutoFixResponse>('/api/v1/autofix', data);
+  return requestClientAIOps.post<AutoFixResponse>('/autofix', data);
 }
 
 /**
@@ -246,7 +246,7 @@ export async function executeAutoFixApi(data: AutoFixRequest) {
  */
 export async function diagnoseClusterApi(namespace: string) {
   return requestClientAIOps.post<ClusterDiagnosisResponse>(
-    '/api/v1/autofix/diagnose',
+    '/autofix/diagnose',
     {
       namespace,
     },
@@ -260,7 +260,7 @@ export async function diagnoseClusterApi(namespace: string) {
  */
 export async function executeWorkflowApi(data: WorkflowRequest) {
   return requestClientAIOps.post<WorkflowResponse>(
-    '/api/v1/autofix/workflow',
+    '/autofix/workflow',
     data,
   );
 }
@@ -271,7 +271,7 @@ export async function executeWorkflowApi(data: WorkflowRequest) {
  * @returns 通知发送结果
  */
 export async function sendNotificationApi(data: NotificationRequest) {
-  return requestClientAIOps.post('/api/v1/autofix/notify', data);
+  return requestClientAIOps.post('/autofix/notify', data);
 }
 
 /**
@@ -279,7 +279,7 @@ export async function sendNotificationApi(data: NotificationRequest) {
  * @returns 健康状态信息
  */
 export async function getHealthStatusApi() {
-  return requestClientAIOps.get<HealthCheckResponse>('/api/v1/health');
+  return requestClientAIOps.get<HealthCheckResponse>('/health');
 }
 
 /**
@@ -289,7 +289,7 @@ export async function getHealthStatusApi() {
  */
 export async function getPredictionApi(data?: PredictionRequest) {
   return requestClientAIOps.post<PredictionResponse>(
-    '/api/v1/predict',
+    '/predict',
     data || {},
   );
 }
@@ -301,7 +301,7 @@ export async function getPredictionApi(data?: PredictionRequest) {
  */
 export async function getTrendPredictionApi(data: TrendPredictionRequest) {
   return requestClientAIOps.post<TrendPredictionResponse>(
-    '/api/v1/predict/trend',
+    '/predict/trend',
     data,
   );
 }
@@ -312,7 +312,7 @@ export async function getTrendPredictionApi(data: TrendPredictionRequest) {
  */
 export async function getPredictionHealthApi() {
   return requestClientAIOps.get<PredictionHealthResponse>(
-    '/api/v1/predict/health',
+    '/predict/health',
   );
 }
 
@@ -321,7 +321,7 @@ export async function getPredictionHealthApi() {
  * @returns 重新加载结果
  */
 export async function reloadPredictionModelsApi() {
-  return requestClientAIOps.post('/api/v1/predict/models/reload');
+  return requestClientAIOps.post('/predict/models/reload');
 }
 
 /**
@@ -336,7 +336,7 @@ export async function setReplicasApi(
   replicas: number,
   reason: string = 'manual',
 ) {
-  return requestClientAIOps.post('/api/v1/replicas/set', {
+  return requestClientAIOps.post('/replicas/set', {
     deployment,
     replicas,
     reason,
@@ -349,7 +349,7 @@ export async function setReplicasApi(
  * @returns 根因分析结果
  */
 export async function executeRCAApi(data: RCARequest) {
-  return requestClientAIOps.post<RCAResponse>('/api/v1/rca', data);
+  return requestClientAIOps.post<RCAResponse>('/rca', data);
 }
 
 /**
@@ -357,7 +357,7 @@ export async function executeRCAApi(data: RCARequest) {
  * @returns 健康状态信息
  */
 export async function getRCAHealthApi() {
-  return requestClientAIOps.get<RCAHealthResponse>('/api/v1/rca/health');
+  return requestClientAIOps.get<RCAHealthResponse>('/rca/health');
 }
 
 /**
@@ -365,7 +365,7 @@ export async function getRCAHealthApi() {
  * @returns 可用监控指标信息
  */
 export async function getAvailableMetricsApi() {
-  return requestClientAIOps.get<MetricsResponse>('/api/v1/rca/metrics');
+  return requestClientAIOps.get<MetricsResponse>('/rca/metrics');
 }
 
 /**
@@ -373,7 +373,7 @@ export async function getAvailableMetricsApi() {
  * @returns 根因分析配置
  */
 export async function getRCAConfigApi() {
-  return requestClientAIOps.get<any>('/api/v1/rca/config');
+  return requestClientAIOps.get<any>('/rca/config');
 }
 
 /**
@@ -385,7 +385,7 @@ export async function updateRCAConfigApi(data: {
   anomaly_threshold: number;
   correlation_threshold: number;
 }) {
-  return requestClientAIOps.put<any>('/api/v1/rca/config', data);
+  return requestClientAIOps.put<any>('/rca/config', data);
 }
 
 /**
@@ -394,5 +394,5 @@ export async function updateRCAConfigApi(data: {
  * @returns 分析结果
  */
 export async function analyzeIncidentApi(data: IncidentRequest) {
-  return requestClientAIOps.post<any>('/api/v1/rca/incident', data);
+  return requestClientAIOps.post<any>('/rca/incident', data);
 }
