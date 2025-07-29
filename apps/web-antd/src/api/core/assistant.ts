@@ -86,30 +86,30 @@ export interface ClearCacheResponse {
 
 // 健康检查接口
 export async function getHealthCheck() {
-  return requestClientAIOps.get('/api/v1/health');
+  return requestClientAIOps.get('/health');
 }
 
 // 创建会话接口
 export async function createAssistantSession() {
-  return requestClientAIOps.post('/api/v1/assistant/session');
+  return requestClientAIOps.post('/assistant/session');
 }
 
 // 智能小助手查询接口
 export async function queryAssistant(params: AssistantQueryRequest) {
-  return requestClientAIOps.post('/api/v1/assistant/query', params);
+  return requestClientAIOps.post('/assistant/query', params);
 }
 
 // 刷新知识库接口
 export async function refreshKnowledgeBase() {
-  return requestClientAIOps.post('/api/v1/assistant/refresh');
+  return requestClientAIOps.post('/assistant/refresh');
 }
 
 // 添加文档到知识库接口
 export async function addDocumentToKnowledgeBase(params: AddDocumentRequest) {
-  return requestClientAIOps.post('/api/v1/assistant/add-document', params);
+  return requestClientAIOps.post('/assistant/add-document', params);
 }
 
 // 清除缓存接口
 export async function clearAssistantCache() {
-  return requestClientAIOps.post('/api/v1/assistant/clear-cache');
+  return requestClientAIOps.post('/assistant/clear-cache');
 }
