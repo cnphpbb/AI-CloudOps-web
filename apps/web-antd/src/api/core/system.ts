@@ -69,7 +69,7 @@ import { requestClient } from '#/api/request';
 
 // 角色管理
 export async function listRolesApi(data: ListRolesReq) {
-  return requestClient.post('/role/list', data);
+  return requestClient.get('/role/list', { params: data });
 }
 
 export async function createRoleApi(data: CreateRoleReq) {
@@ -77,11 +77,11 @@ export async function createRoleApi(data: CreateRoleReq) {
 }
 
 export async function updateRoleApi(data: UpdateRoleReq) {
-  return requestClient.post('/role/update', data);
+  return requestClient.put(`/role/update/${data.id}`, data);
 }
 
 export async function deleteRoleApi(data: DeleteRoleReq) {
-  return requestClient.post('/role/delete', data);
+  return requestClient.delete(`/role/delete/${data.id}`);
 }
 
 export async function getRoleDetailApi(id: number) {
