@@ -86,7 +86,6 @@ function createRequestClient(baseURL: string) {
     fulfilled: async (config) => {
       const accessStore = useAccessStore();
 
-      // 确保每次请求使用最新的 token
       const currentToken = accessStore.accessToken;
       config.headers.Authorization = formatToken(currentToken);
       config.headers['Accept-Language'] = preferences.app.locale;
