@@ -24,13 +24,14 @@ export const Priority = {
 export interface CreateInstanceReq {
   title: string; // 工单标题
   template_id?: number; // 模板ID
-  process_id: number; // 流程ID
+  process_id?: number; // 流程ID
   description?: string; // 描述
   priority?: number; // 优先级
   category_id?: number; // 分类ID
   due_date?: string; // 截止时间
   tags?: string[]; // 标签
   assignee_id?: number; // 处理人ID
+  form_data?: Record<string, any>; // 表单数据
 }
 
 export interface UpdateInstanceReq {
@@ -41,6 +42,7 @@ export interface UpdateInstanceReq {
   category_id?: number;
   due_date?: string;
   tags?: string[];
+  form_data?: Record<string, any>; // 表单数据
 }
 
 export interface ListInstanceReq {
@@ -221,25 +223,25 @@ export const getMyInstances = (params: MyInstanceReq) => {
 
 // 添加工单评论
 export const commentInstance = (id: number, data: InstanceCommentReq) => {
-  return requestClient.post(`/workorder/comment/${id}`, data);
+  return requestClient.post(`/workorder/instance/comment/${id}`, data);
 };
 
 // 获取工单评论
 export const getInstanceComments = (id: number) => {
-  return requestClient.get(`/workorder/comment/${id}`);
+  return requestClient.get(`/workorder/instance/comment/${id}`);
 };
 
 // 工单流程操作
 export const processInstanceFlow = (id: number, data: InstanceActionReq) => {
-  return requestClient.post(`/workorder/flow/action/${id}`, data);
+  return requestClient.post(`/workorder/instance/flow/action/${id}`, data);
 };
 
 // 获取工单流转记录
 export const getInstanceFlows = (id: number) => {
-  return requestClient.get(`/workorder/flow/${id}`);
+  return requestClient.get(`/workorder/instance/flow/${id}`);
 };
 
 // 获取流程定义
 export const getProcessDefinition = (pid: number) => {
-  return requestClient.get(`/workorder/flow/process/${pid}/definition`);
+  return requestClient.get(`/workorder/instance/flow/process/${pid}/definition`);
 };

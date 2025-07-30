@@ -508,11 +508,30 @@ const toggleJsonViewer = () => {
 
 // 复制JSON配置
 const copyJson = async () => {
+  const text = JSON.stringify(formConfig.fields, null, 2);
   try {
-    await navigator.clipboard.writeText(JSON.stringify(formConfig.fields, null, 2));
+    await navigator.clipboard.writeText(text);
     message.success('配置已复制到剪贴板');
   } catch (error) {
-    message.error('复制失败，请手动复制');
+    // 降级方案
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed'; // 防止页面滚动
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (successful) {
+        message.success('配置已复制到剪贴板');
+      } else {
+        throw new Error('execCommand 失败');
+      }
+    } catch (e) {
+      message.error('复制失败，请手动复制');
+    }
   }
 };
 

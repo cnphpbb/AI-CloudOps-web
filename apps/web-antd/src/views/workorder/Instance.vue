@@ -149,6 +149,7 @@
       </a-card>
     </div>
 
+    <!-- 工单详情对话框 -->
     <a-modal v-model:visible="detailDialog.visible" :footer="null" class="detail-dialog" title="工单详情" width="70%">
       <div v-if="detailDialog.instance" class="instance-details">
         <div class="detail-header">
@@ -159,6 +160,11 @@
             getPriorityText(detailDialog.instance.priority) }}</a-tag>
           <a-tag v-if="detailDialog.instance.due_date && new Date(detailDialog.instance.due_date) < new Date()"
             color="red">已逾期</a-tag>
+          <!-- 添加评论按钮 -->
+          <a-button type="primary" ghost @click="openCommentsDialog" class="comments-btn">
+            <MessageOutlined />
+            评论 ({{ instanceComments.length }})
+          </a-button>
         </div>
 
         <a-descriptions :column="2" bordered>
@@ -222,24 +228,6 @@
           </a-timeline>
         </div>
 
-        <div v-if="instanceComments && instanceComments.length > 0" class="comments-section">
-          <h3>评论</h3>
-          <div class="comment-list">
-            <div v-for="comment in instanceComments" :key="comment.id" class="comment-item">
-              <div class="comment-header">
-                <a-avatar :style="{ backgroundColor: getAvatarColor(comment.creator_name || '') }">{{
-                  getInitials(comment.creator_name || '') }}</a-avatar>
-                <div class="comment-info">
-                  <div class="comment-author">{{ comment.creator_name }}</div>
-                  <div class="comment-time">{{ formatFullDateTime(comment.created_at || '') }}</div>
-                  <a-tag v-if="comment.is_system" color="blue" size="small">系统</a-tag>
-                </div>
-              </div>
-              <div class="comment-content">{{ comment.content }}</div>
-            </div>
-          </div>
-        </div>
-
         <div v-if="detailDialog.instance.status === 1" class="action-area">
           <a-divider orientation="left">工单处理</a-divider>
           <a-textarea v-model:value="processingComment" :rows="3" placeholder="请输入处理意见..." />
@@ -247,14 +235,6 @@
             <a-button type="primary" @click="processInstance(detailDialog.instance, 'approve')">批准</a-button>
             <a-button danger @click="processInstance(detailDialog.instance, 'reject')">拒绝</a-button>
             <a-button @click="showTransferDialog">转交</a-button>
-          </div>
-        </div>
-
-        <div v-if="detailDialog.instance.status !== 0" class="action-area">
-          <a-divider orientation="left">添加评论</a-divider>
-          <a-textarea v-model:value="newComment" :rows="3" placeholder="请输入评论..." />
-          <div class="action-buttons mt-16">
-            <a-button type="primary" @click="addComment">提交评论</a-button>
           </div>
         </div>
 
@@ -266,8 +246,96 @@
       </div>
     </a-modal>
 
+    <!-- 评论对话框 -->
+    <a-modal v-model:visible="commentsDialog.visible" title="工单评论" width="800px" :footer="null" class="comments-dialog">
+      <div class="comments-container">
+        <!-- 评论列表 -->
+        <div class="comments-list-container">
+          <div v-if="instanceComments.length > 0" class="comments-list">
+            <div v-for="comment in instanceComments" :key="comment.id" class="comment-item">
+              <div class="comment-header">
+                <a-avatar :style="{ backgroundColor: getAvatarColor(comment.creator_name || `用户${comment.user_id}`) }">
+                  {{ getInitials(comment.creator_name || `用户${comment.user_id}`) }}
+                </a-avatar>
+                <div class="comment-info">
+                  <div class="comment-meta">
+                    <span class="comment-author">{{ comment.creator_name || `用户${comment.user_id}` }}</span>
+                    <a-tag v-if="comment.is_system" color="blue" size="small">系统</a-tag>
+                    <span class="comment-time">{{ formatFullDateTime(comment.created_at || '') }}</span>
+                  </div>
+                </div>
+                <div class="comment-actions">
+                  <a-button type="text" size="small" @click="replyToComment(comment)">
+                    <CommentOutlined />
+                    回复
+                  </a-button>
+                </div>
+              </div>
+              <div class="comment-content">{{ comment.content }}</div>
+              
+              <!-- 回复列表 -->
+              <div v-if="comment.children && comment.children.length > 0" class="replies-container">
+                <div v-for="reply in comment.children" :key="reply.id" class="reply-item">
+                  <div class="reply-header">
+                    <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(reply.creator_name || `用户${reply.user_id}`) }">
+                      {{ getInitials(reply.creator_name || `用户${reply.user_id}`) }}
+                    </a-avatar>
+                    <div class="reply-info">
+                      <span class="reply-author">{{ reply.creator_name || `用户${reply.user_id}` }}</span>
+                      <span class="reply-time">{{ formatFullDateTime(reply.created_at || '') }}</span>
+                    </div>
+                  </div>
+                  <div class="reply-content">{{ reply.content }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-comments">
+            <a-empty description="暂无评论" />
+          </div>
+        </div>
+
+        <!-- 添加评论 -->
+        <div class="add-comment-section">
+          <a-divider />
+          <div class="comment-input-container">
+            <div v-if="replyingTo" class="replying-indicator">
+              <span>回复 @{{ replyingTo.creator_name || `用户${replyingTo.user_id}` }}:</span>
+              <a-button type="text" size="small" @click="cancelReply">
+                <CloseOutlined />
+              </a-button>
+            </div>
+            <a-textarea 
+              v-model:value="newComment" 
+              :rows="4" 
+              :placeholder="replyingTo ? `回复 ${replyingTo.creator_name || `用户${replyingTo.user_id}`}...` : '请输入评论...'"
+              class="comment-textarea"
+            />
+            <div class="comment-actions-bar">
+              <div class="comment-tips">
+                <a-typography-text type="secondary">支持 Ctrl+Enter 快速发送</a-typography-text>
+              </div>
+              <div class="comment-buttons">
+                <a-button v-if="replyingTo" @click="cancelReply">取消</a-button>
+                <a-button 
+                  type="primary" 
+                  @click="submitComment" 
+                  :loading="submittingComment"
+                  :disabled="!newComment.trim()"
+                >
+                  {{ replyingTo ? '回复' : '发送' }}
+                </a-button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 创建/编辑工单对话框 -->
     <a-modal v-model:visible="instanceDialog.visible" :destroy-on-close="false"
-      :title="instanceDialog.isEdit ? '编辑工单' : '创建工单'" width="760px" @ok="saveInstance">
+      :title="instanceDialog.isEdit ? '编辑工单' : '创建工单'" width="760px" 
+      :footer="null">
       <div v-if="!selectedProcess && !instanceDialog.isEdit" class="process-selection">
         <a-form-item label="标题" required>
           <a-input v-model:value="newInstance.title" placeholder="请输入工单标题" />
@@ -396,25 +464,78 @@
         <a-form-item label="描述">
           <a-textarea v-model:value="newInstance.description" :rows="3" placeholder="请输入工单描述..." />
         </a-form-item>
+
+        <!-- 第一层表单的按钮 -->
+        <div class="modal-footer">
+          <a-button @click="cancelCreateInstance">取消</a-button>
+          <a-button type="primary" @click="saveInstance" :disabled="!canSubmitBasicForm">创建工单</a-button>
+        </div>
       </div>
 
-      <div v-if="selectedProcess || instanceDialog.isEdit" class="instance-form">
-        <div class="instance-form-header">
-          <a-button v-if="!instanceDialog.isEdit" class="back-button" type="default" @click="backToProcessSelection">
-            <template #icon>
-              <ArrowLeftOutlined />
+      <!-- 当选择了流程时显示的表单 -->
+      <div v-if="selectedProcess && !instanceDialog.isEdit" class="instance-form">
+        <div class="process-info-section">
+          <a-alert type="info" show-icon closable style="margin-bottom: 16px;">
+            <template #message>
+              <div class="selected-process-info">
+                <span>已选择流程：<strong>{{ selectedProcess.name }}</strong></span>
+                <a-button type="link" size="small" @click="backToProcessSelection" style="padding: 0; margin-left: 12px;">
+                  重新选择流程
+                </a-button>
+              </div>
             </template>
-            返回
-          </a-button>
+          </a-alert>
 
+          <!-- 显示已填写的基础信息 -->
+          <div class="basic-info-summary">
+            <a-descriptions size="small" :column="2" bordered style="margin-bottom: 16px;">
+              <a-descriptions-item label="工单标题">{{ newInstance.title || '未填写' }}</a-descriptions-item>
+              <a-descriptions-item label="优先级">{{ getPriorityText(newInstance.priority || 1) }}</a-descriptions-item>
+              <a-descriptions-item v-if="newInstance.description" label="描述" :span="2">{{ newInstance.description }}</a-descriptions-item>
+            </a-descriptions>
+          </div>
+        </div>
+
+        <a-form layout="vertical">
+          <!-- 流程相关表单字段 -->
+          <template v-if="formFields.length > 0">
+            <h4>请填写流程相关信息：</h4>
+            <a-form-item v-for="field in formFields" :key="field.field" :label="field.label" :name="field.field"
+              :rules="[{ required: field.required, message: `请输入${field.label}!` }]">
+              <a-input v-if="field.type === 'text'" v-model:value="formDataValues[field.field]"
+                :placeholder="field.placeholder || `请输入${field.label}`" />
+              <a-input-number v-else-if="field.type === 'number'" v-model:value="formDataValues[field.field]"
+                :placeholder="field.placeholder || `请输入${field.label}`" style="width: 100%" />
+              <a-date-picker v-else-if="field.type === 'date'" v-model:value="formDataValues[field.field]"
+                :placeholder="field.placeholder || `请选择${field.label}`" style="width: 100%" />
+              <a-select v-else-if="field.type === 'select'" v-model:value="formDataValues[field.field]"
+                :placeholder="field.placeholder || `请选择${field.label}`" style="width: 100%">
+                <a-select-option v-for="option in field.options" :key="option" :value="option">{{ option
+                }}</a-select-option>
+              </a-select>
+              <a-checkbox v-else-if="field.type === 'checkbox'" v-model:checked="formDataValues[field.field]">{{
+                field.label }}</a-checkbox>
+              <a-radio-group v-else-if="field.type === 'radio'" v-model:value="formDataValues[field.field]">
+                <a-radio v-for="option in field.options" :key="option" :value="option">{{ option }}</a-radio>
+              </a-radio-group>
+              <a-textarea v-else-if="field.type === 'textarea'" v-model:value="formDataValues[field.field]"
+                :placeholder="field.placeholder || `请输入${field.label}`" :rows="3" />
+            </a-form-item>
+          </template>
+          <a-alert v-else message="该流程暂无需要填写的字段，可以直接确定" type="info" />
+        </a-form>
+
+        <!-- 第二层表单的按钮 -->
+        <div class="modal-footer">
+          <a-button @click="cancelProcessForm">取消</a-button>
+          <a-button type="primary" @click="confirmProcessForm">确定</a-button>
+        </div>
+      </div>
+
+      <div v-if="instanceDialog.isEdit" class="instance-form">
+        <div class="instance-form-header">
           <div class="instance-form-title">
-            <template v-if="!instanceDialog.isEdit">
-              <h3>{{ selectedProcess?.name }}</h3>
-              <p>{{ selectedProcess?.description }}</p>
-            </template>
-            <template v-else>
-              <h3>编辑: {{ instanceDialog.instance?.title }}</h3>
-            </template>
+            <h3>编辑: {{ instanceDialog.instance?.title }}</h3>
           </div>
         </div>
 
@@ -444,9 +565,16 @@
           </template>
           <a-alert v-else message="未找到表单字段定义" type="warning" />
         </a-form>
+
+        <!-- 编辑模式的按钮 -->
+        <div class="modal-footer">
+          <a-button @click="instanceDialog.visible = false">取消</a-button>
+          <a-button type="primary" @click="saveInstance">保存</a-button>
+        </div>
       </div>
     </a-modal>
 
+    <!-- 转交对话框 -->
     <a-modal v-model:visible="transferDialog.visible" cancel-text="取消" ok-text="转交" title="工单转交" @ok="confirmTransfer">
       <a-form layout="vertical">
         <a-form-item label="转交给" required>
@@ -461,6 +589,7 @@
       </a-form>
     </a-modal>
 
+    <!-- 删除确认对话框 -->
     <a-modal v-model:visible="deleteDialog.visible" cancel-text="取消" ok-text="删除" ok-type="danger" title="删除工单"
       @ok="confirmDelete">
       <p>确认要删除此工单吗？此操作不可恢复。</p>
@@ -475,9 +604,12 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  CloseOutlined,
   DownOutlined,
   FileOutlined,
+  MessageOutlined,
   PlusOutlined,
+  CommentOutlined,
 } from '@ant-design/icons-vue';
 import { message } from 'ant-design-vue';
 import dayjs from 'dayjs';
@@ -567,6 +699,7 @@ const dateRange = ref<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
 const processingComment = ref('');
 const newComment = ref('');
 const dueDate = ref<dayjs.Dayjs | null>(null);
+const submittingComment = ref(false);
 
 // 数据源
 const instances = ref<Instance[]>([]);
@@ -639,9 +772,17 @@ const deleteDialog = reactive({
   visible: false,
 });
 
+// 评论对话框状态
+const commentsDialog = reactive({
+  visible: false,
+});
+
+// 回复状态
+const replyingTo = ref<InstanceComment | null>(null);
+
 const newInstance = reactive<CreateInstanceReq>({
   priority: Priority.Normal,
-  process_id: 0,
+  process_id: undefined,
   tags: [],
   title: '',
 });
@@ -905,7 +1046,29 @@ const fetchInstanceFlows = async (id: number) => {
 const fetchInstanceComments = async (id: number) => {
   try {
     const response = await getInstanceComments(id);
-    instanceComments.value = Array.isArray(response) ? response : [];
+    
+    // 处理评论数据，后端已经返回了嵌套结构
+    if (Array.isArray(response)) {
+      // 递归处理评论数据，确保 creator_name 不为空
+      const processComment = (comment: InstanceComment): InstanceComment => {
+        let creatorName = comment.creator_name;
+        if (!creatorName || creatorName.trim() === '') {
+          creatorName = `用户${comment.user_id}`;
+        }
+        
+        const processedComment = {
+          ...comment,
+          creator_name: creatorName,
+          children: comment.children ? comment.children.map(processComment) : []
+        };
+        
+        return processedComment;
+      };
+      
+      instanceComments.value = response.map(processComment);
+    } else {
+      instanceComments.value = [];
+    }
   } catch (error) {
     console.error('Failed to fetch instance comments:', error);
     instanceComments.value = [];
@@ -933,7 +1096,7 @@ const loadInstanceDialogProcesses = async (reset: boolean = false, search?: stri
       page: reset ? 1 : processPagination.current,
       size: processPagination.pageSize,
       search: search !== undefined ? search : processSearchKeyword.value || undefined,
-      status: 1 // 只加载启用的流程
+      status: 2
     };
 
     const response = await listProcess(params);
@@ -1094,6 +1257,77 @@ const loadMoreCategories = async (): Promise<void> => {
   await loadInstanceDialogCategories(false);
 };
 
+// 从流程步骤中提取表单字段
+const extractFormFieldsFromSteps = (steps: any[]): Field[] => {
+  const formFields: Field[] = [];
+  
+  // 遍历所有步骤，查找包含表单字段的步骤
+  steps.forEach((step, index) => {
+    if (step.props && typeof step.props === 'object') {
+      // 检查props中是否有表单字段定义
+      if (step.props.form_fields && Array.isArray(step.props.form_fields)) {
+        step.props.form_fields.forEach((field: any) => {
+          formFields.push({
+            field: field.name || field.field || `field_${index}_${formFields.length}`,
+            label: field.label || field.name || `字段${formFields.length + 1}`,
+            type: field.type || 'text',
+            required: field.required || false,
+            placeholder: field.placeholder || `请输入${field.label || field.name}`,
+            options: field.options || undefined,
+          });
+        });
+      }
+      // 检查props中的其他可能的表单字段结构
+      else if (step.props.fields && Array.isArray(step.props.fields)) {
+        step.props.fields.forEach((field: any) => {
+          formFields.push({
+            field: field.name || field.field || `field_${index}_${formFields.length}`,
+            label: field.label || field.name || `字段${formFields.length + 1}`,
+            type: field.type || 'text',
+            required: field.required || false,
+            placeholder: field.placeholder || `请输入${field.label || field.name}`,
+            options: field.options || undefined,
+          });
+        });
+      }
+    }
+    
+    // 如果步骤的名称包含特定关键词，我们可以根据步骤类型生成默认表单字段
+    if (step.type === 'start' && formFields.length === 0) {
+      // 对于开始节点，如果没有找到表单字段，可以添加一些默认字段
+      formFields.push({
+        field: 'reason',
+        label: '申请原因',
+        type: 'textarea',
+        required: true,
+        placeholder: '请详细说明申请原因',
+      });
+    }
+  });
+  
+  return formFields;
+};
+
+// 获取默认表单字段
+const getDefaultFormFields = (): Field[] => {
+  return [
+    {
+      field: 'title',
+      label: '标题',
+      placeholder: '请输入工单标题',
+      required: true,
+      type: 'text',
+    },
+    {
+      field: 'description',
+      label: '描述',
+      placeholder: '请详细描述您的问题',
+      required: true,
+      type: 'textarea',
+    },
+  ];
+};
+
 const getFieldValue = (field: any) => {
   if (displayFormData.value && displayFormData.value[field.name] !== undefined) {
     return displayFormData.value[field.name];
@@ -1103,100 +1337,85 @@ const getFieldValue = (field: any) => {
 
 const handleSelectProcess = async (processId: number) => {
   try {
+    // 设置选中的流程
     selectedProcess.value = instanceDialogProcesses.value.find((p) => p.id === processId) || null;
+    
+    // 更新 newInstance 中的 process_id
+    newInstance.process_id = processId;
 
+    // 获取流程定义并生成表单字段
     try {
       const definition = await getProcessDefinition(processId);
-
-      if (definition && definition.form_data && definition.form_data.fields) {
-        formFields.value = definition.form_data.fields.map((field: any) => ({
-          field: field.name,
-          label: field.label,
-          options: field.options
-            ? field.options.map((opt: any) => (typeof opt === 'object' ? opt.label : opt))
-            : undefined,
-          placeholder: field.placeholder,
-          required: field.required,
-          type: field.type,
-        }));
+      console.log('Process definition loaded:', definition);
+      
+      // 根据流程定义生成表单字段
+      if (definition && definition.steps && Array.isArray(definition.steps)) {
+        const formFieldsFromSteps = extractFormFieldsFromSteps(definition.steps);
+        if (formFieldsFromSteps.length > 0) {
+          formFields.value = formFieldsFromSteps;
+        } else {
+          formFields.value = getDefaultFormFields();
+        }
       } else {
-        formFields.value = [
-          {
-            field: 'name',
-            label: '姓名',
-            placeholder: '请输入姓名',
-            required: true,
-            type: 'text',
-          },
-          {
-            field: 'department',
-            label: '部门',
-            options: ['技术部', '市场部', '人力资源部'],
-            required: true,
-            type: 'select',
-          },
-          {
-            field: 'description',
-            label: '问题描述',
-            placeholder: '请详细描述您的问题',
-            required: true,
-            type: 'textarea',
-          },
-        ];
+        formFields.value = getDefaultFormFields();
       }
     } catch (error) {
       console.error('Failed to fetch process definition:', error);
-      formFields.value = [
-        {
-          field: 'name',
-          label: '姓名',
-          placeholder: '请输入姓名',
-          required: true,
-          type: 'text',
-        },
-        {
-          field: 'department',
-          label: '部门',
-          options: ['技术部', '市场部', '人力资源部'],
-          required: true,
-          type: 'select',
-        },
-        {
-          field: 'description',
-          label: '问题描述',
-          placeholder: '请详细描述您的问题',
-          required: true,
-          type: 'textarea',
-        },
-      ];
+      formFields.value = getDefaultFormFields();
     }
-
-    formFields.value.forEach((field: Field) => {
-      switch (field.type) {
-        case 'checkbox':
-          formDataValues[field.field] = false;
-          break;
-        case 'number':
-          formDataValues[field.field] = 0;
-          break;
-        case 'date':
-          formDataValues[field.field] = null;
-          break;
-        default:
-          formDataValues[field.field] = '';
-      }
-    });
   } catch (error) {
-    message.error('获取流程详情失败');
-    console.error('Failed to fetch process detail:', error);
+    message.error('选择流程失败');
+    console.error('Failed to select process:', error);
   }
 };
 
+// 返回流程选择页面
 const backToProcessSelection = () => {
   selectedProcess.value = null;
+  newInstance.process_id = undefined;
   formFields.value = [];
+  // 清空表单数据
   Object.keys(formDataValues).forEach((key) => delete formDataValues[key]);
 };
+
+// 取消创建工单（第一层）
+const cancelCreateInstance = () => {
+  instanceDialog.visible = false;
+};
+
+// 确认流程表单（第二层确定按钮）
+const confirmProcessForm = () => {
+  // 验证流程相关的必填字段
+  const requiredFields = formFields.value.filter(field => field.required);
+  for (const field of requiredFields) {
+    const value = formDataValues[field.field];
+    if (!value || (typeof value === 'string' && !value.trim())) {
+      message.error(`请填写${field.label}`);
+      return;
+    }
+  }
+  
+  // 验证通过，返回第一层表单，携带已填写的数据
+  selectedProcess.value = null;
+  // 注意：这里不清空 formDataValues，保持用户填写的流程数据
+};
+
+// 取消流程表单（第二层取消按钮）
+const cancelProcessForm = () => {
+  // 清空流程相关数据，返回第一层
+  selectedProcess.value = null;
+  newInstance.process_id = undefined;
+  formFields.value = [];
+  // 清空表单数据
+  Object.keys(formDataValues).forEach((key) => delete formDataValues[key]);
+};
+
+// 计算属性：是否可以提交基础表单
+const canSubmitBasicForm = computed(() => {
+  return newInstance.title?.trim() && 
+         newInstance.process_id && 
+         (newInstance.priority !== undefined && newInstance.priority !== null);
+});
 
 const handleSizeChange = (_current: number, size: number) => {
   pageSize.value = size;
@@ -1227,7 +1446,7 @@ const handleCreateInstance = () => {
   Object.assign(newInstance, {
     description: '',
     priority: Priority.Normal,
-    process_id: 0,
+    process_id: undefined,
     tags: [],
     title: '',
   });
@@ -1300,45 +1519,24 @@ const handleEditInstance = (instance: Instance) => {
 const fetchProcessFormFields = async (processId: number) => {
   try {
     const definition = await getProcessDefinition(processId);
-    if (definition && definition.form_data && definition.form_data.fields) {
-      formFields.value = definition.form_data.fields.map((field: any) => ({
-        field: field.name,
-        label: field.label,
-        options: field.options
-          ? field.options.map((opt: any) => (typeof opt === 'object' ? opt.label : opt))
-          : undefined,
-        placeholder: field.placeholder,
-        required: field.required,
-        type: field.type,
-      }));
+    
+    if (definition && definition.steps && Array.isArray(definition.steps)) {
+      // 从流程步骤中提取表单字段
+      const formFieldsFromSteps = extractFormFieldsFromSteps(definition.steps);
+      
+      if (formFieldsFromSteps.length > 0) {
+        formFields.value = formFieldsFromSteps;
+      } else {
+        // 如果没有找到表单字段，使用默认字段
+        formFields.value = getDefaultFormFields();
+      }
     } else {
-      formFields.value = [
-        {
-          field: 'name',
-          label: '姓名',
-          placeholder: '请输入姓名',
-          required: true,
-          type: 'text',
-        },
-        {
-          field: 'department',
-          label: '部门',
-          options: ['技术部', '市场部', '人力资源部'],
-          required: true,
-          type: 'select',
-        },
-        {
-          field: 'description',
-          label: '问题描述',
-          placeholder: '请详细描述您的问题',
-          required: true,
-          type: 'textarea',
-        },
-      ];
+      // 如果接口返回格式不符合预期，使用默认字段
+      formFields.value = getDefaultFormFields();
     }
   } catch (error) {
     console.error('Failed to fetch process form fields:', error);
-    formFields.value = [];
+    formFields.value = getDefaultFormFields();
   }
 };
 
@@ -1370,39 +1568,104 @@ const handleCommand = async (command: string, instance: Instance) => {
 };
 
 const saveInstance = async () => {
-  if (!selectedProcess.value && !instanceDialog.isEdit && !newInstance.process_id) {
-    message.error('请选择流程');
+  // 如果在编辑模式，直接保存
+  if (instanceDialog.isEdit && instanceDialog.instance) {
+    const updateData: UpdateInstanceReq = {
+      id: instanceDialog.instance.id,
+      priority: instanceDialog.instance.priority,
+      title: instanceDialog.instance.title,
+    };
+
+    // 如果有表单数据，添加到更新数据中
+    if (Object.keys(formDataValues).length > 0) {
+      updateData.form_data = {
+        fields: formFields.value,
+        data: formDataValues
+      };
+    }
+
+    try {
+      await updateInstance(instanceDialog.instance.id, updateData);
+      message.success('工单更新成功');
+      instanceDialog.visible = false;
+      fetchInstances();
+    } catch (error) {
+      message.error('保存工单失败');
+      console.error('Failed to save instance:', error);
+    }
     return;
   }
 
-  if (!newInstance.title && !instanceDialog.isEdit) {
+  // 创建模式的验证
+  if (!newInstance.title?.trim()) {
     message.error('请输入工单标题');
     return;
   }
 
+  if (!newInstance.process_id) {
+    message.error('请选择流程');
+    return;
+  }
+
+  if (newInstance.priority === undefined || newInstance.priority === null) {
+    message.error('请选择优先级');
+    return;
+  }
+
   try {
-    if (instanceDialog.isEdit && instanceDialog.instance) {
-      const updateData: UpdateInstanceReq = {
-        id: instanceDialog.instance.id,
-        priority: instanceDialog.instance.priority,
-        title: instanceDialog.instance.title,
-      };
-
-      await updateInstance(instanceDialog.instance.id, updateData);
-      message.success('工单更新成功');
-    } else {
-      const createData: CreateInstanceReq = {
-        ...newInstance,
-      };
-
-      if (dueDate.value) {
-        createData.due_date = dueDate.value.toISOString();
+    // 获取流程定义并生成表单字段
+    let formFieldsToUse: Field[] = [];
+    try {
+      const definition = await getProcessDefinition(newInstance.process_id);
+      if (definition && definition.steps && Array.isArray(definition.steps)) {
+        formFieldsToUse = extractFormFieldsFromSteps(definition.steps);
       }
-
-      await createInstance(createData);
-      message.success('工单创建成功');
+    } catch (error) {
+      console.error('Failed to fetch process definition for form fields:', error);
     }
 
+    // 如果没有找到表单字段，使用默认字段
+    if (formFieldsToUse.length === 0) {
+      formFieldsToUse = getDefaultFormFields();
+    }
+
+    // 检查是否有流程相关的必填字段需要填写
+    const requiredProcessFields = formFieldsToUse.filter(field => field.required);
+    
+    if (requiredProcessFields.length > 0) {
+      // 检查是否所有必填字段都已填写
+      let hasUnfilledRequiredFields = false;
+      for (const field of requiredProcessFields) {
+        const value = formDataValues[field.field];
+        if (!value || (typeof value === 'string' && !value.trim())) {
+          hasUnfilledRequiredFields = true;
+          break;
+        }
+      }
+      
+      if (hasUnfilledRequiredFields) {
+        message.warning('该流程有必填字段需要填写，请完成流程表单后再提交');
+        return;
+      }
+    }
+
+    const createData: CreateInstanceReq = {
+      ...newInstance,
+      process_id: newInstance.process_id,
+    };
+
+    if (dueDate.value) {
+      createData.due_date = dueDate.value.toISOString();
+    }
+
+    // 添加表单数据
+    createData.form_data = {
+      fields: formFieldsToUse,
+      data: formDataValues
+    };
+
+    await createInstance(createData);
+    message.success('工单创建成功');
     instanceDialog.visible = false;
     fetchInstances();
   } catch (error) {
@@ -1486,26 +1749,52 @@ const confirmTransfer = async () => {
   }
 };
 
-const addComment = async () => {
-  if (!newComment.value || !detailDialog.instance) {
+// 打开评论对话框
+const openCommentsDialog = () => {
+  commentsDialog.visible = true;
+};
+
+// 回复评论
+const replyToComment = (comment: InstanceComment) => {
+  replyingTo.value = comment;
+  newComment.value = '';
+};
+
+// 取消回复
+const cancelReply = () => {
+  replyingTo.value = null;
+  newComment.value = '';
+};
+
+// 提交评论
+const submitComment = async () => {
+  if (!newComment.value.trim() || !detailDialog.instance) {
     message.warning('请输入评论内容');
     return;
   }
 
   try {
+    submittingComment.value = true;
+    
     const commentData: InstanceCommentReq = {
-      content: newComment.value,
+      content: newComment.value.trim(),
       instance_id: detailDialog.instance.id,
+      parent_id: replyingTo.value?.id,
     };
 
     await commentInstance(detailDialog.instance.id, commentData);
-    message.success('评论已添加');
+    
+    message.success(replyingTo.value ? '回复成功' : '评论成功');
     newComment.value = '';
+    replyingTo.value = null;
 
-    fetchInstanceComments(detailDialog.instance.id);
+    // 重新获取评论列表
+    await fetchInstanceComments(detailDialog.instance.id);
   } catch (error) {
-    message.error('添加评论失败');
-    console.error('Failed to add comment:', error);
+    message.error('提交失败');
+    console.error('Failed to submit comment:', error);
+  } finally {
+    submittingComment.value = false;
   }
 };
 
@@ -1759,9 +2048,25 @@ const initData = async () => {
   }
 };
 
+// 键盘快捷键处理
+const handleKeyboardShortcuts = (e: KeyboardEvent) => {
+  if (commentsDialog.visible && e.ctrlKey && e.key === 'Enter') {
+    e.preventDefault();
+    submitComment();
+  }
+};
+
 onMounted(() => {
   initData();
   fetchInstances();
+  document.addEventListener('keydown', handleKeyboardShortcuts);
+});
+
+// 组件卸载时清理事件监听器
+onMounted(() => {
+  return () => {
+    document.removeEventListener('keydown', handleKeyboardShortcuts);
+  };
 });
 </script>
 
@@ -1906,15 +2211,17 @@ onMounted(() => {
   color: #1f2937;
 }
 
+.comments-btn {
+  margin-left: auto;
+}
+
 .form-data-preview,
-.flow-records,
-.comments-section {
+.flow-records {
   margin-top: 24px;
 }
 
 .form-data-preview h3,
-.flow-records h3,
-.comments-section h3 {
+.flow-records h3 {
   margin-bottom: 16px;
   color: #1f2937;
   font-size: 18px;
@@ -1953,44 +2260,6 @@ onMounted(() => {
 .flow-duration {
   font-size: 14px;
   margin-top: 4px;
-}
-
-.comment-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.comment-item {
-  padding: 12px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-}
-
-.comment-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.comment-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.comment-author {
-  font-weight: 500;
-}
-
-.comment-time {
-  font-size: 12px;
-  color: #8c8c8c;
-}
-
-.comment-content {
-  white-space: pre-line;
 }
 
 .detail-footer {
@@ -2041,6 +2310,232 @@ onMounted(() => {
 
 .mt-8 {
   margin-top: 8px;
+}
+
+/* 评论对话框样式 */
+.comments-dialog {
+  .ant-modal-body {
+    padding: 0;
+  }
+}
+
+.comments-container {
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+}
+
+.comments-list-container {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: #fafafa;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.comment-item {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.comment-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.comment-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.comment-info {
+  flex: 1;
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.comment-time {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-content {
+  padding-left: 44px;
+  line-height: 1.6;
+  color: #374151;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.replies-container {
+  margin-top: 16px;
+  padding-left: 44px;
+  border-left: 2px solid #e5e7eb;
+}
+
+.reply-item {
+  background-color: #f9fafb;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.reply-item:last-child {
+  margin-bottom: 0;
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.reply-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reply-author {
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.reply-time {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.reply-content {
+  padding-left: 32px;
+  line-height: 1.5;
+  color: #4b5563;
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.empty-comments {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.add-comment-section {
+  background: white;
+  border-top: 1px solid #e5e7eb;
+}
+
+.comment-input-container {
+  padding: 20px;
+}
+
+.replying-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #0369a1;
+}
+
+.comment-textarea {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  transition: all 0.3s ease;
+}
+
+.comment-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.comment-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.comment-tips {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.comment-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* 自定义模态框底部样式 */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 0;
+  border-top: 1px solid #f0f0f0;
+  margin-top: 24px;
+}
+
+/* 流程信息相关样式 */
+.process-info-section {
+  margin-bottom: 20px;
+}
+
+.selected-process-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selected-process-info span {
+  flex: 1;
+}
+
+.basic-info-summary {
+  background-color: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.basic-info-summary h4 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* 选择器样式 */
@@ -2141,6 +2636,25 @@ onMounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+
+  .comments-container {
+    height: 500px;
+  }
+
+  .comment-content,
+  .reply-content {
+    padding-left: 0;
+  }
+
+  .replies-container {
+    padding-left: 20px;
+  }
+
+  .comment-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 }
 </style>

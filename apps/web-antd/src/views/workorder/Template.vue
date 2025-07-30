@@ -95,15 +95,15 @@
             </template>
 
             <template v-if="column.key === 'category'">
-              <a-tag v-if="record.categoryName" color="blue">
-                {{ record.categoryName }}
+              <a-tag v-if="record.category?.name" color="blue">
+                {{ record.category.name }}
               </a-tag>
               <span v-else class="text-gray">未分类</span>
             </template>
 
             <template v-if="column.key === 'process'">
-              <a-tag v-if="record.processName" color="geekblue">
-                {{ record.processName }}
+              <a-tag v-if="record.process?.name" color="geekblue">
+                {{ record.process.name }}
               </a-tag>
               <span v-else class="text-gray">未关联</span>
             </template>
@@ -119,22 +119,22 @@
             </template>
 
             <template v-if="column.key === 'sortOrder'">
-              <a-tag color="default">{{ record.sortOrder || 0 }}</a-tag>
+              <a-tag color="default">{{ record.sort_order || 0 }}</a-tag>
             </template>
 
             <template v-if="column.key === 'creator'">
               <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.creatorName || '') }">
-                  {{ getInitials(record.creatorName) }}
+                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.creator_name || '') }">
+                  {{ getInitials(record.creator_name) }}
                 </a-avatar>
-                <span class="creator-name">{{ record.creatorName }}</span>
+                <span class="creator-name">{{ record.creator_name }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'createdAt'">
               <div class="date-info">
-                <span class="date">{{ formatDate(record.createdAt) }}</span>
-                <span class="time">{{ formatTime(record.createdAt) }}</span>
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
               </div>
             </template>
 
@@ -155,7 +155,6 @@
                       <a-menu-divider />
                       <a-menu-item key="enable" v-if="record.status === 0">启用</a-menu-item>
                       <a-menu-item key="disable" v-if="record.status === 1">禁用</a-menu-item>
-                      <a-menu-item key="clone">克隆</a-menu-item>
                       <a-menu-divider />
                       <a-menu-item key="delete" danger>删除</a-menu-item>
                     </a-menu>
@@ -303,7 +302,6 @@
               <a-select-option :value="1">低</a-select-option>
               <a-select-option :value="2">中</a-select-option>
               <a-select-option :value="3">高</a-select-option>
-              <a-select-option :value="4">紧急</a-select-option>
             </a-select>
           </a-form-item>
 
@@ -351,19 +349,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 克隆对话框 -->
-    <a-modal :open="cloneDialogVisible" title="克隆模板" :width="dialogWidth" @ok="confirmClone" @cancel="closeCloneDialog"
-      :destroy-on-close="true" :confirm-loading="cloneDialog.loading">
-      <a-form :model="cloneDialog.form" layout="vertical">
-        <a-form-item label="原模板名称">
-          <a-input :value="cloneDialog.originalName" disabled />
-        </a-form-item>
-        <a-form-item label="新模板名称" name="name" :rules="[{ required: true, message: '请输入新模板名称' }]">
-          <a-input v-model:value="cloneDialog.form.name" placeholder="请输入新模板名称" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
     <!-- 详情/预览对话框 -->
     <a-modal :open="detailDialogVisible" title="模板详情" :width="previewDialogWidth" :footer="null"
       @cancel="closeDetailDialog" class="detail-dialog">
@@ -379,31 +364,31 @@
           <a-descriptions-item label="ID">{{ detailDialog.template.id }}</a-descriptions-item>
           <a-descriptions-item label="名称">{{ detailDialog.template.name }}</a-descriptions-item>
           <a-descriptions-item label="分类">
-            <a-tag v-if="detailDialog.template.categoryName" color="blue">
-              {{ detailDialog.template.categoryName }}
+            <a-tag v-if="detailDialog.template.category?.name" color="blue">
+              {{ detailDialog.template.category?.name }}
             </a-tag>
             <span v-else class="text-gray">未分类</span>
           </a-descriptions-item>
           <a-descriptions-item label="关联流程">
-            <a-tag v-if="detailDialog.template.processName" color="geekblue">
-              {{ detailDialog.template.processName }}
+            <a-tag v-if="detailDialog.template.process?.name" color="geekblue">
+              {{ detailDialog.template.process?.name }}
             </a-tag>
             <span v-else class="text-gray">未关联</span>
           </a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.template.creatorName }}</a-descriptions-item>
+          <a-descriptions-item label="创建人">{{ detailDialog.template.creator_name }}</a-descriptions-item>
           <a-descriptions-item label="状态">{{ getStatusText(detailDialog.template.status) }}</a-descriptions-item>
-          <a-descriptions-item label="排序">{{ detailDialog.template.sortOrder || 0 }}</a-descriptions-item>
+          <a-descriptions-item label="排序">{{ detailDialog.template.sort_order || 0 }}</a-descriptions-item>
           <a-descriptions-item label="图标">{{ detailDialog.template.icon || '无' }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间" :span="2">{{ formatFullDateTime(detailDialog.template.createdAt || '')
+          <a-descriptions-item label="创建时间" :span="2">{{ formatFullDateTime(detailDialog.template.created_at || '')
             }}</a-descriptions-item>
           <a-descriptions-item label="描述" :span="2">{{ detailDialog.template.description || '无描述'
-          }}</a-descriptions-item>
+            }}</a-descriptions-item>
         </a-descriptions>
 
         <div class="content-preview">
           <h4>默认值配置</h4>
           <div class="content-display">
-            <pre class="content-text">{{ formatDefaultValues(detailDialog.template.defaultValues) }}</pre>
+            <pre class="content-text">{{ formatDefaultValues(detailDialog.template.default_values) }}</pre>
           </div>
         </div>
 
@@ -439,10 +424,7 @@ import {
   updateTemplate,
   deleteTemplate,
   listTemplate,
-  detailTemplate,
-  enableTemplate,
-  disableTemplate,
-  cloneTemplate
+  detailTemplate
 } from '#/api/core/workorder_template';
 import { listProcess } from '#/api/core/workorder_process';
 import { listCategory } from '#/api/core/workorder_category';
@@ -480,13 +462,13 @@ interface DefaultValues {
 // 表格列定义
 const columns = [
   { title: '模板名称', dataIndex: 'name', key: 'name', width: 180, fixed: 'left' },
-  { title: '分类', dataIndex: 'categoryName', key: 'category', width: 120, align: 'center' as const },
-  { title: '关联流程', dataIndex: 'processName', key: 'process', width: 120, align: 'center' as const },
+  { title: '分类', dataIndex: 'category', key: 'category', width: 120, align: 'center' as const },
+  { title: '关联流程', dataIndex: 'process', key: 'process', width: 120, align: 'center' as const },
   { title: '描述', dataIndex: 'description', key: 'description', width: 200, ellipsis: true },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
-  { title: '排序', dataIndex: 'sortOrder', key: 'sortOrder', width: 80, align: 'center' as const },
-  { title: '创建人', dataIndex: 'creatorName', key: 'creator', width: 150 },
-  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+  { title: '排序', dataIndex: 'sort_order', key: 'sortOrder', width: 80, align: 'center' as const },
+  { title: '创建人', dataIndex: 'creator_name', key: 'creator', width: 150 },
+  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
   { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
 ];
 
@@ -559,7 +541,6 @@ const stats = reactive({
 
 // 对话框状态
 const templateDialogVisible = ref(false);
-const cloneDialogVisible = ref(false);
 const detailDialogVisible = ref(false);
 
 // 模板对话框数据
@@ -583,16 +564,6 @@ const templateDialog = reactive({
   } as DefaultValues
 });
 
-// 克隆对话框数据
-const cloneDialog = reactive({
-  loading: false,
-  originalName: '',
-  templateId: 0,
-  form: {
-    name: ''
-  }
-});
-
 // 详情对话框数据
 const detailDialog = reactive({
   template: null as Template | null
@@ -613,16 +584,6 @@ const templateRules = {
 const formRef = ref();
 
 // 响应式对话框宽度
-const dialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '80%';
-    return '600px';
-  }
-  return '600px';
-});
-
 const templateDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
     const width = window.innerWidth;
@@ -1042,7 +1003,7 @@ const loadTemplates = async (): Promise<void> => {
       size: paginationConfig.pageSize,
       search: searchQuery.value || undefined,
       status: statusFilter.value,
-      categoryId: categoryFilter.value
+      category_id: categoryFilter.value
     };
 
     const response = await listTemplate(params);
@@ -1078,8 +1039,8 @@ const updateStats = (): void => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   stats.thisMonth = templates.value.filter(t => {
-    if (t.createdAt) {
-      const createdAt = new Date(t.createdAt);
+    if (t.created_at) {
+      const createdAt = new Date(t.created_at);
       return createdAt >= startOfMonth;
     }
     return false;
@@ -1179,16 +1140,16 @@ const handleEditTemplate = async (record: Template): Promise<void> => {
         id: templateData.id,
         name: templateData.name,
         description: templateData.description || '',
-        categoryId: templateData.categoryId,
-        processId: templateData.processId,
+        categoryId: templateData.category_id,
+        processId: templateData.process_id,
         status: templateData.status,
         icon: templateData.icon || '',
-        sortOrder: templateData.sortOrder || 0,
-        defaultValues: templateData.defaultValues
+        sortOrder: templateData.sort_order || 0,
+        defaultValues: templateData.default_values
       };
 
       // 解析默认值到结构化表单
-      parseDefaultValues(templateData.defaultValues);
+      parseDefaultValues(templateData.default_values);
 
       templateDialogVisible.value = true;
       detailDialogVisible.value = false;
@@ -1233,9 +1194,6 @@ const handleMenuClick = (command: string, record: Template): void => {
     case 'disable':
       toggleTemplateStatus(record, 0);
       break;
-    case 'clone':
-      showCloneDialog(record);
-      break;
     case 'delete':
       confirmDelete(record);
       break;
@@ -1244,11 +1202,19 @@ const handleMenuClick = (command: string, record: Template): void => {
 
 const toggleTemplateStatus = async (record: Template, status: number): Promise<void> => {
   try {
-    if (status === 1) {
-      await enableTemplate(record.id);
-    } else {
-      await disableTemplate(record.id);
-    }
+    const data: UpdateTemplateReq = {
+      id: record.id,
+      name: record.name,
+      description: record.description,
+      process_id: record.process_id,
+      default_values: typeof record.default_values === 'string' ? JSON.parse(record.default_values) : record.default_values,
+      icon: record.icon,
+      category_id: record.category_id,
+      sort_order: record.sort_order,
+      status: status
+    };
+    
+    await updateTemplate(data);
 
     const statusText = status === 1 ? '启用' : '禁用';
     message.success(`模板 "${record.name}" 已${statusText}`);
@@ -1256,33 +1222,6 @@ const toggleTemplateStatus = async (record: Template, status: number): Promise<v
   } catch (error) {
     console.error('更新模板状态失败:', error);
     message.error('更新模板状态失败');
-  }
-};
-
-const showCloneDialog = (record: Template): void => {
-  cloneDialog.originalName = record.name;
-  cloneDialog.form.name = `${record.name} 的副本`;
-  cloneDialog.templateId = record.id;
-  cloneDialogVisible.value = true;
-};
-
-const confirmClone = async (): Promise<void> => {
-  if (!cloneDialog.form.name.trim()) {
-    message.error('请输入新模板名称');
-    return;
-  }
-
-  cloneDialog.loading = true;
-  try {
-    await cloneTemplate(cloneDialog.templateId);
-    message.success(`模板已克隆为 "${cloneDialog.form.name}"`);
-    cloneDialogVisible.value = false;
-    loadTemplates();
-  } catch (error) {
-    console.error('克隆模板失败:', error);
-    message.error('克隆模板失败');
-  } finally {
-    cloneDialog.loading = false;
   }
 };
 
@@ -1353,11 +1292,11 @@ const saveTemplate = async (): Promise<void> => {
         id: templateDialog.form.id,
         name: templateDialog.form.name,
         description: templateDialog.form.description,
-        processId: templateDialog.form.processId,
-        defaultValues: defaultValues,
+        process_id: templateDialog.form.processId || 0,
+        default_values: defaultValues,
         icon: templateDialog.form.icon,
-        categoryId: templateDialog.form.categoryId,
-        sortOrder: templateDialog.form.sortOrder,
+        category_id: templateDialog.form.categoryId,
+        sort_order: templateDialog.form.sortOrder,
         status: templateDialog.form.status
       };
       await updateTemplate(data);
@@ -1366,11 +1305,11 @@ const saveTemplate = async (): Promise<void> => {
       const data: CreateTemplateReq = {
         name: templateDialog.form.name,
         description: templateDialog.form.description,
-        processId: templateDialog.form.processId,
-        defaultValues: defaultValues,
+        process_id: templateDialog.form.processId || 0,
+        default_values: defaultValues,
         icon: templateDialog.form.icon,
-        categoryId: templateDialog.form.categoryId,
-        sortOrder: templateDialog.form.sortOrder
+        category_id: templateDialog.form.categoryId,
+        sort_order: templateDialog.form.sortOrder
       };
       await createTemplate(data);
       message.success(`模板 "${templateDialog.form.name}" 已创建`);
@@ -1396,16 +1335,16 @@ const loadSelectorDataForEdit = async (template: Template): Promise<void> => {
     await loadUsers(true);
 
     // 确保当前选中的分类和流程在列表中
-    if (template.categoryId && !templateDialogCategories.value.find(cat => cat.id === template.categoryId)) {
+    if (template.category_id && !templateDialogCategories.value.find(cat => cat.id === template.category_id)) {
       templateDialogCategories.value = [
-        { id: template.categoryId, name: template.categoryName || `分类${template.categoryId}`, description: '' },
+        { id: template.category_id, name: template.category?.name || `分类${template.category_id}`, description: '' },
         ...templateDialogCategories.value
       ];
     }
 
-    if (template.processId && !templateDialogProcesses.value.find(process => process.id === template.processId)) {
+    if (template.process_id && !templateDialogProcesses.value.find(process => process.id === template.process_id)) {
       templateDialogProcesses.value = [
-        { id: template.processId, name: template.processName || `流程${template.processId}`, description: '' },
+        { id: template.process_id, name: template.process?.name || `流程${template.process_id}`, description: '' },
         ...templateDialogProcesses.value
       ];
     }
@@ -1454,10 +1393,6 @@ const resetSelectors = (): void => {
 const closeTemplateDialog = (): void => {
   templateDialogVisible.value = false;
   resetSelectors();
-};
-
-const closeCloneDialog = (): void => {
-  cloneDialogVisible.value = false;
 };
 
 const closeDetailDialog = (): void => {

@@ -67,15 +67,15 @@ const routes: RouteRecordRaw[] = [
           title: '通知配置',
         },
       },
-      {
-        name: '统计分析',
-        path: '/statistics',
-        component: () => import('#/views/workorder/Statistics.vue'),
-        meta: {
-          icon: 'lucide:bar-chart',
-          title: '统计分析',
-        },
-      },
+      // {
+      //   name: '统计分析',
+      //   path: '/statistics',
+      //   component: () => import('#/views/workorder/Statistics.vue'),
+      //   meta: {
+      //     icon: 'lucide:bar-chart',
+      //     title: '统计分析',
+      //   },
+      // },
       {
         name: '模板管理',
         path: '/template',
