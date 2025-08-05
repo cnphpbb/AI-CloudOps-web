@@ -520,173 +520,10 @@
       </div>
     </a-modal>
 
-    <!-- 评论对话框 -->
-    <a-modal 
-      :open="commentDialog.visible" 
-      title="添加评论" 
-      :width="dialogWidth" 
-      @ok="saveComment"
-      @cancel="() => { commentDialog.visible = false }" 
-      :destroy-on-close="true" 
-      class="responsive-modal"
-    >
-      <a-form :model="commentDialog.form" layout="vertical">
-        <a-form-item label="评论内容" name="content" :rules="[{ required: true, message: '请输入评论内容' }]">
-          <a-textarea v-model:value="commentDialog.form.content" :rows="4" placeholder="请输入评论内容" />
-        </a-form-item>
-        <a-form-item>
-          <a-checkbox v-model:checked="commentDialog.form.is_system">系统评论</a-checkbox>
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
-    <!-- 评论查看对话框 -->
-    <a-modal 
-      :open="commentsViewDialog.visible" 
-      title="工单评论" 
-      :width="previewDialogWidth" 
-      :footer="null"
-      @cancel="() => { commentsViewDialog.visible = false }" 
-      class="comments-dialog responsive-modal"
-    >
-      <div class="comments-content">
-        <div v-if="commentsList.length === 0" class="empty-comments">
-          <a-empty description="暂无评论" />
-        </div>
-        <div v-else class="comments-list">
-          <div v-for="comment in commentsList" :key="comment.id" class="comment-item">
-            <div class="comment-header">
-              <div class="commenter-info">
-                <a-avatar 
-                  size="small" 
-                  :style="{ backgroundColor: getAvatarColor(comment.operator_name || '') }"
-                >
-                  {{ getInitials(comment.operator_name) }}
-                </a-avatar>
-                <span class="commenter-name">{{ comment.operator_name }}</span>
-                <a-tag v-if="comment.is_system === 1" color="orange" size="small">系统</a-tag>
-              </div>
-              <span class="comment-time">{{ formatFullDateTime(comment.created_at) }}</span>
-            </div>
-            <div class="comment-content">{{ comment.content }}</div>
-            <div v-if="comment.children && comment.children.length > 0" class="comment-replies">
-              <div v-for="reply in comment.children" :key="reply.id" class="reply-item">
-                <div class="reply-header">
-                  <div class="replier-info">
-                    <a-avatar 
-                      size="small" 
-                      :style="{ backgroundColor: getAvatarColor(reply.operator_name || '') }"
-                    >
-                      {{ getInitials(reply.operator_name) }}
-                    </a-avatar>
-                    <span class="replier-name">{{ reply.operator_name }}</span>
-                  </div>
-                  <span class="reply-time">{{ formatFullDateTime(reply.created_at) }}</span>
-                </div>
-                <div class="reply-content">{{ reply.content }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </a-modal>
-
-    <!-- 时间线对话框 -->
-    <a-modal 
-      :open="timelineDialog.visible" 
-      title="工单时间线" 
-      :width="previewDialogWidth" 
-      :footer="null"
-      @cancel="() => { timelineDialog.visible = false }" 
-      class="timeline-dialog responsive-modal"
-    >
-      <div class="timeline-content">
-        <a-timeline>
-          <a-timeline-item 
-            v-for="item in timelineList" 
-            :key="item.id" 
-            :color="getTimelineColor(item.action)"
-          >
-            <template #dot>
-              <component :is="getTimelineIcon(item.action)" />
-            </template>
-            <div class="timeline-item">
-              <div class="timeline-header">
-                <span class="action-type">{{ getActionText(item.action) }}</span>
-                <span class="action-time">{{ formatFullDateTime(item.created_at) }}</span>
-              </div>
-              <div class="action-content">
-                <div class="operator-info">
-                  <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(item.operator_name || '') }">
-                    {{ getInitials(item.operator_name) }}
-                  </a-avatar>
-                  <span class="operator-name">{{ item.operator_name }}</span>
-                </div>
-                <div class="action-comment" v-if="item.comment">
-                  {{ item.comment }}
-                </div>
-                <div class="action-data" v-if="item.action_detail">
-                  <pre class="json-content">{{ JSON.stringify(JSON.parse(item.action_detail), null, 2) }}</pre>
-                </div>
-              </div>
-            </div>
-          </a-timeline-item>
-        </a-timeline>
-        <div v-if="timelineList.length === 0" class="empty-timeline">
-          <a-empty description="暂无时间线记录" />
-        </div>
-      </div>
-    </a-modal>
-
-    <!-- 流转记录对话框 -->
-    <a-modal 
-      :open="flowDialog.visible" 
-      title="工单流转记录" 
-      :width="previewDialogWidth" 
-      :footer="null"
-      @cancel="() => { flowDialog.visible = false }" 
-      class="flow-dialog responsive-modal"
-    >
-      <div class="flow-content">
-        <a-timeline>
-          <a-timeline-item 
-            v-for="item in flowList" 
-            :key="item.id" 
-            :color="getFlowActionColor(item.action)"
-          >
-            <template #dot>
-              <component :is="getFlowActionIcon(item.action)" />
-            </template>
-            <div class="flow-item">
-              <div class="flow-header">
-                <span class="flow-action">{{ getFlowActionText(item.action) }}</span>
-                <span class="flow-time">{{ formatFullDateTime(item.created_at) }}</span>
-              </div>
-              <div class="flow-content-detail">
-                <div class="operator-info">
-                  <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(item.operator_name || '') }">
-                    {{ getInitials(item.operator_name) }}
-                  </a-avatar>
-                  <span class="operator-name">{{ item.operator_name }}</span>
-                  <a-tag v-if="item.is_system_action === 1" color="orange" size="small">系统</a-tag>
-                </div>
-                <div class="status-change">
-                  <span class="from-status">{{ getStatusText(item.from_status) }}</span>
-                  <span class="arrow">→</span>
-                  <span class="to-status">{{ getStatusText(item.to_status) }}</span>
-                </div>
-                <div class="flow-comment" v-if="item.comment">
-                  <strong>处理说明：</strong>{{ item.comment }}
-                </div>
-              </div>
-            </div>
-          </a-timeline-item>
-        </a-timeline>
-        <div v-if="flowList.length === 0" class="empty-flow">
-          <a-empty description="暂无流转记录" />
-        </div>
-      </div>
-    </a-modal>
+    <!-- 组件 -->
+    <WorkorderComments ref="commentsRef" @comment-added="loadInstances" />
+    <WorkorderTimeline ref="timelineRef" />
+    <WorkorderFlow ref="flowRef" />
 
     <!-- 分配处理人对话框 -->
     <a-modal 
@@ -776,12 +613,7 @@ import {
   DownOutlined,
   MessageOutlined,
   HistoryOutlined,
-  UserOutlined,
-  ExclamationCircleOutlined,
-  EditOutlined,
-  PlayCircleOutlined,
-  SendOutlined,
-  StopOutlined
+  PlayCircleOutlined
 } from '@ant-design/icons-vue';
 
 import {
@@ -808,27 +640,10 @@ import {
   rejectWorkorderInstance
 } from '#/api/core/workorder_instance';
 
-import {
-  type WorkorderInstanceCommentItem,
-  type CreateWorkorderInstanceCommentReq,
-  type GetInstanceCommentsTreeReq,
-  createWorkorderInstanceComment,
-  getInstanceCommentsTree
-} from '#/api/core/workorder_instance_comment';
-
-import {
-  type WorkorderInstanceTimelineItem,
-  type ListWorkorderInstanceTimelineReq,
-  TimelineAction,
-  listWorkorderInstanceTimeline
-} from '#/api/core/workorder_instance_time_line';
-
-import {
-  type WorkorderInstanceFlowItem,
-  type ListWorkorderInstanceFlowReq,
-  FlowAction,
-  listWorkorderInstanceFlow
-} from '#/api/core/workorder_instance_flow';
+// 导入新的组件
+import WorkorderComments from './components/WorkorderComments.vue'
+import WorkorderTimeline from './components/WorkorderTimeline.vue'
+import WorkorderFlow from './components/WorkorderFlow.vue'
 
 import {
   type GetUserListReq,
@@ -903,6 +718,11 @@ const currentPage = ref(1);
 const pageSize = ref(10);
 const total = ref(0);
 
+// 组件引用
+const commentsRef = ref()
+const timelineRef = ref()
+const flowRef = ref()
+
 // 数据列表
 const instanceList = ref<WorkorderInstanceItem[]>([]);
 const processes = ref<WorkorderProcessItem[]>([]);
@@ -973,39 +793,6 @@ const detailDialog = reactive({
   instance: null as WorkorderInstanceItem | null
 });
 
-// 评论对话框
-const commentDialog = reactive({
-  visible: false,
-  form: {
-    instance_id: 0,
-    content: '',
-    is_system: 0
-  } as CreateWorkorderInstanceCommentReq
-});
-
-// 评论查看对话框
-const commentsViewDialog = reactive({
-  visible: false,
-  instanceId: 0
-});
-
-const commentsList = ref<WorkorderInstanceCommentItem[]>([]);
-
-// 时间线对话框
-const timelineDialog = reactive({
-  visible: false,
-  instanceId: 0
-});
-
-const timelineList = ref<WorkorderInstanceTimelineItem[]>([]);
-
-// 流转记录对话框
-const flowDialog = reactive({
-  visible: false,
-  instanceId: 0
-});
-
-const flowList = ref<WorkorderInstanceFlowItem[]>([]);
 
 // 分配处理人对话框
 const assignDialog = reactive({
@@ -1218,104 +1005,6 @@ const getAvatarColor = (name: string | undefined) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const getTimelineColor = (action: string): string => {
-  const colorMap: Record<string, string> = {
-    [TimelineAction.Create]: 'green',
-    [TimelineAction.Update]: 'blue',
-    [TimelineAction.Submit]: 'orange',
-    [TimelineAction.Assign]: 'purple',
-    [TimelineAction.Approve]: 'green',
-    [TimelineAction.Reject]: 'red',
-    [TimelineAction.Cancel]: 'gray',
-    [TimelineAction.Complete]: 'green',
-    [TimelineAction.Return]: 'orange',
-    [TimelineAction.Comment]: 'blue',
-    [TimelineAction.View]: 'cyan',
-    [TimelineAction.Attach]: 'purple',
-    [TimelineAction.Notify]: 'orange',
-    [TimelineAction.Remind]: 'red'
-  };
-  return colorMap[action] || 'blue';
-};
-
-const getTimelineIcon = (action: string) => {
-  const iconMap: Record<string, any> = {
-    [TimelineAction.Create]: PlusOutlined,
-    [TimelineAction.Update]: EditOutlined,
-    [TimelineAction.Submit]: SendOutlined,
-    [TimelineAction.Assign]: UserOutlined,
-    [TimelineAction.Approve]: CheckCircleOutlined,
-    [TimelineAction.Reject]: ExclamationCircleOutlined,
-    [TimelineAction.Cancel]: StopOutlined,
-    [TimelineAction.Complete]: CheckCircleOutlined,
-    [TimelineAction.Return]: ExclamationCircleOutlined,
-    [TimelineAction.Comment]: MessageOutlined,
-    [TimelineAction.View]: FileTextOutlined,
-    [TimelineAction.Attach]: PlusOutlined,
-    [TimelineAction.Notify]: MessageOutlined,
-    [TimelineAction.Remind]: ExclamationCircleOutlined
-  };
-  return iconMap[action] || EditOutlined;
-};
-
-const getActionText = (action: string): string => {
-  const textMap: Record<string, string> = {
-    [TimelineAction.Create]: '创建工单',
-    [TimelineAction.Update]: '更新工单',
-    [TimelineAction.Submit]: '提交工单',
-    [TimelineAction.Assign]: '分配处理人',
-    [TimelineAction.Approve]: '审批通过',
-    [TimelineAction.Reject]: '拒绝工单',
-    [TimelineAction.Cancel]: '取消工单',
-    [TimelineAction.Complete]: '完成工单',
-    [TimelineAction.Return]: '退回工单',
-    [TimelineAction.Comment]: '添加评论',
-    [TimelineAction.View]: '查看工单',
-    [TimelineAction.Attach]: '添加附件',
-    [TimelineAction.Notify]: '发送通知',
-    [TimelineAction.Remind]: '催办提醒'
-  };
-  return textMap[action] || action;
-};
-
-const getFlowActionColor = (action: string): string => {
-  const colorMap: Record<string, string> = {
-    [FlowAction.Submit]: 'orange',
-    [FlowAction.Approve]: 'green',
-    [FlowAction.Reject]: 'red',
-    [FlowAction.Assign]: 'purple',
-    [FlowAction.Cancel]: 'gray',
-    [FlowAction.Complete]: 'green',
-    [FlowAction.Return]: 'orange'
-  };
-  return colorMap[action] || 'blue';
-};
-
-const getFlowActionIcon = (action: string) => {
-  const iconMap: Record<string, any> = {
-    [FlowAction.Submit]: SendOutlined,
-    [FlowAction.Approve]: CheckCircleOutlined,
-    [FlowAction.Reject]: ExclamationCircleOutlined,
-    [FlowAction.Assign]: UserOutlined,
-    [FlowAction.Cancel]: StopOutlined,
-    [FlowAction.Complete]: CheckCircleOutlined,
-    [FlowAction.Return]: ExclamationCircleOutlined
-  };
-  return iconMap[action] || PlayCircleOutlined;
-};
-
-const getFlowActionText = (action: string): string => {
-  const textMap: Record<string, string> = {
-    [FlowAction.Submit]: '提交工单',
-    [FlowAction.Approve]: '审批通过',
-    [FlowAction.Reject]: '审批拒绝',
-    [FlowAction.Assign]: '指派处理人',
-    [FlowAction.Cancel]: '取消工单',
-    [FlowAction.Complete]: '完成工单',
-    [FlowAction.Return]: '退回工单'
-  };
-  return textMap[action] || action;
-};
 
 // JSON处理方法
 const formatFormDataJson = (): void => {
@@ -1784,102 +1473,20 @@ const handleCommand = async (command: string, row: WorkorderInstanceItem) => {
 };
 
 const showCommentDialog = (instance: WorkorderInstanceItem) => {
-  commentDialog.form = {
-    instance_id: instance.id,
-    content: '',
-    is_system: 0
-  };
-  commentDialog.visible = true;
-};
+  commentsRef.value?.showCommentDialog(instance.id)
+}
 
-const saveComment = async () => {
-  try {
-    if (!commentDialog.form.content.trim()) {
-      message.error('请输入评论内容');
-      return;
-    }
+const handleViewComments = (instance: WorkorderInstanceItem) => {
+  commentsRef.value?.showCommentsView(instance.id)
+}
 
-    loading.value = true;
-    await createWorkorderInstanceComment(commentDialog.form);
-    message.success('评论添加成功');
-    commentDialog.visible = false;
-  } catch (error: any) {
-    message.error(`添加评论失败: ${error.message || '未知错误'}`);
-    console.error('Failed to create comment:', error);
-  } finally {
-    loading.value = false;
-  }
-};
+const handleViewTimeline = (instance: WorkorderInstanceItem) => {
+  timelineRef.value?.showTimeline(instance.id)
+}
 
-const handleViewComments = async (instance: WorkorderInstanceItem) => {
-  commentsViewDialog.instanceId = instance.id;
-  commentsViewDialog.visible = true;
-
-  try {
-    const params: GetInstanceCommentsTreeReq = {
-      id: instance.id
-    };
-
-    const res = await getInstanceCommentsTree(params);
-    if (res) {
-      commentsList.value = res;
-    } else {
-      commentsList.value = [];
-    }
-  } catch (error: any) {
-    console.error('Failed to load comments:', error);
-    message.error(`加载评论失败: ${error.message || '未知错误'}`);
-    commentsList.value = [];
-  }
-};
-
-const handleViewTimeline = async (instance: WorkorderInstanceItem) => {
-  timelineDialog.instanceId = instance.id;
-  timelineDialog.visible = true;
-
-  try {
-    const params: ListWorkorderInstanceTimelineReq = {
-      page: 1,
-      size: 100,
-      instance_id: instance.id
-    };
-
-    const res = await listWorkorderInstanceTimeline(params);
-    if (res) {
-      timelineList.value = res.items;
-    } else {
-      timelineList.value = [];
-    }
-  } catch (error: any) {
-    console.error('Failed to load timeline:', error);
-    message.error(`加载时间线失败: ${error.message || '未知错误'}`);
-    timelineList.value = [];
-  }
-};
-
-const handleViewFlow = async (instance: WorkorderInstanceItem) => {
-  flowDialog.instanceId = instance.id;
-  flowDialog.visible = true;
-
-  try {
-    const params: ListWorkorderInstanceFlowReq = {
-      page: 1,
-      size: 100,
-      instance_id: instance.id
-    };
-
-    const res = await listWorkorderInstanceFlow(params);
-    if (res && res.items) {
-      flowList.value = res.items;
-    } else {
-      flowList.value = [];
-    }
-  } catch (error: any) {
-    console.error('Failed to load flow:', error);
-    message.error(`加载流转记录失败: ${error.message || '未知错误'}`);
-    flowList.value = [];
-  }
-};
+const handleViewFlow = (instance: WorkorderInstanceItem) => {
+  flowRef.value?.showFlow(instance.id)
+}
 
 const handleSubmitInstance = async (instance: WorkorderInstanceItem) => {
   Modal.confirm({
@@ -2476,235 +2083,6 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
-/* 评论样式 */
-.comments-content {
-  max-height: 600px;
-  overflow-y: auto;
-}
-
-.comments-list {
-  space-y: 16px;
-}
-
-.comment-item {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-  background: white;
-}
-
-.comment-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.commenter-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.commenter-name {
-  font-weight: 500;
-  color: #1f2937;
-}
-
-.comment-time {
-  font-size: 12px;
-  color: #8c8c8c;
-}
-
-.comment-content {
-  line-height: 1.6;
-  color: #495057;
-  margin-bottom: 12px;
-}
-
-.comment-replies {
-  margin-left: 32px;
-  border-left: 2px solid #e8e8e8;
-  padding-left: 16px;
-}
-
-.reply-item {
-  margin-bottom: 12px;
-  padding: 12px;
-  background: #fafafa;
-  border-radius: 6px;
-}
-
-.reply-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.replier-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.replier-name {
-  font-weight: 500;
-  color: #1f2937;
-  font-size: 14px;
-}
-
-.reply-time {
-  font-size: 11px;
-  color: #8c8c8c;
-}
-
-.reply-content {
-  line-height: 1.5;
-  color: #495057;
-  font-size: 14px;
-}
-
-.empty-comments {
-  text-align: center;
-  padding: 40px 0;
-}
-
-/* 时间线样式 */
-.timeline-content {
-  max-height: 600px;
-  overflow-y: auto;
-}
-
-.timeline-item {
-  margin-bottom: 16px;
-}
-
-.timeline-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.action-type {
-  font-weight: 500;
-  color: #1f2937;
-}
-
-.action-time {
-  font-size: 12px;
-  color: #8c8c8c;
-}
-
-.action-content {
-  padding-left: 8px;
-}
-
-.action-comment {
-  margin: 8px 0;
-  color: #666;
-  line-height: 1.5;
-}
-
-.action-data {
-  margin-top: 8px;
-  padding: 8px;
-  background: #f5f5f5;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.empty-timeline {
-  text-align: center;
-  padding: 40px 0;
-}
-
-/* 流转记录样式 */
-.flow-content {
-  max-height: 600px;
-  overflow-y: auto;
-}
-
-.flow-item {
-  margin-bottom: 16px;
-}
-
-.flow-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.flow-action {
-  font-weight: 500;
-  color: #1f2937;
-}
-
-.flow-time {
-  font-size: 12px;
-  color: #8c8c8c;
-}
-
-.flow-content-detail {
-  padding-left: 8px;
-}
-
-.status-change {
-  margin: 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.from-status,
-.to-status {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.from-status {
-  background: #f0f0f0;
-  color: #666;
-}
-
-.to-status {
-  background: #e6f7ff;
-  color: #1890ff;
-}
-
-.arrow {
-  color: #8c8c8c;
-  font-weight: bold;
-}
-
-.flow-comment {
-  margin-top: 8px;
-  padding: 8px;
-  background: #f9f9f9;
-  border-radius: 4px;
-  line-height: 1.5;
-  color: #495057;
-}
-
-.empty-flow {
-  text-align: center;
-  padding: 40px 0;
-}
-
 /* 响应式对话框 */
 .responsive-modal :deep(.ant-modal) {
   max-width: calc(100vw - 16px);
@@ -2778,12 +2156,6 @@ onMounted(async () => {
     font-size: 12px;
   }
 
-  .timeline-header,
-  .flow-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
 
   .detail-footer {
     justify-content: center;
@@ -2881,10 +2253,6 @@ onMounted(async () => {
   .load-more-content {
     padding: 4px 6px;
     font-size: 12px;
-  }
-
-  .action-data {
-    font-size: 10px;
   }
 }
 
