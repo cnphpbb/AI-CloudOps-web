@@ -51,25 +51,59 @@ export interface WorkorderProcessItem {
   form_design?: WorkorderFormDesignItem; // 表单设计
 }
 
-// 创建工单流程请求
+// 流程步骤类型
+export interface ProcessStep {
+  id: string; // 步骤唯一标识
+  type: string; // 步骤类型
+  name: string; // 步骤名称
+  assignee_type?: string; // 受理人类型
+  assignee_ids?: number[]; // 受理人ID列表
+  actions?: string[]; // 可执行动作
+  sort_order: number; // 排序
+}
+
+// 流程连接条件类型
+export interface ConnectionCondition {
+  field_key: string; // 表单字段标识
+  operator: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'in' | 'not_in' | 'contains' | 'not_contains'; // 比较操作符
+  value: any; // 比较值
+  label?: string; // 条件显示名称
+}
+
+// 流程连接类型
+export interface ProcessConnection {
+  id: string; // 连接唯一标识
+  from: string; // 来源步骤ID
+  to: string; // 目标步骤ID
+  condition?: ConnectionCondition; // 流转条件（可选）
+  label?: string; // 连接显示名称
+  action?: string; // 触发此连接的动作
+}
+
+// 流程定义类型
+export interface ProcessDefinition {
+  steps: ProcessStep[]; // 步骤列表
+  connections: ProcessConnection[]; // 连接列表
+}
+
+// 将 ProcessDefinition 应用于流程相关请求的定义
 export interface CreateWorkorderProcessReq {
   name: string; // 流程名称
   description?: string; // 流程描述
   form_design_id: number; // 关联表单设计ID
-  definition: any; // 流程定义
+  definition: ProcessDefinition; // 流程定义
   status: number; // 状态
   category_id?: number; // 分类ID
   tags?: string[]; // 标签
   is_default: number; // 是否为默认流程
 }
 
-// 更新工单流程请求
 export interface UpdateWorkorderProcessReq {
   id: number; // 流程ID
   name: string; // 流程名称
   description?: string; // 流程描述
   form_design_id: number; // 关联表单设计ID
-  definition: any; // 流程定义
+  definition: ProcessDefinition; // 流程定义
   status: number; // 状态
   category_id?: number; // 分类ID
   tags?: string[]; // 标签

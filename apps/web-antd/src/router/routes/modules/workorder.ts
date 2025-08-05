@@ -41,6 +41,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: '流程设计',
+        path: '/process_design',
+        component: () => import('#/views/workorder/ProcessDesign.vue'),
+        meta: {
+          icon: 'lucide:pencil',
+          title: '流程设计',
+        },
+      },
+      {
         name: '流程管理',
         path: '/process',
         component: () => import('#/views/workorder/Process.vue'),

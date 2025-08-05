@@ -1,29 +1,58 @@
 <template>
-  <div class="form-instance-container">
+  <div class="instance-management-container">
     <div class="page-header">
       <div class="header-actions">
         <a-button type="primary" @click="handleCreateInstance" class="btn-create">
           <template #icon>
             <PlusOutlined />
           </template>
-          创建新工单
+          创建工单
         </a-button>
-        <a-input-search v-model:value="searchQuery" allow-clear placeholder="搜索工单..." style="width: 250px"
-          @search="handleSearch" />
-        <a-select v-model:value="statusFilter" placeholder="状态" style="width: 120px" @change="handleStatusChange">
-          <a-select-option :value="null">全部</a-select-option>
-          <a-select-option :value="0">草稿</a-select-option>
-          <a-select-option :value="1">处理中</a-select-option>
-          <a-select-option :value="2">已完成</a-select-option>
-          <a-select-option :value="3">已取消</a-select-option>
-          <a-select-option :value="4">已拒绝</a-select-option>
-          <a-select-option :value="5">待处理</a-select-option>
-          <a-select-option :value="6">已超时</a-select-option>
-        </a-select>
-        <a-range-picker v-model:value="dateRange" :allow-clear="true" :placeholder="['开始日期', '结束日期']"
-          style="width: 240px" @change="handleDateRangeChange" />
-        <a-button @click="fetchMyInstances('all')">我的工单</a-button>
-        <a-button @click="fetchOverdueInstances">超时工单</a-button>
+        <div class="search-filters">
+          <a-input-search 
+            v-model:value="searchQuery" 
+            placeholder="搜索工单标题或编号..." 
+            class="search-input" 
+            @search="handleSearch"
+            allow-clear 
+          />
+          <a-select 
+            v-model:value="statusFilter" 
+            placeholder="状态" 
+            class="status-filter" 
+            @change="handleStatusChange"
+          >
+            <a-select-option :value="undefined">全部状态</a-select-option>
+            <a-select-option :value="InstanceStatus.Draft">草稿</a-select-option>
+            <a-select-option :value="InstanceStatus.Pending">待处理</a-select-option>
+            <a-select-option :value="InstanceStatus.Processing">处理中</a-select-option>
+            <a-select-option :value="InstanceStatus.Completed">已完成</a-select-option>
+            <a-select-option :value="InstanceStatus.Rejected">已拒绝</a-select-option>
+            <a-select-option :value="InstanceStatus.Cancelled">已取消</a-select-option>
+          </a-select>
+          <a-select 
+            v-model:value="priorityFilter" 
+            placeholder="优先级" 
+            class="priority-filter" 
+            @change="handlePriorityChange"
+          >
+            <a-select-option :value="undefined">全部优先级</a-select-option>
+            <a-select-option :value="Priority.Low">低</a-select-option>
+            <a-select-option :value="Priority.Normal">普通</a-select-option>
+            <a-select-option :value="Priority.High">高</a-select-option>
+          </a-select>
+          <a-select 
+            v-model:value="processFilter" 
+            placeholder="流程" 
+            class="process-filter" 
+            @change="handleProcessChange"
+          >
+            <a-select-option :value="undefined">全部流程</a-select-option>
+            <a-select-option v-for="process in processes" :key="process.id" :value="process.id">
+              {{ process.name }}
+            </a-select-option>
+          </a-select>
+        </div>
       </div>
     </div>
 
@@ -31,16 +60,24 @@
       <a-row :gutter="16">
         <a-col :span="6">
           <a-card class="stats-card">
-            <a-statistic :value="statistics.total_count" :value-style="{ color: '#3f8600' }" title="总工单数">
+            <a-statistic 
+              title="总工单数" 
+              :value="stats.total" 
+              :value-style="{ color: '#3f8600' }"
+            >
               <template #prefix>
-                <FileOutlined />
+                <FileTextOutlined />
               </template>
             </a-statistic>
           </a-card>
         </a-col>
         <a-col :span="6">
           <a-card class="stats-card">
-            <a-statistic :value="statistics.processing_count" :value-style="{ color: '#1890ff' }" title="处理中">
+            <a-statistic 
+              title="待处理" 
+              :value="stats.pending" 
+              :value-style="{ color: '#faad14' }"
+            >
               <template #prefix>
                 <ClockCircleOutlined />
               </template>
@@ -49,18 +86,26 @@
         </a-col>
         <a-col :span="6">
           <a-card class="stats-card">
-            <a-statistic :value="statistics.completed_count" :value-style="{ color: '#52c41a' }" title="已完成">
+            <a-statistic 
+              title="处理中" 
+              :value="stats.processing" 
+              :value-style="{ color: '#1890ff' }"
+            >
               <template #prefix>
-                <CheckCircleOutlined />
+                <LoadingOutlined />
               </template>
             </a-statistic>
           </a-card>
         </a-col>
         <a-col :span="6">
           <a-card class="stats-card">
-            <a-statistic :value="statistics.rejected_count" :value-style="{ color: '#f5222d' }" title="已拒绝">
+            <a-statistic 
+              title="已完成" 
+              :value="stats.completed" 
+              :value-style="{ color: '#52c41a' }"
+            >
               <template #prefix>
-                <CloseCircleOutlined />
+                <CheckCircleOutlined />
               </template>
             </a-statistic>
           </a-card>
@@ -70,45 +115,59 @@
 
     <div class="table-container">
       <a-card>
-        <a-table :columns="columns" :data-source="instances" :loading="loading" :pagination="false" bordered
-          row-key="id">
+        <a-table 
+          :data-source="instanceList" 
+          :columns="columns" 
+          :pagination="paginationConfig" 
+          :loading="loading"
+          row-key="id" 
+          bordered 
+          :scroll="{ x: 1400 }" 
+          @change="handleTableChange"
+        >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'title'">
-              <div class="form-name-cell">
-                <div :class="getStatusClass(record.status)" class="form-badge"></div>
-                <div>
-                  <div class="form-name-text">{{ record.title }}</div>
-                  <div class="instance-id">#{{ record.id }}</div>
+              <div class="instance-title-cell">
+                <div class="priority-badge" :class="getPriorityClass(record.priority)"></div>
+                <div class="title-content">
+                  <div class="title-text">{{ record.title }}</div>
+                  <div class="serial-number">{{ record.serial_number }}</div>
                 </div>
               </div>
             </template>
 
             <template v-if="column.key === 'status'">
-              <a-tag :color="getStatusColor(record.status)">{{ getStatusText(record.status) }}</a-tag>
+              <a-tag :color="getStatusColor(record.status)">
+                {{ getStatusText(record.status) }}
+              </a-tag>
             </template>
 
             <template v-if="column.key === 'priority'">
-              <a-tag :color="getPriorityColor(record.priority)">{{ getPriorityText(record.priority) }}</a-tag>
+              <a-tag :color="getPriorityColor(record.priority)">
+                {{ getPriorityText(record.priority) }}
+              </a-tag>
             </template>
 
-            <template v-if="column.key === 'creator'">
-              <div class="creator-info">
-                <a-avatar :style="{ backgroundColor: getAvatarColor(record.creator_name) }" size="small">{{
-                  getInitials(record.creator_name) }}</a-avatar>
-                <span class="creator-name">{{ record.creator_name }}</span>
+            <template v-if="column.key === 'operator'">
+              <div class="operator-info">
+                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.operator_name || '') }">
+                  {{ getInitials(record.operator_name) }}
+                </a-avatar>
+                <span class="operator-name">{{ record.operator_name }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'assignee'">
-              <div v-if="record.assignee_name" class="creator-info">
-                <a-avatar :style="{ backgroundColor: getAvatarColor(record.assignee_name) }" size="small">{{
-                  getInitials(record.assignee_name) }}</a-avatar>
-                <span class="creator-name">{{ record.assignee_name }}</span>
+              <div class="assignee-info" v-if="record.assignee_id">
+                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(getAssigneeName(record.assignee_id)) }">
+                  {{ getInitials(getAssigneeName(record.assignee_id)) }}
+                </a-avatar>
+                <span class="assignee-name">{{ getAssigneeName(record.assignee_id) }}</span>
               </div>
-              <span v-else>-</span>
+              <span v-else class="text-gray">未分配</span>
             </template>
 
-            <template v-if="column.key === 'created_at'">
+            <template v-if="column.key === 'createdAt'">
               <div class="date-info">
                 <span class="date">{{ formatDate(record.created_at) }}</span>
                 <span class="time">{{ formatTime(record.created_at) }}</span>
@@ -117,21 +176,62 @@
 
             <template v-if="column.key === 'action'">
               <div class="action-buttons">
-                <a-button size="small" type="primary" @click="handleViewInstance(record)">查看</a-button>
-                <a-button :disabled="record.status !== 0" size="small" type="default"
-                  @click="handleEditInstance(record)">编辑</a-button>
+                <a-button type="primary" size="small" @click="handleViewInstance(record)">
+                  查看
+                </a-button>
+                <a-button 
+                  type="default" 
+                  size="small" 
+                  @click="handleEditInstance(record)" 
+                  v-if="record.status === InstanceStatus.Draft"
+                >
+                  编辑
+                </a-button>
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleCommand(e.key, record)">
-                      <a-menu-item v-if="record.status === 1" key="approve">批准</a-menu-item>
-                      <a-menu-item v-if="record.status === 1" key="reject">拒绝</a-menu-item>
-                      <a-menu-item v-if="record.status === 1" key="transfer">转交</a-menu-item>
-                      <a-menu-item v-if="[0, 1, 5].includes(record.status)" key="cancel">取消</a-menu-item>
+                      <a-menu-item key="comment">
+                        <MessageOutlined /> 添加评论
+                      </a-menu-item>
+                      <a-menu-item key="timeline">
+                        <HistoryOutlined /> 查看时间线
+                      </a-menu-item>
+                      <a-menu-item key="flow">
+                        <PlayCircleOutlined /> 查看流转
+                      </a-menu-item>
                       <a-menu-divider />
-                      <a-menu-item key="delete" danger>删除</a-menu-item>
+                      <a-menu-item 
+                        key="submit" 
+                        v-if="record.status === InstanceStatus.Draft"
+                      >
+                        提交工单
+                      </a-menu-item>
+                      <a-menu-item 
+                        key="assign" 
+                        v-if="[InstanceStatus.Pending, InstanceStatus.Processing].includes(record.status)"
+                      >
+                        分配处理人
+                      </a-menu-item>
+                      <a-menu-item 
+                        key="approve" 
+                        v-if="[InstanceStatus.Pending, InstanceStatus.Processing].includes(record.status)"
+                      >
+                        审批通过
+                      </a-menu-item>
+                      <a-menu-item 
+                        key="reject" 
+                        v-if="[InstanceStatus.Pending, InstanceStatus.Processing].includes(record.status)"
+                      >
+                        拒绝工单
+                      </a-menu-item>
+                      <a-menu-divider />
+                      <a-menu-item key="delete" danger v-if="record.status === InstanceStatus.Draft">
+                        删除
+                      </a-menu-item>
                     </a-menu>
                   </template>
-                  <a-button size="small">更多
+                  <a-button size="small">
+                    更多
                     <DownOutlined />
                   </a-button>
                 </a-dropdown>
@@ -139,584 +239,796 @@
             </template>
           </template>
         </a-table>
-
-        <div class="pagination-container">
-          <a-pagination v-model:current="currentPage" :page-size="pageSize"
-            :page-size-options="['10', '20', '50', '100']" :show-size-changer="true"
-            :show-total="(total: number) => `共 ${total} 条`" :total="totalItems" @change="handleCurrentChange"
-            @show-size-change="handleSizeChange" />
-        </div>
       </a-card>
     </div>
 
-    <!-- 工单详情对话框 -->
-    <a-modal v-model:visible="detailDialog.visible" :footer="null" class="detail-dialog" title="工单详情" width="70%">
+    <!-- 工单创建/编辑对话框 -->
+    <a-modal 
+      :open="instanceDialog.visible" 
+      :title="instanceDialog.isEdit ? '编辑工单' : '创建工单'" 
+      :width="formDialogWidth"
+      @ok="saveInstance" 
+      @cancel="() => { instanceDialog.visible = false }" 
+      :destroy-on-close="true"
+      class="responsive-modal instance-form-modal" 
+      :confirm-loading="loading"
+    >
+      <a-form ref="formRef" :model="instanceDialog.form" :rules="formRules" layout="vertical">
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="工单标题" name="title">
+              <a-input v-model:value="instanceDialog.form.title" placeholder="请输入工单标题" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="优先级" name="priority">
+              <a-select v-model:value="instanceDialog.form.priority" placeholder="请选择优先级">
+                <a-select-option :value="Priority.Low">低</a-select-option>
+                <a-select-option :value="Priority.Normal">普通</a-select-option>
+                <a-select-option :value="Priority.High">高</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="关联流程" name="process_id">
+              <a-select 
+                v-model:value="instanceDialog.form.process_id" 
+                placeholder="请选择流程" 
+                style="width: 100%"
+                show-search 
+                :filter-option="false" 
+                option-label-prop="children"
+                :not-found-content="processSelectorLoading ? undefined : (processSearchKeyword ? '无搜索结果' : '无数据')"
+                @search="handleProcessSearch" 
+                @dropdown-visible-change="handleProcessDropdownChange"
+                @popup-scroll="handleProcessScroll" 
+                allow-clear 
+                :loading="processSelectorLoading"
+              >
+                <template #notFoundContent>
+                  <div v-if="processSelectorLoading" class="selector-loading">
+                    <a-spin size="small" />
+                    <span style="margin-left: 8px;">加载中...</span>
+                  </div>
+                  <div v-else class="selector-empty">
+                    {{ processSearchKeyword ? '无搜索结果' : '暂无流程数据' }}
+                  </div>
+                </template>
+
+                <a-select-option v-for="process in dialogProcesses" :key="process.id" :value="process.id">
+                  <div class="process-option">
+                    <span class="process-name">{{ process.name }}</span>
+                    <span v-if="process.description" class="process-desc">{{ process.description }}</span>
+                  </div>
+                </a-select-option>
+
+                <a-select-option 
+                  v-if="processPagination.hasMore" 
+                  :value="'__load_more_process__'" 
+                  disabled
+                  class="load-more-option"
+                >
+                  <div class="load-more-content" @click.stop="loadMoreProcesses">
+                    <a-button 
+                      type="link" 
+                      size="small" 
+                      :loading="processSelectorLoading"
+                      style="padding: 0; height: auto; font-size: 12px;"
+                    >
+                      <template v-if="!processSelectorLoading">
+                        加载更多 ({{ processPagination.current }}/{{ processTotalPages }})
+                      </template>
+                      <template v-else>
+                        正在加载...
+                      </template>
+                    </a-button>
+                  </div>
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="指定处理人" name="assignee_id">
+              <a-select 
+                v-model:value="instanceDialog.form.assignee_id" 
+                placeholder="请选择处理人" 
+                style="width: 100%"
+                show-search 
+                :filter-option="false" 
+                option-label-prop="children"
+                :not-found-content="userSelectorLoading ? undefined : (userSearchKeyword ? '无搜索结果' : '无数据')"
+                @search="handleUserSearch" 
+                @dropdown-visible-change="handleUserDropdownChange"
+                @popup-scroll="handleUserScroll" 
+                allow-clear 
+                :loading="userSelectorLoading"
+              >
+                <template #notFoundContent>
+                  <div v-if="userSelectorLoading" class="selector-loading">
+                    <a-spin size="small" />
+                    <span style="margin-left: 8px;">加载中...</span>
+                  </div>
+                  <div v-else class="selector-empty">
+                    {{ userSearchKeyword ? '无搜索结果' : '暂无用户数据' }}
+                  </div>
+                </template>
+
+                <a-select-option v-for="user in dialogUsers" :key="user.user_id" :value="user.user_id">
+                  <div class="user-option">
+                    <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(user.username) }">
+                      {{ getInitials(user.username) }}
+                    </a-avatar>
+                    <span class="user-name">{{ user.username }}</span>
+                    <span v-if="user.real_name" class="user-real-name">({{ user.real_name }})</span>
+                  </div>
+                </a-select-option>
+
+                <a-select-option 
+                  v-if="userPagination.hasMore" 
+                  :value="'__load_more_user__'" 
+                  disabled
+                  class="load-more-option"
+                >
+                  <div class="load-more-content" @click.stop="loadMoreUsers">
+                    <a-button 
+                      type="link" 
+                      size="small" 
+                      :loading="userSelectorLoading"
+                      style="padding: 0; height: auto; font-size: 12px;"
+                    >
+                      <template v-if="!userSelectorLoading">
+                        加载更多 ({{ userPagination.current }}/{{ userTotalPages }})
+                      </template>
+                      <template v-else>
+                        正在加载...
+                      </template>
+                    </a-button>
+                  </div>
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="描述" name="description">
+          <a-textarea v-model:value="instanceDialog.form.description" :rows="4" placeholder="请输入工单描述" />
+        </a-form-item>
+
+        <a-form-item label="表单数据" name="form_data" v-if="instanceDialog.form.process_id">
+          <div class="form-data-section">
+            <div class="section-header">
+              <h4>表单字段数据 (JSON格式)</h4>
+              <div class="header-actions">
+                <a-button size="small" @click="formatFormDataJson" :disabled="!instanceDialog.form.form_data_json">
+                  格式化
+                </a-button>
+                <a-button size="small" @click="validateFormDataJson" :disabled="!instanceDialog.form.form_data_json">
+                  验证
+                </a-button>
+              </div>
+            </div>
+
+            <a-textarea 
+              v-model:value="instanceDialog.form.form_data_json" 
+              placeholder="请输入表单数据JSON..." 
+              :rows="8"
+              class="json-editor" 
+              :class="{ 'json-error': formDataValidationError }" 
+            />
+
+            <div v-if="formDataValidationError" class="json-error-message">
+              <a-alert 
+                type="error" 
+                :message="formDataValidationError" 
+                show-icon 
+                closable
+                @close="formDataValidationError = ''" 
+              />
+            </div>
+
+            <div class="json-help">
+              <a-alert 
+                type="info" 
+                message="表单数据说明" 
+                description="请输入符合流程表单字段的JSON数据，例如：{&quot;name&quot;: &quot;张三&quot;, &quot;email&quot;: &quot;zhangsan@example.com&quot;}" 
+                show-icon 
+              />
+            </div>
+          </div>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 详情对话框 -->
+    <a-modal 
+      :open="detailDialog.visible" 
+      title="工单详情" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="() => { detailDialog.visible = false }" 
+      class="detail-dialog responsive-modal"
+    >
       <div v-if="detailDialog.instance" class="instance-details">
         <div class="detail-header">
-          <h2>{{ detailDialog.instance.title }}</h2>
-          <a-tag :color="getStatusColor(detailDialog.instance.status)">{{ getStatusText(detailDialog.instance.status)
-          }}</a-tag>
-          <a-tag :color="getPriorityColor(detailDialog.instance.priority)">{{
-            getPriorityText(detailDialog.instance.priority) }}</a-tag>
-          <a-tag v-if="detailDialog.instance.due_date && new Date(detailDialog.instance.due_date) < new Date()"
-            color="red">已逾期</a-tag>
-          <!-- 添加评论按钮 -->
-          <a-button type="primary" ghost @click="openCommentsDialog" class="comments-btn">
-            <MessageOutlined />
-            评论 ({{ instanceComments.length }})
-          </a-button>
+          <div class="title-section">
+            <h2>{{ detailDialog.instance.title }}</h2>
+            <div class="meta-info">
+              <a-tag :color="getStatusColor(detailDialog.instance.status)">
+                {{ getStatusText(detailDialog.instance.status) }}
+              </a-tag>
+              <a-tag :color="getPriorityColor(detailDialog.instance.priority)">
+                {{ getPriorityText(detailDialog.instance.priority) }}
+              </a-tag>
+              <span class="serial-number">{{ detailDialog.instance.serial_number }}</span>
+            </div>
+          </div>
         </div>
 
-        <a-descriptions :column="2" bordered>
+        <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
           <a-descriptions-item label="工单ID">{{ detailDialog.instance.id }}</a-descriptions-item>
-          <a-descriptions-item label="流程ID">{{ detailDialog.instance.process_id }}</a-descriptions-item>
-          <a-descriptions-item label="当前节点">{{ detailDialog.instance.current_step }}</a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.instance.creator_name }}</a-descriptions-item>
-          <a-descriptions-item label="提交时间">{{ formatFullDateTime(detailDialog.instance.created_at || '')
-          }}</a-descriptions-item>
-          <a-descriptions-item v-if="detailDialog.instance.assignee_name" label="处理人">{{
-            detailDialog.instance.assignee_name
-          }}</a-descriptions-item>
-          <a-descriptions-item v-if="detailDialog.instance.completed_at" label="完成时间">{{
-            formatFullDateTime(detailDialog.instance.completed_at || '') }}</a-descriptions-item>
-          <a-descriptions-item v-if="detailDialog.instance.due_date" label="截止时间">{{
-            formatFullDateTime(detailDialog.instance.due_date || '') }}</a-descriptions-item>
-          <a-descriptions-item v-if="detailDialog.instance.tags?.length" label="标签">
+          <a-descriptions-item label="工单编号">{{ detailDialog.instance.serial_number }}</a-descriptions-item>
+          <a-descriptions-item label="创建人">{{ detailDialog.instance.operator_name }}</a-descriptions-item>
+          <a-descriptions-item label="处理人">
+            {{ getAssigneeName(detailDialog.instance.assignee_id) || '未分配' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.instance.created_at || '') }}
+          </a-descriptions-item>
+          <a-descriptions-item label="更新时间">
+            {{ formatFullDateTime(detailDialog.instance.updated_at || '') }}
+          </a-descriptions-item>
+          <a-descriptions-item label="完成时间" :span="2" v-if="detailDialog.instance.completed_at">
+            {{ formatFullDateTime(detailDialog.instance.completed_at) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="截止时间" :span="2" v-if="detailDialog.instance.due_date">
+            {{ formatFullDateTime(detailDialog.instance.due_date) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="标签" :span="2" v-if="detailDialog.instance.tags && detailDialog.instance.tags.length > 0">
             <a-tag v-for="tag in detailDialog.instance.tags" :key="tag" color="blue">{{ tag }}</a-tag>
           </a-descriptions-item>
-          <a-descriptions-item v-if="detailDialog.instance.description" :span="2" label="描述">{{
-            detailDialog.instance.description }}</a-descriptions-item>
+          <a-descriptions-item label="关联流程" :span="2">
+            {{ getProcessName(detailDialog.instance.process_id) || '无' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="描述" :span="2">
+            {{ detailDialog.instance.description || '无描述' }}
+          </a-descriptions-item>
         </a-descriptions>
 
-        <div class="form-data-preview">
+        <div class="form-data-preview" v-if="detailDialog.instance.form_data">
           <h3>表单数据</h3>
-          <a-collapse>
-            <a-collapse-panel key="1" header="表单内容">
-              <a-form layout="vertical">
-                <template v-if="displayFormData && Object.keys(displayFormData).length > 0">
-                  <a-form-item v-for="(value, field) in displayFormData" :key="field" :label="getFieldLabel(field)">
-                    <a-input v-if="!Array.isArray(value)" v-model:value="displayFormData[field]" :disabled="true" />
-                    <span v-else>{{ value.join(', ') }}</span>
-                  </a-form-item>
-                </template>
-                <template v-else-if="formFieldDefinitions && formFieldDefinitions.length > 0">
-                  <a-form-item v-for="field in formFieldDefinitions" :key="field.id" :label="field.label">
-                    <a-input :disabled="true" :value="getFieldValue(field)" />
-                  </a-form-item>
-                </template>
-                <a-alert v-else message="暂无表单数据" type="info" />
-              </a-form>
-            </a-collapse-panel>
-          </a-collapse>
-        </div>
-
-        <div v-if="instanceFlows && instanceFlows.length > 0" class="flow-records">
-          <h3>流转记录</h3>
-          <a-timeline>
-            <a-timeline-item v-for="flow in instanceFlows" :key="flow.id" :color="getFlowColor(flow.action)">
-              <div class="flow-item">
-                <div class="flow-header">
-                  <span class="flow-node">{{ flow.step_name }}</span>
-                  <span class="flow-action">{{ getFlowActionText(flow.action) }}</span>
-                  <span class="flow-time">{{ formatFullDateTime(flow.created_at || '') }}</span>
-                </div>
-                <div class="flow-operator">操作人: {{ flow.operator_name }}</div>
-                <div v-if="flow.comment" class="flow-comment">备注: {{ flow.comment }}</div>
-                <div v-if="flow.duration" class="flow-duration">处理时长: {{ formatDuration(flow.duration) }}</div>
-              </div>
-            </a-timeline-item>
-          </a-timeline>
-        </div>
-
-        <div v-if="detailDialog.instance.status === 1" class="action-area">
-          <a-divider orientation="left">工单处理</a-divider>
-          <a-textarea v-model:value="processingComment" :rows="3" placeholder="请输入处理意见..." />
-          <div class="action-buttons mt-16">
-            <a-button type="primary" @click="processInstance(detailDialog.instance, 'approve')">批准</a-button>
-            <a-button danger @click="processInstance(detailDialog.instance, 'reject')">拒绝</a-button>
-            <a-button @click="showTransferDialog">转交</a-button>
+          <div class="form-data-content">
+            <pre class="json-content">{{ JSON.stringify(detailDialog.instance.form_data, null, 2) }}</pre>
           </div>
         </div>
 
         <div class="detail-footer">
           <a-button @click="detailDialog.visible = false">关闭</a-button>
-          <a-button v-if="detailDialog.instance.status === 0" type="primary"
-            @click="handleEditInstance(detailDialog.instance)">编辑</a-button>
+          <a-button 
+            type="primary" 
+            @click="handleEditInstance(detailDialog.instance)" 
+            v-if="detailDialog.instance.status === InstanceStatus.Draft"
+          >
+            编辑
+          </a-button>
+          <a-button type="default" @click="handleViewTimeline(detailDialog.instance)">查看时间线</a-button>
+          <a-button type="default" @click="handleViewComments(detailDialog.instance)">查看评论</a-button>
+          <a-button type="default" @click="handleViewFlow(detailDialog.instance)">查看流转</a-button>
         </div>
       </div>
     </a-modal>
 
     <!-- 评论对话框 -->
-    <a-modal v-model:visible="commentsDialog.visible" title="工单评论" width="800px" :footer="null" class="comments-dialog">
-      <div class="comments-container">
-        <!-- 评论列表 -->
-        <div class="comments-list-container">
-          <div v-if="instanceComments.length > 0" class="comments-list">
-            <div v-for="comment in instanceComments" :key="comment.id" class="comment-item">
-              <div class="comment-header">
-                <a-avatar :style="{ backgroundColor: getAvatarColor(comment.creator_name || `用户${comment.user_id}`) }">
-                  {{ getInitials(comment.creator_name || `用户${comment.user_id}`) }}
-                </a-avatar>
-                <div class="comment-info">
-                  <div class="comment-meta">
-                    <span class="comment-author">{{ comment.creator_name || `用户${comment.user_id}` }}</span>
-                    <a-tag v-if="comment.is_system" color="blue" size="small">系统</a-tag>
-                    <span class="comment-time">{{ formatFullDateTime(comment.created_at || '') }}</span>
-                  </div>
-                </div>
-                <div class="comment-actions">
-                  <a-button type="text" size="small" @click="replyToComment(comment)">
-                    <CommentOutlined />
-                    回复
-                  </a-button>
-                </div>
-              </div>
-              <div class="comment-content">{{ comment.content }}</div>
-              
-              <!-- 回复列表 -->
-              <div v-if="comment.children && comment.children.length > 0" class="replies-container">
-                <div v-for="reply in comment.children" :key="reply.id" class="reply-item">
-                  <div class="reply-header">
-                    <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(reply.creator_name || `用户${reply.user_id}`) }">
-                      {{ getInitials(reply.creator_name || `用户${reply.user_id}`) }}
-                    </a-avatar>
-                    <div class="reply-info">
-                      <span class="reply-author">{{ reply.creator_name || `用户${reply.user_id}` }}</span>
-                      <span class="reply-time">{{ formatFullDateTime(reply.created_at || '') }}</span>
-                    </div>
-                  </div>
-                  <div class="reply-content">{{ reply.content }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div v-else class="empty-comments">
-            <a-empty description="暂无评论" />
-          </div>
-        </div>
-
-        <!-- 添加评论 -->
-        <div class="add-comment-section">
-          <a-divider />
-          <div class="comment-input-container">
-            <div v-if="replyingTo" class="replying-indicator">
-              <span>回复 @{{ replyingTo.creator_name || `用户${replyingTo.user_id}` }}:</span>
-              <a-button type="text" size="small" @click="cancelReply">
-                <CloseOutlined />
-              </a-button>
-            </div>
-            <a-textarea 
-              v-model:value="newComment" 
-              :rows="4" 
-              :placeholder="replyingTo ? `回复 ${replyingTo.creator_name || `用户${replyingTo.user_id}`}...` : '请输入评论...'"
-              class="comment-textarea"
-            />
-            <div class="comment-actions-bar">
-              <div class="comment-tips">
-                <a-typography-text type="secondary">支持 Ctrl+Enter 快速发送</a-typography-text>
-              </div>
-              <div class="comment-buttons">
-                <a-button v-if="replyingTo" @click="cancelReply">取消</a-button>
-                <a-button 
-                  type="primary" 
-                  @click="submitComment" 
-                  :loading="submittingComment"
-                  :disabled="!newComment.trim()"
-                >
-                  {{ replyingTo ? '回复' : '发送' }}
-                </a-button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </a-modal>
-
-    <!-- 创建/编辑工单对话框 -->
-    <a-modal v-model:visible="instanceDialog.visible" :destroy-on-close="false"
-      :title="instanceDialog.isEdit ? '编辑工单' : '创建工单'" width="760px" 
-      :footer="null">
-      <div v-if="!selectedProcess && !instanceDialog.isEdit" class="process-selection">
-        <a-form-item label="标题" required>
-          <a-input v-model:value="newInstance.title" placeholder="请输入工单标题" />
+    <a-modal 
+      :open="commentDialog.visible" 
+      title="添加评论" 
+      :width="dialogWidth" 
+      @ok="saveComment"
+      @cancel="() => { commentDialog.visible = false }" 
+      :destroy-on-close="true" 
+      class="responsive-modal"
+    >
+      <a-form :model="commentDialog.form" layout="vertical">
+        <a-form-item label="评论内容" name="content" :rules="[{ required: true, message: '请输入评论内容' }]">
+          <a-textarea v-model:value="commentDialog.form.content" :rows="4" placeholder="请输入评论内容" />
         </a-form-item>
-
-        <a-form-item label="选择流程" required>
-          <a-select v-model:value="newInstance.process_id" placeholder="请选择流程" style="width: 100%" show-search
-            :filter-option="false" option-label-prop="children"
-            :not-found-content="processSelectorLoading ? undefined : (processSearchKeyword ? '无搜索结果' : '无数据')"
-            @search="handleProcessSearch" @dropdown-visible-change="handleProcessDropdownChange"
-            @popup-scroll="handleProcessScroll" @change="handleSelectProcess" :loading="processSelectorLoading">
-            <template #notFoundContent>
-              <div v-if="processSelectorLoading" class="process-loading">
-                <a-spin size="small" />
-                <span style="margin-left: 8px;">加载中...</span>
-              </div>
-              <div v-else class="process-empty">
-                {{ processSearchKeyword ? '无搜索结果' : '暂无流程数据' }}
-              </div>
-            </template>
-
-            <!-- 流程选项 -->
-            <a-select-option v-for="process in instanceDialogProcesses" :key="process.id" :value="process.id">
-              <div class="process-option">
-                <span class="process-name">{{ process.name }}</span>
-                <span v-if="process.description" class="process-desc">{{ process.description }}</span>
-              </div>
-            </a-select-option>
-
-            <!-- 加载更多指示器 -->
-            <a-select-option v-if="processPagination.hasMore" :value="'__load_more__'" disabled
-              class="load-more-option">
-              <div class="load-more-content" @click.stop="loadMoreProcesses">
-                <a-button type="link" size="small" :loading="processSelectorLoading"
-                  style="padding: 0; height: auto; font-size: 12px;">
-                  <template v-if="!processSelectorLoading">
-                    <DownOutlined style="margin-right: 4px;" />
-                    加载更多 ({{ processPagination.current }}/{{ totalProcessPages }})
-                  </template>
-                  <template v-else>
-                    正在加载...
-                  </template>
-                </a-button>
-              </div>
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="模板">
-          <a-select v-model:value="newInstance.template_id" allow-clear placeholder="请选择模板(可选)" style="width: 100%">
-            <a-select-option v-for="template in templates" :key="template.id" :value="template.id">{{ template.name
-            }}</a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="分类">
-          <a-select v-model:value="newInstance.category_id" allow-clear placeholder="请选择分类(可选)" style="width: 100%" show-search
-            :filter-option="false" option-label-prop="children"
-            :not-found-content="categorySelectorLoading ? undefined : (categorySearchKeyword ? '无搜索结果' : '无数据')"
-            @search="handleCategorySearch" @dropdown-visible-change="handleCategoryDropdownChange"
-            @popup-scroll="handleCategoryScroll" :loading="categorySelectorLoading">
-            <template #notFoundContent>
-              <div v-if="categorySelectorLoading" class="category-loading">
-                <a-spin size="small" />
-                <span style="margin-left: 8px;">加载中...</span>
-              </div>
-              <div v-else class="category-empty">
-                {{ categorySearchKeyword ? '无搜索结果' : '暂无分类数据' }}
-              </div>
-            </template>
-
-            <!-- 分类选项 -->
-            <a-select-option v-for="cat in instanceDialogCategories" :key="cat.id" :value="cat.id">
-              <div class="category-option">
-                <span class="category-name">{{ cat.name }}</span>
-                <span v-if="cat.description" class="category-desc">{{ cat.description }}</span>
-              </div>
-            </a-select-option>
-
-            <!-- 加载更多指示器 -->
-            <a-select-option v-if="categoryPagination.hasMore" :value="'__load_more__'" disabled
-              class="load-more-option">
-              <div class="load-more-content" @click.stop="loadMoreCategories">
-                <a-button type="link" size="small" :loading="categorySelectorLoading"
-                  style="padding: 0; height: auto; font-size: 12px;">
-                  <template v-if="!categorySelectorLoading">
-                    <DownOutlined style="margin-right: 4px;" />
-                    加载更多 ({{ categoryPagination.current }}/{{ totalCategoryPages }})
-                  </template>
-                  <template v-else>
-                    正在加载...
-                  </template>
-                </a-button>
-              </div>
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="优先级" required>
-          <a-select v-model:value="newInstance.priority" placeholder="请选择优先级" style="width: 100%">
-            <a-select-option :value="0">低</a-select-option>
-            <a-select-option :value="1">普通</a-select-option>
-            <a-select-option :value="2">高</a-select-option>
-            <a-select-option :value="3">紧急</a-select-option>
-            <a-select-option :value="4">严重</a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="指定处理人">
-          <a-select v-model:value="newInstance.assignee_id" allow-clear placeholder="请选择处理人(可选)" style="width: 100%">
-            <a-select-option v-for="user in users" :key="user.id" :value="user.id">{{ user.real_name
-            }}</a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="截止日期">
-          <a-date-picker v-model:value="dueDate" :show-time="{ format: 'HH:mm:ss' }" format="YYYY-MM-DD HH:mm:ss"
-            style="width: 100%" />
-        </a-form-item>
-
-        <a-form-item label="标签">
-          <a-select v-model:value="newInstance.tags" :token-separators="[',']" mode="tags" placeholder="输入标签"
-            style="width: 100%" />
-        </a-form-item>
-
-        <a-form-item label="描述">
-          <a-textarea v-model:value="newInstance.description" :rows="3" placeholder="请输入工单描述..." />
-        </a-form-item>
-
-        <!-- 第一层表单的按钮 -->
-        <div class="modal-footer">
-          <a-button @click="cancelCreateInstance">取消</a-button>
-          <a-button type="primary" @click="saveInstance" :disabled="!canSubmitBasicForm">创建工单</a-button>
-        </div>
-      </div>
-
-      <!-- 当选择了流程时显示的表单 -->
-      <div v-if="selectedProcess && !instanceDialog.isEdit" class="instance-form">
-        <div class="process-info-section">
-          <a-alert type="info" show-icon closable style="margin-bottom: 16px;">
-            <template #message>
-              <div class="selected-process-info">
-                <span>已选择流程：<strong>{{ selectedProcess.name }}</strong></span>
-                <a-button type="link" size="small" @click="backToProcessSelection" style="padding: 0; margin-left: 12px;">
-                  重新选择流程
-                </a-button>
-              </div>
-            </template>
-          </a-alert>
-
-          <!-- 显示已填写的基础信息 -->
-          <div class="basic-info-summary">
-            <a-descriptions size="small" :column="2" bordered style="margin-bottom: 16px;">
-              <a-descriptions-item label="工单标题">{{ newInstance.title || '未填写' }}</a-descriptions-item>
-              <a-descriptions-item label="优先级">{{ getPriorityText(newInstance.priority || 1) }}</a-descriptions-item>
-              <a-descriptions-item v-if="newInstance.description" label="描述" :span="2">{{ newInstance.description }}</a-descriptions-item>
-            </a-descriptions>
-          </div>
-        </div>
-
-        <a-form layout="vertical">
-          <!-- 流程相关表单字段 -->
-          <template v-if="formFields.length > 0">
-            <h4>请填写流程相关信息：</h4>
-            <a-form-item v-for="field in formFields" :key="field.field" :label="field.label" :name="field.field"
-              :rules="[{ required: field.required, message: `请输入${field.label}!` }]">
-              <a-input v-if="field.type === 'text'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请输入${field.label}`" />
-              <a-input-number v-else-if="field.type === 'number'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请输入${field.label}`" style="width: 100%" />
-              <a-date-picker v-else-if="field.type === 'date'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请选择${field.label}`" style="width: 100%" />
-              <a-select v-else-if="field.type === 'select'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请选择${field.label}`" style="width: 100%">
-                <a-select-option v-for="option in field.options" :key="option" :value="option">{{ option
-                }}</a-select-option>
-              </a-select>
-              <a-checkbox v-else-if="field.type === 'checkbox'" v-model:checked="formDataValues[field.field]">{{
-                field.label }}</a-checkbox>
-              <a-radio-group v-else-if="field.type === 'radio'" v-model:value="formDataValues[field.field]">
-                <a-radio v-for="option in field.options" :key="option" :value="option">{{ option }}</a-radio>
-              </a-radio-group>
-              <a-textarea v-else-if="field.type === 'textarea'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请输入${field.label}`" :rows="3" />
-            </a-form-item>
-          </template>
-          <a-alert v-else message="该流程暂无需要填写的字段，可以直接确定" type="info" />
-        </a-form>
-
-        <!-- 第二层表单的按钮 -->
-        <div class="modal-footer">
-          <a-button @click="cancelProcessForm">取消</a-button>
-          <a-button type="primary" @click="confirmProcessForm">确定</a-button>
-        </div>
-      </div>
-
-      <div v-if="instanceDialog.isEdit" class="instance-form">
-        <div class="instance-form-header">
-          <div class="instance-form-title">
-            <h3>编辑: {{ instanceDialog.instance?.title }}</h3>
-          </div>
-        </div>
-
-        <a-form layout="vertical">
-          <template v-if="formFields.length > 0">
-            <a-form-item v-for="field in formFields" :key="field.field" :label="field.label" :name="field.field"
-              :rules="[{ required: field.required, message: `请输入${field.label}!` }]">
-              <a-input v-if="field.type === 'text'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请输入${field.label}`" />
-              <a-input-number v-else-if="field.type === 'number'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请输入${field.label}`" style="width: 100%" />
-              <a-date-picker v-else-if="field.type === 'date'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请选择${field.label}`" style="width: 100%" />
-              <a-select v-else-if="field.type === 'select'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请选择${field.label}`" style="width: 100%">
-                <a-select-option v-for="option in field.options" :key="option" :value="option">{{ option
-                }}</a-select-option>
-              </a-select>
-              <a-checkbox v-else-if="field.type === 'checkbox'" v-model:checked="formDataValues[field.field]">{{
-                field.label }}</a-checkbox>
-              <a-radio-group v-else-if="field.type === 'radio'" v-model:value="formDataValues[field.field]">
-                <a-radio v-for="option in field.options" :key="option" :value="option">{{ option }}</a-radio>
-              </a-radio-group>
-              <a-textarea v-else-if="field.type === 'textarea'" v-model:value="formDataValues[field.field]"
-                :placeholder="field.placeholder || `请输入${field.label}`" :rows="3" />
-            </a-form-item>
-          </template>
-          <a-alert v-else message="未找到表单字段定义" type="warning" />
-        </a-form>
-
-        <!-- 编辑模式的按钮 -->
-        <div class="modal-footer">
-          <a-button @click="instanceDialog.visible = false">取消</a-button>
-          <a-button type="primary" @click="saveInstance">保存</a-button>
-        </div>
-      </div>
-    </a-modal>
-
-    <!-- 转交对话框 -->
-    <a-modal v-model:visible="transferDialog.visible" cancel-text="取消" ok-text="转交" title="工单转交" @ok="confirmTransfer">
-      <a-form layout="vertical">
-        <a-form-item label="转交给" required>
-          <a-select v-model:value="transferDialog.assigneeId" placeholder="请选择处理人">
-            <a-select-option v-for="user in users" :key="user.id" :value="user.id">{{ user.real_name
-            }}</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="转交说明">
-          <a-textarea v-model:value="transferDialog.comment" :rows="3" placeholder="请输入转交说明..." />
+        <a-form-item>
+          <a-checkbox v-model:checked="commentDialog.form.is_system">系统评论</a-checkbox>
         </a-form-item>
       </a-form>
     </a-modal>
 
-    <!-- 删除确认对话框 -->
-    <a-modal v-model:visible="deleteDialog.visible" cancel-text="取消" ok-text="删除" ok-type="danger" title="删除工单"
-      @ok="confirmDelete">
-      <p>确认要删除此工单吗？此操作不可恢复。</p>
+    <!-- 评论查看对话框 -->
+    <a-modal 
+      :open="commentsViewDialog.visible" 
+      title="工单评论" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="() => { commentsViewDialog.visible = false }" 
+      class="comments-dialog responsive-modal"
+    >
+      <div class="comments-content">
+        <div v-if="commentsList.length === 0" class="empty-comments">
+          <a-empty description="暂无评论" />
+        </div>
+        <div v-else class="comments-list">
+          <div v-for="comment in commentsList" :key="comment.id" class="comment-item">
+            <div class="comment-header">
+              <div class="commenter-info">
+                <a-avatar 
+                  size="small" 
+                  :style="{ backgroundColor: getAvatarColor(comment.operator_name || '') }"
+                >
+                  {{ getInitials(comment.operator_name) }}
+                </a-avatar>
+                <span class="commenter-name">{{ comment.operator_name }}</span>
+                <a-tag v-if="comment.is_system === 1" color="orange" size="small">系统</a-tag>
+              </div>
+              <span class="comment-time">{{ formatFullDateTime(comment.created_at) }}</span>
+            </div>
+            <div class="comment-content">{{ comment.content }}</div>
+            <div v-if="comment.children && comment.children.length > 0" class="comment-replies">
+              <div v-for="reply in comment.children" :key="reply.id" class="reply-item">
+                <div class="reply-header">
+                  <div class="replier-info">
+                    <a-avatar 
+                      size="small" 
+                      :style="{ backgroundColor: getAvatarColor(reply.operator_name || '') }"
+                    >
+                      {{ getInitials(reply.operator_name) }}
+                    </a-avatar>
+                    <span class="replier-name">{{ reply.operator_name }}</span>
+                  </div>
+                  <span class="reply-time">{{ formatFullDateTime(reply.created_at) }}</span>
+                </div>
+                <div class="reply-content">{{ reply.content }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 时间线对话框 -->
+    <a-modal 
+      :open="timelineDialog.visible" 
+      title="工单时间线" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="() => { timelineDialog.visible = false }" 
+      class="timeline-dialog responsive-modal"
+    >
+      <div class="timeline-content">
+        <a-timeline>
+          <a-timeline-item 
+            v-for="item in timelineList" 
+            :key="item.id" 
+            :color="getTimelineColor(item.action)"
+          >
+            <template #dot>
+              <component :is="getTimelineIcon(item.action)" />
+            </template>
+            <div class="timeline-item">
+              <div class="timeline-header">
+                <span class="action-type">{{ getActionText(item.action) }}</span>
+                <span class="action-time">{{ formatFullDateTime(item.created_at) }}</span>
+              </div>
+              <div class="action-content">
+                <div class="operator-info">
+                  <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(item.operator_name || '') }">
+                    {{ getInitials(item.operator_name) }}
+                  </a-avatar>
+                  <span class="operator-name">{{ item.operator_name }}</span>
+                </div>
+                <div class="action-comment" v-if="item.comment">
+                  {{ item.comment }}
+                </div>
+                <div class="action-data" v-if="item.action_detail">
+                  <pre class="json-content">{{ JSON.stringify(JSON.parse(item.action_detail), null, 2) }}</pre>
+                </div>
+              </div>
+            </div>
+          </a-timeline-item>
+        </a-timeline>
+        <div v-if="timelineList.length === 0" class="empty-timeline">
+          <a-empty description="暂无时间线记录" />
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 流转记录对话框 -->
+    <a-modal 
+      :open="flowDialog.visible" 
+      title="工单流转记录" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="() => { flowDialog.visible = false }" 
+      class="flow-dialog responsive-modal"
+    >
+      <div class="flow-content">
+        <a-timeline>
+          <a-timeline-item 
+            v-for="item in flowList" 
+            :key="item.id" 
+            :color="getFlowActionColor(item.action)"
+          >
+            <template #dot>
+              <component :is="getFlowActionIcon(item.action)" />
+            </template>
+            <div class="flow-item">
+              <div class="flow-header">
+                <span class="flow-action">{{ getFlowActionText(item.action) }}</span>
+                <span class="flow-time">{{ formatFullDateTime(item.created_at) }}</span>
+              </div>
+              <div class="flow-content-detail">
+                <div class="operator-info">
+                  <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(item.operator_name || '') }">
+                    {{ getInitials(item.operator_name) }}
+                  </a-avatar>
+                  <span class="operator-name">{{ item.operator_name }}</span>
+                  <a-tag v-if="item.is_system_action === 1" color="orange" size="small">系统</a-tag>
+                </div>
+                <div class="status-change">
+                  <span class="from-status">{{ getStatusText(item.from_status) }}</span>
+                  <span class="arrow">→</span>
+                  <span class="to-status">{{ getStatusText(item.to_status) }}</span>
+                </div>
+                <div class="flow-comment" v-if="item.comment">
+                  <strong>处理说明：</strong>{{ item.comment }}
+                </div>
+              </div>
+            </div>
+          </a-timeline-item>
+        </a-timeline>
+        <div v-if="flowList.length === 0" class="empty-flow">
+          <a-empty description="暂无流转记录" />
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 分配处理人对话框 -->
+    <a-modal 
+      :open="assignDialog.visible" 
+      title="分配处理人" 
+      :width="dialogWidth" 
+      @ok="saveAssign"
+      @cancel="() => { assignDialog.visible = false }" 
+      :destroy-on-close="true" 
+      class="responsive-modal"
+    >
+      <a-form :model="assignDialog.form" layout="vertical">
+        <a-form-item label="选择处理人" name="assignee_id" :rules="[{ required: true, message: '请选择处理人' }]">
+          <a-select 
+            v-model:value="assignDialog.form.assignee_id" 
+            placeholder="请选择处理人" 
+            style="width: 100%"
+            show-search 
+            :filter-option="false" 
+            option-label-prop="children"
+            :not-found-content="userSelectorLoading ? undefined : (userSearchKeyword ? '无搜索结果' : '无数据')"
+            @search="handleUserSearch" 
+            @dropdown-visible-change="handleUserDropdownChange"
+            allow-clear 
+            :loading="userSelectorLoading"
+          >
+            <template #notFoundContent>
+              <div v-if="userSelectorLoading" class="selector-loading">
+                <a-spin size="small" />
+                <span style="margin-left: 8px;">加载中...</span>
+              </div>
+              <div v-else class="selector-empty">
+                {{ userSearchKeyword ? '无搜索结果' : '暂无用户数据' }}
+              </div>
+            </template>
+
+            <a-select-option v-for="user in dialogUsers" :key="user.user_id" :value="user.user_id">
+              <div class="user-option">
+                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(user.username) }">
+                  {{ getInitials(user.username) }}
+                </a-avatar>
+                <span class="user-name">{{ user.username }}</span>
+                <span v-if="user.real_name" class="user-real-name">({{ user.real_name }})</span>
+              </div>
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 审批/拒绝对话框 -->
+    <a-modal 
+      :open="approvalDialog.visible" 
+      :title="approvalDialog.type === 'approve' ? '审批通过' : '拒绝工单'" 
+      :width="dialogWidth" 
+      @ok="saveApproval"
+      @cancel="() => { approvalDialog.visible = false }" 
+      :destroy-on-close="true" 
+      class="responsive-modal"
+    >
+      <a-form :model="approvalDialog.form" layout="vertical">
+        <a-form-item 
+          :label="approvalDialog.type === 'approve' ? '审批意见' : '拒绝理由'" 
+          name="comment" 
+          :rules="approvalDialog.type === 'reject' ? [{ required: true, message: '请输入拒绝理由' }] : []"
+        >
+          <a-textarea 
+            v-model:value="approvalDialog.form.comment" 
+            :rows="4" 
+            :placeholder="approvalDialog.type === 'approve' ? '请输入审批意见(可选)' : '请输入拒绝理由'" 
+          />
+        </a-form-item>
+      </a-form>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch, computed } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
+import { message, Modal } from 'ant-design-vue';
 import {
-  ArrowLeftOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  CloseOutlined,
-  DownOutlined,
-  FileOutlined,
-  MessageOutlined,
   PlusOutlined,
-  CommentOutlined,
+  FileTextOutlined,
+  ClockCircleOutlined,
+  LoadingOutlined,
+  CheckCircleOutlined,
+  DownOutlined,
+  MessageOutlined,
+  HistoryOutlined,
+  UserOutlined,
+  ExclamationCircleOutlined,
+  EditOutlined,
+  PlayCircleOutlined,
+  SendOutlined,
+  StopOutlined
 } from '@ant-design/icons-vue';
-import { message } from 'ant-design-vue';
-import dayjs from 'dayjs';
 
-import { getUserList } from '#/api/core/user';
-import { listCategory } from '#/api/core/workorder_category';
 import {
-  commentInstance,
-  createInstance,
-  type CreateInstanceReq,
-  deleteInstance,
-  detailInstance,
-  getInstanceComments,
-  getInstanceFlows,
-  getMyInstances,
-  getProcessDefinition,
-  type Instance,
-  type InstanceComment,
-  type InstanceFlow,
+  type WorkorderInstanceItem,
+  type CreateWorkorderInstanceReq,
+  type UpdateWorkorderInstanceReq,
+  type DeleteWorkorderInstanceReq,
+  type ListWorkorderInstanceReq,
+  type DetailWorkorderInstanceReq,
+  type SubmitWorkorderInstanceReq,
+  type AssignWorkorderInstanceReq,
+  type ApproveWorkorderInstanceReq,
+  type RejectWorkorderInstanceReq,
   InstanceStatus,
-  listInstance,
-  type ListInstanceReq,
-  type MyInstanceReq,
   Priority,
-  processInstanceFlow,
-  transferInstance,
-  type TransferInstanceReq,
-  updateInstance,
-  type UpdateInstanceReq,
-  type InstanceActionReq,
-  type InstanceCommentReq,
+  listWorkorderInstance,
+  detailWorkorderInstance,
+  createWorkorderInstance,
+  updateWorkorderInstance,
+  deleteWorkorderInstance,
+  submitWorkorderInstance,
+  assignWorkorderInstance,
+  approveWorkorderInstance,
+  rejectWorkorderInstance
 } from '#/api/core/workorder_instance';
-import { listProcess } from '#/api/core/workorder_process';
 
-// 定义类型
-interface Process {
-  id: number;
-  name: string;
-  description?: string;
-  version: number;
-}
+import {
+  type WorkorderInstanceCommentItem,
+  type CreateWorkorderInstanceCommentReq,
+  type GetInstanceCommentsTreeReq,
+  createWorkorderInstanceComment,
+  getInstanceCommentsTree
+} from '#/api/core/workorder_instance_comment';
 
-interface Template {
-  id: number;
-  name: string;
-  description?: string;
-}
+import {
+  type WorkorderInstanceTimelineItem,
+  type ListWorkorderInstanceTimelineReq,
+  TimelineAction,
+  listWorkorderInstanceTimeline
+} from '#/api/core/workorder_instance_time_line';
 
-interface Category {
-  id: number;
-  name: string;
-  description?: string;
-}
+import {
+  type WorkorderInstanceFlowItem,
+  type ListWorkorderInstanceFlowReq,
+  FlowAction,
+  listWorkorderInstanceFlow
+} from '#/api/core/workorder_instance_flow';
 
-interface User {
-  id: number;
-  name: string;
-  username: string;
-  real_name?: string;
-}
+import {
+  type GetUserListReq,
+  getUserList
+} from '#/api/core/user';
 
-interface Field {
-  field: string;
-  label: string;
-  type: string;
-  required: boolean;
-  options?: string[];
-  placeholder?: string;
-}
+import type { UserInfo } from '@vben/types';
 
-interface WorkOrderStatistics {
-  total_count: number;
-  completed_count: number;
-  processing_count: number;
-  canceled_count: number;
-  rejected_count: number;
-}
+// 列定义
+const columns = [
+  {
+    title: '工单标题',
+    dataIndex: 'title',
+    key: 'title',
+    width: 250,
+    fixed: 'left'
+  },
+  {
+    title: '状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: '优先级',
+    dataIndex: 'priority',
+    key: 'priority',
+    width: 100,
+    align: 'center' as const,
+  },
+  {
+    title: '创建人',
+    dataIndex: 'operator_name',
+    key: 'operator',
+    width: 150,
+  },
+  {
+    title: '处理人',
+    dataIndex: 'assignee_id',
+    key: 'assignee',
+    width: 150,
+  },
+  {
+    title: '创建时间',
+    dataIndex: 'created_at',
+    key: 'createdAt',
+    width: 180,
+  },
+  {
+    title: '操作',
+    key: 'action',
+    width: 200,
+    align: 'center' as const,
+    fixed: 'right'
+  },
+];
 
 // 状态数据
 const loading = ref(false);
 const searchQuery = ref('');
-const statusFilter = ref<number | null>(null);
+const statusFilter = ref<number | undefined>(undefined);
+const priorityFilter = ref<number | undefined>(undefined);
+const processFilter = ref<number | undefined>(undefined);
 const currentPage = ref(1);
 const pageSize = ref(10);
-const totalItems = ref(0);
-const dateRange = ref<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
-const processingComment = ref('');
-const newComment = ref('');
-const dueDate = ref<dayjs.Dayjs | null>(null);
-const submittingComment = ref(false);
+const total = ref(0);
 
-// 数据源
-const instances = ref<Instance[]>([]);
-const users = ref<User[]>([]);
-const templates = ref<Template[]>([]);
+// 数据列表
+const instanceList = ref<WorkorderInstanceItem[]>([]);
+const processes = ref<any[]>([]);
 
-// 模态框中的分页数据
-const instanceDialogProcesses = ref<Process[]>([]);
-const instanceDialogCategories = ref<Category[]>([]);
+// 主用户数据 - 实现真分页
+const users = ref<UserInfo[]>([]);
+const usersPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: false
+});
+const usersLoading = ref(false);
+const usersSearchKeyword = ref('');
+let usersSearchTimeout: any = null;
+
+// 统计数据
+const stats = reactive({
+  total: 0,
+  pending: 0,
+  processing: 0,
+  completed: 0
+});
+
+// 分页配置
+const paginationConfig = computed(() => ({
+  current: currentPage.value,
+  pageSize: pageSize.value,
+  total: total.value,
+  showSizeChanger: true,
+  showQuickJumper: true,
+  showTotal: (total: number) => `共 ${total} 条`,
+  pageSizeOptions: ['10', '20', '50', '100'],
+}));
+
+// 工单对话框
+const instanceDialog = reactive({
+  visible: false,
+  isEdit: false,
+  form: {
+    id: undefined,
+    title: '',
+    description: '',
+    priority: Priority.Normal,
+    process_id: 0,
+    assignee_id: undefined,
+    form_data_json: ''
+  } as CreateWorkorderInstanceReq & { id?: number; form_data_json?: string }
+});
+
+// 表单验证规则
+const formRules = {
+  title: [
+    { required: true, message: '请输入工单标题', trigger: 'blur' },
+    { min: 3, max: 100, message: '长度应为3到100个字符', trigger: 'blur' }
+  ],
+  priority: [
+    { required: true, message: '请选择优先级', trigger: 'change' }
+  ],
+  process_id: [
+    { required: true, message: '请选择关联流程', trigger: 'change' }
+  ]
+};
+
+// 详情对话框
+const detailDialog = reactive({
+  visible: false,
+  instance: null as WorkorderInstanceItem | null
+});
+
+// 评论对话框
+const commentDialog = reactive({
+  visible: false,
+  form: {
+    instance_id: 0,
+    content: '',
+    is_system: 0
+  } as CreateWorkorderInstanceCommentReq
+});
+
+// 评论查看对话框
+const commentsViewDialog = reactive({
+  visible: false,
+  instanceId: 0
+});
+
+const commentsList = ref<WorkorderInstanceCommentItem[]>([]);
+
+// 时间线对话框
+const timelineDialog = reactive({
+  visible: false,
+  instanceId: 0
+});
+
+const timelineList = ref<WorkorderInstanceTimelineItem[]>([]);
+
+// 流转记录对话框
+const flowDialog = reactive({
+  visible: false,
+  instanceId: 0
+});
+
+const flowList = ref<WorkorderInstanceFlowItem[]>([]);
+
+// 分配处理人对话框
+const assignDialog = reactive({
+  visible: false,
+  instanceId: 0,
+  form: {
+    assignee_id: 0
+  }
+});
+
+// 审批对话框
+const approvalDialog = reactive({
+  visible: false,
+  instanceId: 0,
+  type: 'approve' as 'approve' | 'reject',
+  form: {
+    comment: ''
+  }
+});
+
+// JSON验证错误
+const formDataValidationError = ref('');
+
+// 流程选择器相关
+const dialogProcesses = ref<any[]>([]);
 const processSelectorLoading = ref(false);
-const categorySelectorLoading = ref(false);
 const processSearchKeyword = ref('');
-const categorySearchKeyword = ref('');
 let processSearchTimeout: any = null;
-let categorySearchTimeout: any = null;
 
-// 流程分页状态
 const processPagination = reactive({
   current: 1,
   pageSize: 20,
@@ -724,367 +1036,377 @@ const processPagination = reactive({
   hasMore: false
 });
 
-// 分类分页状态
-const categoryPagination = reactive({
+// 用户选择器相关
+const dialogUsers = ref<UserInfo[]>([]);
+const userSelectorLoading = ref(false);
+const userSearchKeyword = ref('');
+let userSearchTimeout: any = null;
+
+const userPagination = reactive({
   current: 1,
   pageSize: 20,
   total: 0,
   hasMore: false
 });
 
-const instanceFlows = ref<InstanceFlow[]>([]);
-const instanceComments = ref<InstanceComment[]>([]);
-const statistics = ref<WorkOrderStatistics>({
-  canceled_count: 0,
-  completed_count: 0,
-  processing_count: 0,
-  rejected_count: 0,
-  total_count: 0,
+// 响应式对话框宽度
+const dialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '80%';
+    return '600px';
+  }
+  return '600px';
 });
 
-// 表单字段和数据
-const formFields = ref<Field[]>([]);
-const formDataValues = reactive<Record<string, any>>({});
-const displayFormData = ref<null | Record<string, any>>(null);
-const formFieldDefinitions = ref<any[]>([]);
-
-// 对话框状态
-const detailDialog = reactive({
-  instance: null as Instance | null,
-  visible: false,
+const formDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '900px';
+  }
+  return '900px';
 });
 
-const instanceDialog = reactive({
-  instance: null as Instance | null,
-  isEdit: false,
-  visible: false,
+const previewDialogWidth = computed(() => {
+  if (typeof window !== 'undefined') {
+    const width = window.innerWidth;
+    if (width < 768) return '95%';
+    if (width < 1024) return '90%';
+    return '80%';
+  }
+  return '80%';
 });
 
-const transferDialog = reactive({
-  assigneeId: null as null | number,
-  comment: '',
-  instanceId: 0,
-  visible: false,
-});
-
-const deleteDialog = reactive({
-  instanceId: 0,
-  visible: false,
-});
-
-// 评论对话框状态
-const commentsDialog = reactive({
-  visible: false,
-});
-
-// 回复状态
-const replyingTo = ref<InstanceComment | null>(null);
-
-const newInstance = reactive<CreateInstanceReq>({
-  priority: Priority.Normal,
-  process_id: undefined,
-  tags: [],
-  title: '',
-});
-
-const selectedProcess = ref<null | Process>(null);
-
-const columns = [
-  {
-    dataIndex: 'title',
-    key: 'title',
-    title: '工单标题',
-    width: 250,
-  },
-  {
-    align: 'center',
-    dataIndex: 'status',
-    key: 'status',
-    title: '状态',
-    width: 100,
-  },
-  {
-    align: 'center',
-    dataIndex: 'priority',
-    key: 'priority',
-    title: '优先级',
-    width: 100,
-  },
-  {
-    dataIndex: 'creator_name',
-    key: 'creator',
-    title: '创建人',
-    width: 120,
-  },
-  {
-    dataIndex: 'assignee_name',
-    key: 'assignee',
-    title: '处理人',
-    width: 120,
-  },
-  {
-    dataIndex: 'created_at',
-    key: 'created_at',
-    title: '创建时间',
-    width: 180,
-  },
-  {
-    align: 'center',
-    key: 'action',
-    title: '操作',
-    width: 200,
-  },
-];
-
-watch(
-  [currentPage, pageSize, searchQuery, statusFilter, dateRange],
-  () => {
-    fetchInstances();
-  },
-  { deep: true },
-);
-
-// 计算总页数
-const totalProcessPages = computed(() => {
+const processTotalPages = computed(() => {
   return Math.ceil(processPagination.total / processPagination.pageSize);
 });
 
-const totalCategoryPages = computed(() => {
-  return Math.ceil(categoryPagination.total / categoryPagination.pageSize);
+const userTotalPages = computed(() => {
+  return Math.ceil(userPagination.total / userPagination.pageSize);
 });
 
-const fetchInstances = async () => {
+// 辅助方法
+const getStatusColor = (status: number): string => {
+  const colorMap = {
+    [InstanceStatus.Draft]: 'default',
+    [InstanceStatus.Pending]: 'orange',
+    [InstanceStatus.Processing]: 'blue',
+    [InstanceStatus.Completed]: 'green',
+    [InstanceStatus.Rejected]: 'red',
+    [InstanceStatus.Cancelled]: 'default'
+  };
+  return colorMap[status as keyof typeof colorMap] || 'default';
+};
+
+const getStatusText = (status: number): string => {
+  const textMap = {
+    [InstanceStatus.Draft]: '草稿',
+    [InstanceStatus.Pending]: '待处理',
+    [InstanceStatus.Processing]: '处理中',
+    [InstanceStatus.Completed]: '已完成',
+    [InstanceStatus.Rejected]: '已拒绝',
+    [InstanceStatus.Cancelled]: '已取消'
+  };
+  return textMap[status as keyof typeof textMap] || '未知';
+};
+
+const getPriorityColor = (priority: number): string => {
+  const colorMap = {
+    [Priority.Low]: 'green',
+    [Priority.Normal]: 'blue',
+    [Priority.High]: 'red'
+  };
+  return colorMap[priority as keyof typeof colorMap] || 'blue';
+};
+
+const getPriorityText = (priority: number): string => {
+  const textMap = {
+    [Priority.Low]: '低',
+    [Priority.Normal]: '普通',
+    [Priority.High]: '高'
+  };
+  return textMap[priority as keyof typeof textMap] || '普通';
+};
+
+const getPriorityClass = (priority: number): string => {
+  const classMap = {
+    [Priority.Low]: 'priority-low',
+    [Priority.Normal]: 'priority-normal',
+    [Priority.High]: 'priority-high'
+  };
+  return classMap[priority as keyof typeof classMap] || 'priority-normal';
+};
+
+// 修改getAssigneeName方法 - 支持动态加载
+const getAssigneeName = (assigneeId?: number): string => {
+  if (!assigneeId) return '';
+  
+  // 先从已加载的用户中查找
+  const user = users.value.find((u: UserInfo) => u.user_id === assigneeId.toString());
+  if (user) {
+    return user.username;
+  }
+  
+  // 如果没找到且还有更多数据，触发加载
+  if (usersPagination.hasMore && !usersLoading.value) {
+    loadMoreMainUsers();
+  }
+  
+  return `用户${assigneeId}`;
+};
+
+const getProcessName = (processId: number): string => {
+  const process = processes.value.find(p => p.id === processId);
+  return process?.name || `流程${processId}`;
+};
+
+const formatDate = (dateStr: string | undefined) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+};
+
+const formatTime = (dateStr: string | undefined) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+};
+
+const formatFullDateTime = (dateStr: string | undefined) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return d.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const getInitials = (name: string | undefined) => {
+  if (!name) return '';
+  return name
+    .split('')
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+};
+
+const getAvatarColor = (name: string | undefined) => {
+  if (!name) return '#1890ff';
+
+  const colors = [
+    '#1890ff', '#52c41a', '#faad14', '#f5222d',
+    '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
+  ];
+
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+};
+
+const getTimelineColor = (action: string): string => {
+  const colorMap: Record<string, string> = {
+    [TimelineAction.Create]: 'green',
+    [TimelineAction.Update]: 'blue',
+    [TimelineAction.Submit]: 'orange',
+    [TimelineAction.Assign]: 'purple',
+    [TimelineAction.Approve]: 'green',
+    [TimelineAction.Reject]: 'red',
+    [TimelineAction.Cancel]: 'gray',
+    [TimelineAction.Complete]: 'green',
+    [TimelineAction.Return]: 'orange',
+    [TimelineAction.Comment]: 'blue',
+    [TimelineAction.View]: 'cyan',
+    [TimelineAction.Attach]: 'purple',
+    [TimelineAction.Notify]: 'orange',
+    [TimelineAction.Remind]: 'red'
+  };
+  return colorMap[action] || 'blue';
+};
+
+const getTimelineIcon = (action: string) => {
+  const iconMap: Record<string, any> = {
+    [TimelineAction.Create]: PlusOutlined,
+    [TimelineAction.Update]: EditOutlined,
+    [TimelineAction.Submit]: SendOutlined,
+    [TimelineAction.Assign]: UserOutlined,
+    [TimelineAction.Approve]: CheckCircleOutlined,
+    [TimelineAction.Reject]: ExclamationCircleOutlined,
+    [TimelineAction.Cancel]: StopOutlined,
+    [TimelineAction.Complete]: CheckCircleOutlined,
+    [TimelineAction.Return]: ExclamationCircleOutlined,
+    [TimelineAction.Comment]: MessageOutlined,
+    [TimelineAction.View]: FileTextOutlined,
+    [TimelineAction.Attach]: PlusOutlined,
+    [TimelineAction.Notify]: MessageOutlined,
+    [TimelineAction.Remind]: ExclamationCircleOutlined
+  };
+  return iconMap[action] || EditOutlined;
+};
+
+const getActionText = (action: string): string => {
+  const textMap: Record<string, string> = {
+    [TimelineAction.Create]: '创建工单',
+    [TimelineAction.Update]: '更新工单',
+    [TimelineAction.Submit]: '提交工单',
+    [TimelineAction.Assign]: '分配处理人',
+    [TimelineAction.Approve]: '审批通过',
+    [TimelineAction.Reject]: '拒绝工单',
+    [TimelineAction.Cancel]: '取消工单',
+    [TimelineAction.Complete]: '完成工单',
+    [TimelineAction.Return]: '退回工单',
+    [TimelineAction.Comment]: '添加评论',
+    [TimelineAction.View]: '查看工单',
+    [TimelineAction.Attach]: '添加附件',
+    [TimelineAction.Notify]: '发送通知',
+    [TimelineAction.Remind]: '催办提醒'
+  };
+  return textMap[action] || action;
+};
+
+const getFlowActionColor = (action: string): string => {
+  const colorMap: Record<string, string> = {
+    [FlowAction.Submit]: 'orange',
+    [FlowAction.Approve]: 'green',
+    [FlowAction.Reject]: 'red',
+    [FlowAction.Assign]: 'purple',
+    [FlowAction.Cancel]: 'gray',
+    [FlowAction.Complete]: 'green',
+    [FlowAction.Return]: 'orange'
+  };
+  return colorMap[action] || 'blue';
+};
+
+const getFlowActionIcon = (action: string) => {
+  const iconMap: Record<string, any> = {
+    [FlowAction.Submit]: SendOutlined,
+    [FlowAction.Approve]: CheckCircleOutlined,
+    [FlowAction.Reject]: ExclamationCircleOutlined,
+    [FlowAction.Assign]: UserOutlined,
+    [FlowAction.Cancel]: StopOutlined,
+    [FlowAction.Complete]: CheckCircleOutlined,
+    [FlowAction.Return]: ExclamationCircleOutlined
+  };
+  return iconMap[action] || PlayCircleOutlined;
+};
+
+const getFlowActionText = (action: string): string => {
+  const textMap: Record<string, string> = {
+    [FlowAction.Submit]: '提交工单',
+    [FlowAction.Approve]: '审批通过',
+    [FlowAction.Reject]: '审批拒绝',
+    [FlowAction.Assign]: '指派处理人',
+    [FlowAction.Cancel]: '取消工单',
+    [FlowAction.Complete]: '完成工单',
+    [FlowAction.Return]: '退回工单'
+  };
+  return textMap[action] || action;
+};
+
+// JSON处理方法
+const formatFormDataJson = (): void => {
   try {
-    loading.value = true;
-    const params: ListInstanceReq = {
-      page: currentPage.value,
-      size: pageSize.value,
-    };
-
-    if (searchQuery.value.trim()) {
-      params.search = searchQuery.value.trim();
+    if (!instanceDialog.form.form_data_json?.trim()) {
+      message.warning('请先输入JSON内容');
+      return;
     }
-
-    if (statusFilter.value !== null) {
-      params.status = statusFilter.value;
-    }
-
-    if (dateRange.value) {
-      params.start_date = dateRange.value[0].format('YYYY-MM-DD');
-      params.end_date = dateRange.value[1].format('YYYY-MM-DD');
-    }
-
-    const response = await listInstance(params);
-
-    if (response) {
-      instances.value = response.items || [];
-      totalItems.value = response.total || 0;
-    } else {
-      instances.value = [];
-      totalItems.value = 0;
-    }
+    const parsed = JSON.parse(instanceDialog.form.form_data_json);
+    instanceDialog.form.form_data_json = JSON.stringify(parsed, null, 2);
+    formDataValidationError.value = '';
+    message.success('JSON格式化成功');
   } catch (error) {
-    message.error('获取工单列表失败');
-    console.error('Failed to fetch instances:', error);
-    instances.value = [];
-    totalItems.value = 0;
-  } finally {
-    loading.value = false;
+    formDataValidationError.value = `JSON格式错误: ${(error as Error).message}`;
+    message.error('JSON格式化失败');
   }
 };
 
-const fetchMyInstances = async (type: 'all' | 'assigned' | 'created' = 'all') => {
+const validateFormDataJson = (): void => {
   try {
-    loading.value = true;
-    const params: MyInstanceReq = {
-      page: currentPage.value,
-      size: pageSize.value,
-      type,
-    };
-
-    if (searchQuery.value.trim()) {
-      params.search = searchQuery.value.trim();
-    }
-
-    if (statusFilter.value !== null) {
-      params.status = statusFilter.value;
-    }
-
-    if (dateRange.value) {
-      params.start_date = dateRange.value[0].format('YYYY-MM-DD');
-      params.end_date = dateRange.value[1].format('YYYY-MM-DD');
-    }
-
-    const response = await getMyInstances(params);
-
-    if (response && typeof response === 'object' && 'items' in response) {
-      instances.value = response.items || [];
-      totalItems.value = response.total || 0;
-    } else if (Array.isArray(response)) {
-      instances.value = response;
-      totalItems.value = response.length;
-    } else {
-      instances.value = [];
-      totalItems.value = 0;
-    }
-  } catch (error) {
-    message.error('获取我的工单失败');
-    console.error('Failed to fetch my instances:', error);
-    instances.value = [];
-    totalItems.value = 0;
-  } finally {
-    loading.value = false;
-  }
-};
-
-const fetchOverdueInstances = async () => {
-  try {
-    loading.value = true;
-    const params: ListInstanceReq = {
-      page: currentPage.value,
-      size: pageSize.value,
-      overdue: true,
-    };
-
-    if (searchQuery.value.trim()) {
-      params.search = searchQuery.value.trim();
-    }
-
-    if (statusFilter.value !== null) {
-      params.status = statusFilter.value;
-    }
-
-    if (dateRange.value) {
-      params.start_date = dateRange.value[0].format('YYYY-MM-DD');
-      params.end_date = dateRange.value[1].format('YYYY-MM-DD');
-    }
-
-    const response = await listInstance(params);
-
-    if (response && typeof response === 'object' && 'items' in response) {
-      instances.value = response.items || [];
-      totalItems.value = response.total || 0;
-    } else if (Array.isArray(response)) {
-      instances.value = response;
-      totalItems.value = response.length;
-    } else {
-      instances.value = [];
-      totalItems.value = 0;
-    }
-  } catch (error) {
-    message.error('获取超时工单失败');
-    console.error('Failed to fetch overdue instances:', error);
-    instances.value = [];
-    totalItems.value = 0;
-  } finally {
-    loading.value = false;
-  }
-};
-
-const fetchInstanceDetail = async (id: number) => {
-  try {
-    const response = await detailInstance(id);
-    if (!response) {
-      message.error('获取工单详情失败: 无响应数据');
+    if (!instanceDialog.form.form_data_json?.trim()) {
+      formDataValidationError.value = '';
+      message.info('JSON内容为空');
       return;
     }
 
-    detailDialog.instance = response;
-
-    let parsedFormData: any = null;
-
-    if (typeof response.form_data === 'string') {
-      try {
-        parsedFormData = JSON.parse(response.form_data);
-      } catch (error) {
-        parsedFormData = {};
-        console.error('解析表单数据失败:', error);
-      }
-    } else if (response.form_data && typeof response.form_data === 'object') {
-      parsedFormData = response.form_data;
-    }
-
-    if (parsedFormData) {
-      if (parsedFormData.fields && Array.isArray(parsedFormData.fields)) {
-        formFieldDefinitions.value = parsedFormData.fields;
-
-        if (parsedFormData.data) {
-          displayFormData.value = parsedFormData.data;
-        } else {
-          const defaultData: Record<string, any> = {};
-          parsedFormData.fields.forEach((field: any) => {
-            defaultData[field.name] = field.default_value || '';
-          });
-          displayFormData.value = defaultData;
-        }
-      } else {
-        displayFormData.value = parsedFormData;
-        formFieldDefinitions.value = [];
-      }
-    } else {
-      displayFormData.value = {};
-      formFieldDefinitions.value = [];
-    }
-
-    await Promise.all([fetchInstanceFlows(id), fetchInstanceComments(id)]);
+    JSON.parse(instanceDialog.form.form_data_json);
+    formDataValidationError.value = '';
+    message.success('JSON验证通过');
   } catch (error) {
-    message.error('获取工单详情失败');
-    console.error('Failed to fetch instance detail:', error);
+    formDataValidationError.value = `验证失败: ${(error as Error).message}`;
+    message.error('JSON验证失败');
   }
 };
 
-const fetchInstanceFlows = async (id: number) => {
-  try {
-    const response = await getInstanceFlows(id);
-    instanceFlows.value = Array.isArray(response) ? response : [];
-  } catch (error) {
-    console.error('Failed to fetch instance flows:', error);
-    instanceFlows.value = [];
+// 主用户数据加载方法 - 实现真分页
+const loadUsers = async (reset: boolean = false, search?: string): Promise<void> => {
+  if (usersLoading.value && !reset) {
+    return;
   }
-};
 
-const fetchInstanceComments = async (id: number) => {
+  usersLoading.value = true;
+
   try {
-    const response = await getInstanceComments(id);
+    const params: GetUserListReq = {
+      page: reset ? 1 : usersPagination.current,
+      size: usersPagination.pageSize,
+      search: search || usersSearchKeyword.value || ''
+    };
+
+    const res = await getUserList(params);
     
-    // 处理评论数据，后端已经返回了嵌套结构
-    if (Array.isArray(response)) {
-      // 递归处理评论数据，确保 creator_name 不为空
-      const processComment = (comment: InstanceComment): InstanceComment => {
-        let creatorName = comment.creator_name;
-        if (!creatorName || creatorName.trim() === '') {
-          creatorName = `用户${comment.user_id}`;
-        }
-        
-        const processedComment = {
-          ...comment,
-          creator_name: creatorName,
-          children: comment.children ? comment.children.map(processComment) : []
-        };
-        
-        return processedComment;
-      };
-      
-      instanceComments.value = response.map(processComment);
+    if (res && res.items) {
+      if (reset) {
+        users.value = res.items;
+        usersPagination.current = 1;
+      } else {
+        // 追加模式，用于加载更多
+        users.value = [...users.value, ...res.items];
+        usersPagination.current += 1;
+      }
+
+      usersPagination.total = res.total || 0;
+      usersPagination.hasMore = (usersPagination.current * usersPagination.pageSize) < usersPagination.total;
     } else {
-      instanceComments.value = [];
+      if (reset) {
+        users.value = [];
+        usersPagination.current = 1;
+        usersPagination.total = 0;
+        usersPagination.hasMore = false;
+      }
     }
-  } catch (error) {
-    console.error('Failed to fetch instance comments:', error);
-    instanceComments.value = [];
+  } catch (error: any) {
+    console.error('加载用户数据失败:', error);
+    if (reset) {
+      message.error(error.message || '加载用户数据失败');
+      users.value = [];
+      usersPagination.current = 1;
+      usersPagination.total = 0;
+      usersPagination.hasMore = false;
+    }
+  } finally {
+    usersLoading.value = false;
   }
 };
 
-const getFieldLabel = (fieldName: string) => {
-  if (formFieldDefinitions.value && formFieldDefinitions.value.length > 0) {
-    const field = formFieldDefinitions.value.find((f) => f.name === fieldName);
-    return field ? field.label : fieldName;
+// 加载更多主用户数据的方法
+const loadMoreMainUsers = async (): Promise<void> => {
+  if (!usersPagination.hasMore || usersLoading.value) {
+    return;
   }
-  return fieldName;
+
+  await loadUsers(false);
 };
 
-// 分页流程加载方法
-const loadInstanceDialogProcesses = async (reset: boolean = false, search?: string): Promise<void> => {
+// 流程选择器方法
+const loadDialogProcesses = async (reset: boolean = false, search?: string): Promise<void> => {
   if (processSelectorLoading.value && !reset) {
     return;
   }
@@ -1092,34 +1414,26 @@ const loadInstanceDialogProcesses = async (reset: boolean = false, search?: stri
   processSelectorLoading.value = true;
 
   try {
-    const params = {
-      page: reset ? 1 : processPagination.current,
-      size: processPagination.pageSize,
-      search: search !== undefined ? search : processSearchKeyword.value || undefined,
-      status: 2
+    const params: GetUserListReq = {
+      page: 1,
+      size: 10,
+      search: '',
     };
+    const res = await getUserList(params);
+    const mockProcesses = res.items || [];
 
-    const response = await listProcess(params);
-
-    if (response) {
-      if (reset) {
-        instanceDialogProcesses.value = response.items || [];
-        processPagination.current = 1;
-      } else {
-        const existingIds = new Set(instanceDialogProcesses.value.map(process => process.id));
-        const newItems = (response.items || []).filter((process: any) => !existingIds.has(process.id));
-        instanceDialogProcesses.value = [...instanceDialogProcesses.value, ...newItems];
-      }
-
-      processPagination.total = response.total || 0;
-      processPagination.hasMore = (response.items || []).length === processPagination.pageSize &&
-        instanceDialogProcesses.value.length < processPagination.total;
+    if (reset) {
+      dialogProcesses.value = mockProcesses;
+      processPagination.current = 1;
     }
+
+    processPagination.total = mockProcesses.length;
+    processPagination.hasMore = false;
   } catch (error: any) {
     console.error('加载流程列表失败:', error);
     if (reset) {
       message.error(error.message || '加载流程列表失败');
-      instanceDialogProcesses.value = [];
+      dialogProcesses.value = [];
       processPagination.current = 1;
       processPagination.total = 0;
       processPagination.hasMore = false;
@@ -1129,52 +1443,6 @@ const loadInstanceDialogProcesses = async (reset: boolean = false, search?: stri
   }
 };
 
-// 分页分类加载方法
-const loadInstanceDialogCategories = async (reset: boolean = false, search?: string): Promise<void> => {
-  if (categorySelectorLoading.value && !reset) {
-    return;
-  }
-
-  categorySelectorLoading.value = true;
-
-  try {
-    const params = {
-      page: reset ? 1 : categoryPagination.current,
-      size: categoryPagination.pageSize,
-      search: search !== undefined ? search : categorySearchKeyword.value || undefined
-    };
-
-    const response = await listCategory(params);
-
-    if (response) {
-      if (reset) {
-        instanceDialogCategories.value = response.items || [];
-        categoryPagination.current = 1;
-      } else {
-        const existingIds = new Set(instanceDialogCategories.value.map(cat => cat.id));
-        const newItems = (response.items || []).filter((cat: any) => !existingIds.has(cat.id));
-        instanceDialogCategories.value = [...instanceDialogCategories.value, ...newItems];
-      }
-
-      categoryPagination.total = response.total || 0;
-      categoryPagination.hasMore = (response.items || []).length === categoryPagination.pageSize &&
-        instanceDialogCategories.value.length < categoryPagination.total;
-    }
-  } catch (error: any) {
-    console.error('加载分类列表失败:', error);
-    if (reset) {
-      message.error(error.message || '加载分类列表失败');
-      instanceDialogCategories.value = [];
-      categoryPagination.current = 1;
-      categoryPagination.total = 0;
-      categoryPagination.hasMore = false;
-    }
-  } finally {
-    categorySelectorLoading.value = false;
-  }
-};
-
-// 处理流程搜索
 const handleProcessSearch = (value: string): void => {
   processSearchKeyword.value = value;
 
@@ -1184,917 +1452,700 @@ const handleProcessSearch = (value: string): void => {
 
   processSearchTimeout = setTimeout(() => {
     processPagination.current = 1;
-    loadInstanceDialogProcesses(true, value);
+    loadDialogProcesses(true, value);
   }, 300);
 };
 
-// 处理分类搜索
-const handleCategorySearch = (value: string): void => {
-  categorySearchKeyword.value = value;
-
-  if (categorySearchTimeout) {
-    clearTimeout(categorySearchTimeout);
-  }
-
-  categorySearchTimeout = setTimeout(() => {
-    categoryPagination.current = 1;
-    loadInstanceDialogCategories(true, value);
-  }, 300);
-};
-
-// 处理下拉框显示/隐藏
 const handleProcessDropdownChange = (open: boolean): void => {
   if (open) {
-    if (instanceDialogProcesses.value.length === 0) {
-      loadInstanceDialogProcesses(true);
+    if (dialogProcesses.value.length === 0) {
+      loadDialogProcesses(true);
     }
   }
 };
 
-const handleCategoryDropdownChange = (open: boolean): void => {
-  if (open) {
-    if (instanceDialogCategories.value.length === 0) {
-      loadInstanceDialogCategories(true);
-    }
-  }
-};
-
-// 处理滚动加载更多
 const handleProcessScroll = (e: Event): void => {
-  const target = e.target as HTMLElement;
-  if (target && target.scrollTop + target.offsetHeight >= target.scrollHeight - 10) {
-    if (processPagination.hasMore && !processSelectorLoading.value) {
-      loadMoreProcesses();
-    }
+  const { target } = e;
+  if (!target) return;
+
+  const element = target as HTMLElement;
+  const { scrollTop, scrollHeight, clientHeight } = element;
+
+  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+    processPagination.hasMore &&
+    !processSelectorLoading.value) {
+    loadMoreProcesses();
   }
 };
 
-const handleCategoryScroll = (e: Event): void => {
-  const target = e.target as HTMLElement;
-  if (target && target.scrollTop + target.offsetHeight >= target.scrollHeight - 10) {
-    if (categoryPagination.hasMore && !categorySelectorLoading.value) {
-      loadMoreCategories();
-    }
-  }
-};
-
-// 加载更多方法
 const loadMoreProcesses = async (): Promise<void> => {
   if (!processPagination.hasMore || processSelectorLoading.value) {
     return;
   }
 
   processPagination.current += 1;
-  await loadInstanceDialogProcesses(false);
+  await loadDialogProcesses(false);
 };
 
-const loadMoreCategories = async (): Promise<void> => {
-  if (!categoryPagination.hasMore || categorySelectorLoading.value) {
+// 用户选择器方法 - 实现真分页
+const loadDialogUsers = async (reset: boolean = false, search?: string): Promise<void> => {
+  if (userSelectorLoading.value && !reset) {
     return;
   }
 
-  categoryPagination.current += 1;
-  await loadInstanceDialogCategories(false);
-};
+  userSelectorLoading.value = true;
 
-// 从流程步骤中提取表单字段
-const extractFormFieldsFromSteps = (steps: any[]): Field[] => {
-  const formFields: Field[] = [];
-  
-  // 遍历所有步骤，查找包含表单字段的步骤
-  steps.forEach((step, index) => {
-    if (step.props && typeof step.props === 'object') {
-      // 检查props中是否有表单字段定义
-      if (step.props.form_fields && Array.isArray(step.props.form_fields)) {
-        step.props.form_fields.forEach((field: any) => {
-          formFields.push({
-            field: field.name || field.field || `field_${index}_${formFields.length}`,
-            label: field.label || field.name || `字段${formFields.length + 1}`,
-            type: field.type || 'text',
-            required: field.required || false,
-            placeholder: field.placeholder || `请输入${field.label || field.name}`,
-            options: field.options || undefined,
-          });
-        });
-      }
-      // 检查props中的其他可能的表单字段结构
-      else if (step.props.fields && Array.isArray(step.props.fields)) {
-        step.props.fields.forEach((field: any) => {
-          formFields.push({
-            field: field.name || field.field || `field_${index}_${formFields.length}`,
-            label: field.label || field.name || `字段${formFields.length + 1}`,
-            type: field.type || 'text',
-            required: field.required || false,
-            placeholder: field.placeholder || `请输入${field.label || field.name}`,
-            options: field.options || undefined,
-          });
-        });
-      }
-    }
-    
-    // 如果步骤的名称包含特定关键词，我们可以根据步骤类型生成默认表单字段
-    if (step.type === 'start' && formFields.length === 0) {
-      // 对于开始节点，如果没有找到表单字段，可以添加一些默认字段
-      formFields.push({
-        field: 'reason',
-        label: '申请原因',
-        type: 'textarea',
-        required: true,
-        placeholder: '请详细说明申请原因',
-      });
-    }
-  });
-  
-  return formFields;
-};
-
-// 获取默认表单字段
-const getDefaultFormFields = (): Field[] => {
-  return [
-    {
-      field: 'title',
-      label: '标题',
-      placeholder: '请输入工单标题',
-      required: true,
-      type: 'text',
-    },
-    {
-      field: 'description',
-      label: '描述',
-      placeholder: '请详细描述您的问题',
-      required: true,
-      type: 'textarea',
-    },
-  ];
-};
-
-const getFieldValue = (field: any) => {
-  if (displayFormData.value && displayFormData.value[field.name] !== undefined) {
-    return displayFormData.value[field.name];
-  }
-  return field.default_value || '';
-};
-
-const handleSelectProcess = async (processId: number) => {
   try {
-    // 设置选中的流程
-    selectedProcess.value = instanceDialogProcesses.value.find((p) => p.id === processId) || null;
-    
-    // 更新 newInstance 中的 process_id
-    newInstance.process_id = processId;
+    const params: GetUserListReq = {
+      page: reset ? 1 : userPagination.current,
+      size: userPagination.pageSize,
+      search: search || userSearchKeyword.value || ''
+    };
 
-    // 获取流程定义并生成表单字段
-    try {
-      const definition = await getProcessDefinition(processId);
-      console.log('Process definition loaded:', definition);
-      
-      // 根据流程定义生成表单字段
-      if (definition && definition.steps && Array.isArray(definition.steps)) {
-        const formFieldsFromSteps = extractFormFieldsFromSteps(definition.steps);
-        if (formFieldsFromSteps.length > 0) {
-          formFields.value = formFieldsFromSteps;
-        } else {
-          formFields.value = getDefaultFormFields();
-        }
+    const res = await getUserList(params);
+    
+    if (res && res.items) {
+      if (reset) {
+        dialogUsers.value = res.items;
+        userPagination.current = 1;
       } else {
-        formFields.value = getDefaultFormFields();
+        // 追加模式，用于加载更多
+        dialogUsers.value = [...dialogUsers.value, ...res.items];
+        userPagination.current += 1;
       }
-    } catch (error) {
-      console.error('Failed to fetch process definition:', error);
-      formFields.value = getDefaultFormFields();
+
+      userPagination.total = res.total || 0;
+      userPagination.hasMore = (userPagination.current * userPagination.pageSize) < userPagination.total;
+    } else {
+      if (reset) {
+        dialogUsers.value = [];
+        userPagination.current = 1;
+        userPagination.total = 0;
+        userPagination.hasMore = false;
+      }
+    }
+  } catch (error: any) {
+    console.error('加载用户列表失败:', error);
+    if (reset) {
+      message.error(error.message || '加载用户列表失败');
+      dialogUsers.value = [];
+      userPagination.current = 1;
+      userPagination.total = 0;
+      userPagination.hasMore = false;
+    }
+  } finally {
+    userSelectorLoading.value = false;
+  }
+};
+
+const handleUserSearch = (value: string): void => {
+  userSearchKeyword.value = value;
+
+  if (userSearchTimeout) {
+    clearTimeout(userSearchTimeout);
+  }
+
+  userSearchTimeout = setTimeout(() => {
+    userPagination.current = 1;
+    loadDialogUsers(true, value);
+  }, 300);
+};
+
+const handleUserDropdownChange = (open: boolean): void => {
+  if (open) {
+    if (dialogUsers.value.length === 0) {
+      loadDialogUsers(true);
+    }
+  }
+};
+
+const handleUserScroll = (e: Event): void => {
+  const { target } = e;
+  if (!target) return;
+
+  const element = target as HTMLElement;
+  const { scrollTop, scrollHeight, clientHeight } = element;
+
+  if (scrollTop + clientHeight >= scrollHeight - 10 &&
+    userPagination.hasMore &&
+    !userSelectorLoading.value) {
+    loadMoreUsers();
+  }
+};
+
+const loadMoreUsers = async (): Promise<void> => {
+  if (!userPagination.hasMore || userSelectorLoading.value) {
+    return;
+  }
+
+  await loadDialogUsers(false);
+};
+
+// 表格变化处理
+const handleTableChange = (pagination: any): void => {
+  if (pagination.current !== currentPage.value) {
+    currentPage.value = pagination.current;
+  }
+  if (pagination.pageSize !== pageSize.value) {
+    pageSize.value = pagination.pageSize;
+    currentPage.value = 1;
+  }
+  loadInstances();
+};
+
+// 数据加载
+const loadInstances = async () => {
+  loading.value = true;
+  try {
+    const params: ListWorkorderInstanceReq = {
+      page: currentPage.value,
+      size: pageSize.value,
+      search: searchQuery.value || undefined,
+      status: statusFilter.value || undefined,
+      priority: priorityFilter.value || undefined,
+      process_id: processFilter.value || undefined
+    };
+
+    const res = await listWorkorderInstance(params);
+    if (res && res.items) {
+      instanceList.value = res.items || [];
+      total.value = res.total || 0;
+      
+      // 更新统计数据
+      updateStats();
     }
   } catch (error) {
-    message.error('选择流程失败');
-    console.error('Failed to select process:', error);
+    message.error('加载工单数据失败');
+    console.error('Failed to load instances:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
-// 返回流程选择页面
-const backToProcessSelection = () => {
-  selectedProcess.value = null;
-  newInstance.process_id = undefined;
-  formFields.value = [];
-  // 清空表单数据
-  Object.keys(formDataValues).forEach((key) => delete formDataValues[key]);
+const updateStats = () => {
+  stats.total = instanceList.value.length;
+  stats.pending = instanceList.value.filter(item => item.status === InstanceStatus.Pending).length;
+  stats.processing = instanceList.value.filter(item => item.status === InstanceStatus.Processing).length;
+  stats.completed = instanceList.value.filter(item => item.status === InstanceStatus.Completed).length;
 };
 
-// 取消创建工单（第一层）
-const cancelCreateInstance = () => {
-  instanceDialog.visible = false;
-};
-
-// 确认流程表单（第二层确定按钮）
-const confirmProcessForm = () => {
-  // 验证流程相关的必填字段
-  const requiredFields = formFields.value.filter(field => field.required);
-  for (const field of requiredFields) {
-    const value = formDataValues[field.field];
-    if (!value || (typeof value === 'string' && !value.trim())) {
-      message.error(`请填写${field.label}`);
-      return;
-    }
-  }
-  
-  // 验证通过，返回第一层表单，携带已填写的数据
-  selectedProcess.value = null;
-  // 注意：这里不清空 formDataValues，保持用户填写的流程数据
-};
-
-// 取消流程表单（第二层取消按钮）
-const cancelProcessForm = () => {
-  // 清空流程相关数据，返回第一层
-  selectedProcess.value = null;
-  newInstance.process_id = undefined;
-  formFields.value = [];
-  // 清空表单数据
-  Object.keys(formDataValues).forEach((key) => delete formDataValues[key]);
-};
-
-// 计算属性：是否可以提交基础表单
-const canSubmitBasicForm = computed(() => {
-  return newInstance.title?.trim() && 
-         newInstance.process_id && 
-         (newInstance.priority !== undefined && newInstance.priority !== null);
-});
-
-const handleSizeChange = (_current: number, size: number) => {
-  pageSize.value = size;
-  currentPage.value = 1;
-};
-
-const handleCurrentChange = (page: number) => {
-  currentPage.value = page;
-};
-
+// 事件处理
 const handleSearch = () => {
   currentPage.value = 1;
+  loadInstances();
 };
 
 const handleStatusChange = () => {
   currentPage.value = 1;
+  loadInstances();
 };
 
-const handleDateRangeChange = () => {
+const handlePriorityChange = () => {
   currentPage.value = 1;
+  loadInstances();
+};
+
+const handleProcessChange = () => {
+  currentPage.value = 1;
+  loadInstances();
 };
 
 const handleCreateInstance = () => {
   instanceDialog.isEdit = false;
-  instanceDialog.instance = null;
-  selectedProcess.value = null;
-
-  Object.assign(newInstance, {
+  instanceDialog.form = {
+    title: '',
     description: '',
     priority: Priority.Normal,
-    process_id: undefined,
-    tags: [],
-    title: '',
-  });
-
-  Object.keys(formDataValues).forEach((key) => delete formDataValues[key]);
-
-  dueDate.value = null;
-  formFields.value = [];
+    process_id: 0,
+    assignee_id: undefined,
+    form_data_json: '',
+    form_data: {},
+    status: 1
+  };
+  formDataValidationError.value = '';
   instanceDialog.visible = true;
-  
-  // 重置选择器状态
-  resetDialogSelectors();
+  resetSelectors();
 };
 
-const handleEditInstance = (instance: Instance) => {
+const handleEditInstance = async (row: WorkorderInstanceItem) => {
   instanceDialog.isEdit = true;
-  instanceDialog.instance = JSON.parse(JSON.stringify(instance)) as Instance;
+  loading.value = true;
 
-  let instanceFormData: Record<string, any> = {};
-  let fieldDefinitions: any[] = [];
-
-  if (typeof instance.form_data === 'string') {
-    try {
-      const parsed = JSON.parse(instance.form_data);
-      if (parsed.fields && Array.isArray(parsed.fields)) {
-        fieldDefinitions = parsed.fields;
-        instanceFormData = parsed.data || {};
-      } else {
-        instanceFormData = parsed;
-      }
-    } catch (error) {
-      instanceFormData = {};
-      console.error('解析表单数据失败:', error);
-    }
-  } else if (instance.form_data && typeof instance.form_data === 'object') {
-    const formData = instance.form_data as any;
-    if (formData.fields && Array.isArray(formData.fields)) {
-      fieldDefinitions = formData.fields;
-      instanceFormData = formData.data || {};
-    } else {
-      instanceFormData = formData;
-    }
-  }
-
-  if (fieldDefinitions.length > 0) {
-    formFields.value = fieldDefinitions.map((field: any) => ({
-      field: field.name,
-      label: field.label,
-      options: field.options
-        ? field.options.map((opt: any) => (typeof opt === 'object' ? opt.label : opt))
-        : undefined,
-      placeholder: field.placeholder,
-      required: field.required,
-      type: field.type,
-    }));
-  } else {
-    fetchProcessFormFields(instance.process_id);
-  }
-
-  Object.keys(formDataValues).forEach((key) => delete formDataValues[key]);
-
-  Object.keys(instanceFormData).forEach((key) => {
-    formDataValues[key] = instanceFormData[key];
-  });
-
-  instanceDialog.visible = true;
-  detailDialog.visible = false;
-};
-
-const fetchProcessFormFields = async (processId: number) => {
   try {
-    const definition = await getProcessDefinition(processId);
-    
-    if (definition && definition.steps && Array.isArray(definition.steps)) {
-      // 从流程步骤中提取表单字段
-      const formFieldsFromSteps = extractFormFieldsFromSteps(definition.steps);
-      
-      if (formFieldsFromSteps.length > 0) {
-        formFields.value = formFieldsFromSteps;
-      } else {
-        // 如果没有找到表单字段，使用默认字段
-        formFields.value = getDefaultFormFields();
-      }
-    } else {
-      // 如果接口返回格式不符合预期，使用默认字段
-      formFields.value = getDefaultFormFields();
+    const res = await detailWorkorderInstance({ id: row.id } as DetailWorkorderInstanceReq);
+    if (res) {
+      instanceDialog.form = {
+        id: res.id,
+        title: res.title,
+        description: res.description,
+        priority: res.priority,
+        process_id: res.process_id,
+        assignee_id: res.assignee_id,
+        form_data_json: JSON.stringify(res.form_data || {}, null, 2),
+        form_data: res.form_data,
+        status: res.status
+      };
+
+      formDataValidationError.value = '';
+      instanceDialog.visible = true;
+      await loadSelectorsForEdit();
     }
   } catch (error) {
-    console.error('Failed to fetch process form fields:', error);
-    formFields.value = getDefaultFormFields();
+    message.error('获取工单详情失败');
+    console.error('Failed to get instance details:', error);
+  } finally {
+    loading.value = false;
   }
 };
 
-const handleViewInstance = async (instance: Instance) => {
-  await fetchInstanceDetail(instance.id);
-  detailDialog.visible = true;
+const handleViewInstance = async (row: WorkorderInstanceItem) => {
+  loading.value = true;
+
+  try {
+    const res = await detailWorkorderInstance({ id: row.id } as DetailWorkorderInstanceReq);
+    if (res) {
+      detailDialog.instance = res;
+      detailDialog.visible = true;
+    }
+  } catch (error) {
+    message.error('获取工单详情失败');
+    console.error('Failed to get instance details:', error);
+  } finally {
+    loading.value = false;
+  }
 };
 
-const handleCommand = async (command: string, instance: Instance) => {
+const handleCommand = async (command: string, row: WorkorderInstanceItem) => {
   switch (command) {
+    case 'comment':
+      showCommentDialog(row);
+      break;
+    case 'timeline':
+      await handleViewTimeline(row);
+      break;
+    case 'flow':
+      await handleViewFlow(row);
+      break;
+    case 'submit':
+      await handleSubmitInstance(row);
+      break;
+    case 'assign':
+      showAssignDialog(row);
+      break;
     case 'approve':
-      await processInstance(instance, 'approve');
-      break;
-    case 'cancel':
-      await processInstance(instance, 'cancel');
-      break;
-    case 'delete':
-      deleteDialog.instanceId = instance.id;
-      deleteDialog.visible = true;
+      showApprovalDialog(row, 'approve');
       break;
     case 'reject':
-      await processInstance(instance, 'reject');
+      showApprovalDialog(row, 'reject');
       break;
-    case 'transfer':
-      transferDialog.instanceId = instance.id;
-      transferDialog.visible = true;
+    case 'delete':
+      confirmDelete(row);
       break;
   }
+};
+
+const showCommentDialog = (instance: WorkorderInstanceItem) => {
+  commentDialog.form = {
+    instance_id: instance.id,
+    content: '',
+    is_system: 0
+  };
+  commentDialog.visible = true;
+};
+
+const saveComment = async () => {
+  try {
+    if (!commentDialog.form.content.trim()) {
+      message.error('请输入评论内容');
+      return;
+    }
+
+    loading.value = true;
+    await createWorkorderInstanceComment(commentDialog.form);
+    message.success('评论添加成功');
+    commentDialog.visible = false;
+  } catch (error: any) {
+    message.error(`添加评论失败: ${error.message || '未知错误'}`);
+    console.error('Failed to create comment:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleViewComments = async (instance: WorkorderInstanceItem) => {
+  commentsViewDialog.instanceId = instance.id;
+  commentsViewDialog.visible = true;
+
+  try {
+    const params: GetInstanceCommentsTreeReq = {
+      id: instance.id
+    };
+
+    const res = await getInstanceCommentsTree(params);
+    if (res && res.items) {
+      commentsList.value = res.items;
+    } else {
+      commentsList.value = [];
+    }
+  } catch (error: any) {
+    console.error('Failed to load comments:', error);
+    message.error(`加载评论失败: ${error.message || '未知错误'}`);
+    commentsList.value = [];
+  }
+};
+
+const handleViewTimeline = async (instance: WorkorderInstanceItem) => {
+  timelineDialog.instanceId = instance.id;
+  timelineDialog.visible = true;
+
+  try {
+    const params: ListWorkorderInstanceTimelineReq = {
+      page: 1,
+      size: 100,
+      instance_id: instance.id
+    };
+
+    const res = await listWorkorderInstanceTimeline(params);
+    if (res && res.items) {
+      timelineList.value = res.items;
+    } else {
+      timelineList.value = [];
+    }
+  } catch (error: any) {
+    console.error('Failed to load timeline:', error);
+    message.error(`加载时间线失败: ${error.message || '未知错误'}`);
+    timelineList.value = [];
+  }
+};
+
+const handleViewFlow = async (instance: WorkorderInstanceItem) => {
+  flowDialog.instanceId = instance.id;
+  flowDialog.visible = true;
+
+  try {
+    const params: ListWorkorderInstanceFlowReq = {
+      page: 1,
+      size: 100,
+      instance_id: instance.id
+    };
+
+    const res = await listWorkorderInstanceFlow(params);
+    if (res && res.items) {
+      flowList.value = res.items;
+    } else {
+      flowList.value = [];
+    }
+  } catch (error: any) {
+    console.error('Failed to load flow:', error);
+    message.error(`加载流转记录失败: ${error.message || '未知错误'}`);
+    flowList.value = [];
+  }
+};
+
+const handleSubmitInstance = async (instance: WorkorderInstanceItem) => {
+  Modal.confirm({
+    title: '提交确认',
+    content: `确定要提交工单 "${instance.title}" 吗？提交后将无法撤回。`,
+    okText: '提交',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        loading.value = true;
+        const params: SubmitWorkorderInstanceReq = {
+          id: instance.id
+        };
+
+        await submitWorkorderInstance(params);
+        message.success(`工单 "${instance.title}" 提交成功`);
+        loadInstances();
+      } catch (error: any) {
+        message.error(`提交工单失败: ${error.message || '未知错误'}`);
+        console.error('Failed to submit instance:', error);
+      } finally {
+        loading.value = false;
+      }
+    }
+  });
+};
+
+const showAssignDialog = (instance: WorkorderInstanceItem) => {
+  assignDialog.instanceId = instance.id;
+  assignDialog.form.assignee_id = 0;
+  assignDialog.visible = true;
+  loadDialogUsers(true);
+};
+
+const saveAssign = async () => {
+  try {
+    if (!assignDialog.form.assignee_id) {
+      message.error('请选择处理人');
+      return;
+    }
+
+    loading.value = true;
+    const params: AssignWorkorderInstanceReq = {
+      id: assignDialog.instanceId,
+      assignee_id: assignDialog.form.assignee_id
+    };
+
+    await assignWorkorderInstance(params);
+    message.success('分配处理人成功');
+    assignDialog.visible = false;
+    loadInstances();
+  } catch (error: any) {
+    message.error(`分配处理人失败: ${error.message || '未知错误'}`);
+    console.error('Failed to assign instance:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const showApprovalDialog = (instance: WorkorderInstanceItem, type: 'approve' | 'reject') => {
+  approvalDialog.instanceId = instance.id;
+  approvalDialog.type = type;
+  approvalDialog.form.comment = '';
+  approvalDialog.visible = true;
+};
+
+const saveApproval = async () => {
+  try {
+    if (approvalDialog.type === 'reject' && !approvalDialog.form.comment.trim()) {
+      message.error('请输入拒绝理由');
+      return;
+    }
+
+    loading.value = true;
+
+    if (approvalDialog.type === 'approve') {
+      const params: ApproveWorkorderInstanceReq = {
+        id: approvalDialog.instanceId,
+        comment: approvalDialog.form.comment
+      };
+      await approveWorkorderInstance(params);
+      message.success('审批通过成功');
+    } else {
+      const params: RejectWorkorderInstanceReq = {
+        id: approvalDialog.instanceId,
+        comment: approvalDialog.form.comment
+      };
+      await rejectWorkorderInstance(params);
+      message.success('拒绝工单成功');
+    }
+
+    approvalDialog.visible = false;
+    loadInstances();
+  } catch (error: any) {
+    message.error(`${approvalDialog.type === 'approve' ? '审批' : '拒绝'}失败: ${error.message || '未知错误'}`);
+    console.error('Failed to process approval:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const confirmDelete = (instance: WorkorderInstanceItem) => {
+  Modal.confirm({
+    title: '警告',
+    content: `确定要删除工单 "${instance.title}" 吗？这个操作不可恢复！`,
+    okText: '删除',
+    okType: 'danger',
+    cancelText: '取消',
+    async onOk() {
+      try {
+        loading.value = true;
+        const params: DeleteWorkorderInstanceReq = {
+          id: instance.id
+        };
+
+        await deleteWorkorderInstance(params);
+        message.success(`工单 "${instance.title}" 已删除`);
+
+        if (instanceList.value.length === 1 && currentPage.value > 1) {
+          currentPage.value = currentPage.value - 1;
+        }
+
+        loadInstances();
+      } catch (error: any) {
+        message.error(`删除工单失败: ${error.message || '未知错误'}`);
+        console.error('Failed to delete instance:', error);
+      } finally {
+        loading.value = false;
+      }
+    }
+  });
 };
 
 const saveInstance = async () => {
-  // 如果在编辑模式，直接保存
-  if (instanceDialog.isEdit && instanceDialog.instance) {
-    const updateData: UpdateInstanceReq = {
-      id: instanceDialog.instance.id,
-      priority: instanceDialog.instance.priority,
-      title: instanceDialog.instance.title,
-    };
+  try {
+    if (!instanceDialog.form.title.trim()) {
+      message.error('工单标题不能为空');
+      return;
+    }
 
-    // 如果有表单数据，添加到更新数据中
-    if (Object.keys(formDataValues).length > 0) {
-      updateData.form_data = {
-        fields: formFields.value,
-        data: formDataValues
+    if (!instanceDialog.form.process_id) {
+      message.error('请选择关联流程');
+      return;
+    }
+
+    // 解析表单数据JSON
+    let formData = {};
+    try {
+      if (instanceDialog.form.form_data_json?.trim()) {
+        formData = JSON.parse(instanceDialog.form.form_data_json);
+      }
+    } catch (error) {
+      message.error('表单数据JSON格式错误');
+      return;
+    }
+
+    loading.value = true;
+
+    if (instanceDialog.isEdit && instanceDialog.form.id) {
+      const updateData: UpdateWorkorderInstanceReq = {
+        id: instanceDialog.form.id,
+        title: instanceDialog.form.title,
+        description: instanceDialog.form.description || '',
+        priority: instanceDialog.form.priority,
+        assignee_id: instanceDialog.form.assignee_id,
+        form_data: formData
       };
+
+      await updateWorkorderInstance(updateData);
+      message.success(`工单 "${instanceDialog.form.title}" 已更新`);
+    } else {
+      const createData: CreateWorkorderInstanceReq = {
+        title: instanceDialog.form.title,
+        process_id: instanceDialog.form.process_id,
+        form_data: formData,
+        status: InstanceStatus.Draft,
+        priority: instanceDialog.form.priority,
+        assignee_id: instanceDialog.form.assignee_id,
+        description: instanceDialog.form.description
+      };
+
+      await createWorkorderInstance(createData);
+      message.success(`工单 "${instanceDialog.form.title}" 已创建`);
+
+      currentPage.value = 1;
     }
 
-    try {
-      await updateInstance(instanceDialog.instance.id, updateData);
-      message.success('工单更新成功');
-      instanceDialog.visible = false;
-      fetchInstances();
-    } catch (error) {
-      message.error('保存工单失败');
-      console.error('Failed to save instance:', error);
-    }
-    return;
-  }
-
-  // 创建模式的验证
-  if (!newInstance.title?.trim()) {
-    message.error('请输入工单标题');
-    return;
-  }
-
-  if (!newInstance.process_id) {
-    message.error('请选择流程');
-    return;
-  }
-
-  if (newInstance.priority === undefined || newInstance.priority === null) {
-    message.error('请选择优先级');
-    return;
-  }
-
-  try {
-    // 获取流程定义并生成表单字段
-    let formFieldsToUse: Field[] = [];
-    try {
-      const definition = await getProcessDefinition(newInstance.process_id);
-      if (definition && definition.steps && Array.isArray(definition.steps)) {
-        formFieldsToUse = extractFormFieldsFromSteps(definition.steps);
-      }
-    } catch (error) {
-      console.error('Failed to fetch process definition for form fields:', error);
-    }
-
-    // 如果没有找到表单字段，使用默认字段
-    if (formFieldsToUse.length === 0) {
-      formFieldsToUse = getDefaultFormFields();
-    }
-
-    // 检查是否有流程相关的必填字段需要填写
-    const requiredProcessFields = formFieldsToUse.filter(field => field.required);
-    
-    if (requiredProcessFields.length > 0) {
-      // 检查是否所有必填字段都已填写
-      let hasUnfilledRequiredFields = false;
-      for (const field of requiredProcessFields) {
-        const value = formDataValues[field.field];
-        if (!value || (typeof value === 'string' && !value.trim())) {
-          hasUnfilledRequiredFields = true;
-          break;
-        }
-      }
-      
-      if (hasUnfilledRequiredFields) {
-        message.warning('该流程有必填字段需要填写，请完成流程表单后再提交');
-        return;
-      }
-    }
-
-    const createData: CreateInstanceReq = {
-      ...newInstance,
-      process_id: newInstance.process_id,
-    };
-
-    if (dueDate.value) {
-      createData.due_date = dueDate.value.toISOString();
-    }
-
-    // 添加表单数据
-    createData.form_data = {
-      fields: formFieldsToUse,
-      data: formDataValues
-    };
-
-    await createInstance(createData);
-    message.success('工单创建成功');
     instanceDialog.visible = false;
-    fetchInstances();
-  } catch (error) {
-    message.error('保存工单失败');
+    loadInstances();
+  } catch (error: any) {
+    message.error(instanceDialog.isEdit
+      ? `更新工单失败: ${error.message || '未知错误'}`
+      : `创建工单失败: ${error.message || '未知错误'}`
+    );
     console.error('Failed to save instance:', error);
-  }
-};
-
-const processInstance = async (instance: Instance, action: string) => {
-  if (!processingComment.value && ['approve', 'reject'].includes(action)) {
-    message.warning('请输入处理意见');
-    return;
-  }
-
-  try {
-    const flowData: InstanceActionReq = {
-      action: action as any,
-      comment: processingComment.value,
-      instance_id: instance.id,
-      step_id: instance.current_step,
-    };
-
-    await processInstanceFlow(instance.id, flowData);
-
-    const actionText =
-      {
-        approve: '批准',
-        cancel: '取消',
-        reject: '拒绝',
-        revoke: '撤回',
-      }[action] || action;
-
-    message.success(`工单 #${instance.id} 已${actionText}`);
-    detailDialog.visible = false;
-    processingComment.value = '';
-    fetchInstances();
-  } catch (error) {
-    message.error('处理工单失败');
-    console.error('Failed to process instance:', error);
-  }
-};
-
-const showTransferDialog = () => {
-  if (detailDialog.instance) {
-    transferDialog.instanceId = detailDialog.instance.id;
-    transferDialog.visible = true;
-  }
-};
-
-const confirmTransfer = async () => {
-  if (!transferDialog.assigneeId) {
-    message.warning('请选择转交人');
-    return;
-  }
-
-  if (!detailDialog.instance) {
-    message.error('工单实例不存在');
-    return;
-  }
-
-  try {
-    const transferData: TransferInstanceReq = {
-      instance_id: detailDialog.instance.id,
-      assignee_id: transferDialog.assigneeId,
-      comment: transferDialog.comment,
-    };
-
-    await transferInstance(transferDialog.instanceId, transferData);
-    message.success('工单转交成功');
-    transferDialog.visible = false;
-    transferDialog.assigneeId = null;
-    transferDialog.comment = '';
-
-    if (detailDialog.visible && detailDialog.instance) {
-      fetchInstanceDetail(detailDialog.instance.id);
-    }
-    fetchInstances();
-  } catch (error) {
-    message.error('工单转交失败');
-    console.error('Failed to transfer instance:', error);
-  }
-};
-
-// 打开评论对话框
-const openCommentsDialog = () => {
-  commentsDialog.visible = true;
-};
-
-// 回复评论
-const replyToComment = (comment: InstanceComment) => {
-  replyingTo.value = comment;
-  newComment.value = '';
-};
-
-// 取消回复
-const cancelReply = () => {
-  replyingTo.value = null;
-  newComment.value = '';
-};
-
-// 提交评论
-const submitComment = async () => {
-  if (!newComment.value.trim() || !detailDialog.instance) {
-    message.warning('请输入评论内容');
-    return;
-  }
-
-  try {
-    submittingComment.value = true;
-    
-    const commentData: InstanceCommentReq = {
-      content: newComment.value.trim(),
-      instance_id: detailDialog.instance.id,
-      parent_id: replyingTo.value?.id,
-    };
-
-    await commentInstance(detailDialog.instance.id, commentData);
-    
-    message.success(replyingTo.value ? '回复成功' : '评论成功');
-    newComment.value = '';
-    replyingTo.value = null;
-
-    // 重新获取评论列表
-    await fetchInstanceComments(detailDialog.instance.id);
-  } catch (error) {
-    message.error('提交失败');
-    console.error('Failed to submit comment:', error);
   } finally {
-    submittingComment.value = false;
+    loading.value = false;
   }
 };
 
-const confirmDelete = async () => {
-  try {
-    await deleteInstance(deleteDialog.instanceId);
-    message.success(`工单 #${deleteDialog.instanceId} 已删除`);
-    deleteDialog.visible = false;
-    fetchInstances();
-  } catch (error) {
-    message.error('删除工单失败');
-    console.error('Failed to delete instance:', error);
-  }
-};
-
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  return dayjs(dateStr).format('YYYY-MM-DD');
-};
-
-const formatTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  return dayjs(dateStr).format('HH:mm');
-};
-
-const formatFullDateTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss');
-};
-
-const formatDuration = (minutes: number) => {
-  if (minutes < 60) {
-    return `${minutes}分钟`;
-  } else if (minutes < 1440) {
-    return `${Math.floor(minutes / 60)}小时${minutes % 60}分钟`;
-  } else {
-    const days = Math.floor(minutes / 1440);
-    const hours = Math.floor((minutes % 1440) / 60);
-    return `${days}天${hours}小时`;
-  }
-};
-
-const getInitials = (name: string) => {
-  if (!name) return '';
-  return name
-    .split('')
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-};
-
-const getStatusClass = (status: number) => {
-  switch (status) {
-    case InstanceStatus.Cancelled:
-      return 'status-cancelled';
-    case InstanceStatus.Completed:
-      return 'status-completed';
-    case InstanceStatus.Draft:
-      return 'status-draft';
-    case InstanceStatus.Overdue:
-      return 'status-overdue';
-    case InstanceStatus.Pending:
-      return 'status-pending';
-    case InstanceStatus.Processing:
-      return 'status-processing';
-    case InstanceStatus.Rejected:
-      return 'status-rejected';
-    default:
-      return '';
-  }
-};
-
-const getStatusColor = (status: number) => {
-  switch (status) {
-    case InstanceStatus.Cancelled:
-      return 'default';
-    case InstanceStatus.Completed:
-      return 'green';
-    case InstanceStatus.Draft:
-      return 'orange';
-    case InstanceStatus.Overdue:
-      return 'volcano';
-    case InstanceStatus.Pending:
-      return 'gold';
-    case InstanceStatus.Processing:
-      return 'blue';
-    case InstanceStatus.Rejected:
-      return 'red';
-    default:
-      return 'default';
-  }
-};
-
-const getStatusText = (status: number) => {
-  switch (status) {
-    case InstanceStatus.Cancelled:
-      return '已取消';
-    case InstanceStatus.Completed:
-      return '已完成';
-    case InstanceStatus.Draft:
-      return '草稿';
-    case InstanceStatus.Overdue:
-      return '已超时';
-    case InstanceStatus.Pending:
-      return '待处理';
-    case InstanceStatus.Processing:
-      return '处理中';
-    case InstanceStatus.Rejected:
-      return '已拒绝';
-    default:
-      return '未知';
-  }
-};
-
-const getPriorityColor = (priority: number) => {
-  switch (priority) {
-    case Priority.Critical:
-      return 'volcano';
-    case Priority.High:
-      return 'orange';
-    case Priority.Low:
-      return 'green';
-    case Priority.Normal:
-      return 'blue';
-    case Priority.Urgent:
-      return 'red';
-    default:
-      return 'default';
-  }
-};
-
-const getPriorityText = (priority: number) => {
-  switch (priority) {
-    case Priority.Critical:
-      return '严重';
-    case Priority.High:
-      return '高';
-    case Priority.Low:
-      return '低';
-    case Priority.Normal:
-      return '普通';
-    case Priority.Urgent:
-      return '紧急';
-    default:
-      return '未知';
-  }
-};
-
-const getFlowColor = (action: string) => {
-  switch (action) {
-    case 'approve':
-      return 'green';
-    case 'cancel':
-      return 'orange';
-    case 'reject':
-      return 'red';
-    case 'revoke':
-      return 'purple';
-    case 'transfer':
-      return 'blue';
-    default:
-      return 'gray';
-  }
-};
-
-const getFlowActionText = (action: string) => {
-  switch (action) {
-    case 'approve':
-      return '批准';
-    case 'cancel':
-      return '取消';
-    case 'reject':
-      return '拒绝';
-    case 'revoke':
-      return '撤回';
-    case 'transfer':
-      return '转交';
-    default:
-      return action;
-  }
-};
-
-const getAvatarColor = (name: string) => {
-  const colors = [
-    '#1890ff',
-    '#52c41a',
-    '#faad14',
-    '#f5222d',
-    '#722ed1',
-    '#13c2c2',
-    '#eb2f96',
-    '#fa8c16',
-  ];
-
-  let hash = 0;
-  if (!name) return colors[0];
-
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return colors[Math.abs(hash) % colors.length];
-};
-
-// 重置对话框选择器状态
-const resetDialogSelectors = (): void => {
+// 重置选择器状态
+const resetSelectors = (): void => {
   // 重置流程选择器
-  instanceDialogProcesses.value = [];
+  dialogProcesses.value = [];
   processPagination.current = 1;
   processPagination.total = 0;
   processPagination.hasMore = false;
   processSearchKeyword.value = '';
   processSelectorLoading.value = false;
 
-  // 重置分类选择器
-  instanceDialogCategories.value = [];
-  categoryPagination.current = 1;
-  categoryPagination.total = 0;
-  categoryPagination.hasMore = false;
-  categorySearchKeyword.value = '';
-  categorySelectorLoading.value = false;
-
-  // 清除搜索定时器
   if (processSearchTimeout) {
     clearTimeout(processSearchTimeout);
     processSearchTimeout = null;
   }
-  if (categorySearchTimeout) {
-    clearTimeout(categorySearchTimeout);
-    categorySearchTimeout = null;
+
+  // 重置用户选择器
+  dialogUsers.value = [];
+  userPagination.current = 1;
+  userPagination.total = 0;
+  userPagination.hasMore = false;
+  userSearchKeyword.value = '';
+  userSelectorLoading.value = false;
+
+  if (userSearchTimeout) {
+    clearTimeout(userSearchTimeout);
+    userSearchTimeout = null;
   }
 };
 
-const initData = async () => {
+// 为编辑模式加载选择器信息
+const loadSelectorsForEdit = async (): Promise<void> => {
+  resetSelectors();
+
   try {
-    // 只加载用户列表和模板数据，流程和分类改为按需加载
-    const usersResponse = await getUserList({
-      page: currentPage.value,
-      search: '',
-      size: pageSize.value,
-    });
-    users.value = usersResponse.items || [];
-
-    templates.value = [
-      { description: '通用工单模板', id: 1, name: '通用模板' },
-      { description: '紧急工单模板', id: 2, name: '紧急模板' },
-    ];
+    await Promise.all([
+      loadDialogProcesses(true),
+      loadDialogUsers(true)
+    ]);
   } catch (error) {
-    message.error('初始化数据失败');
-    console.error('数据初始化失败:', error);
+    console.error('加载编辑模式选择器信息失败:', error);
   }
 };
 
-// 键盘快捷键处理
-const handleKeyboardShortcuts = (e: KeyboardEvent) => {
-  if (commentsDialog.visible && e.ctrlKey && e.key === 'Enter') {
-    e.preventDefault();
-    submitComment();
+// 初始化加载
+onMounted(async () => {
+  loading.value = true;
+  try {
+    await Promise.all([
+      loadInstances(),
+      loadUsers(true) // 初始化加载用户数据（第一页）
+    ]);
+  } catch (error: any) {
+    console.error('初始化数据加载失败:', error);
+    message.error(`初始化数据加载失败: ${error.message || '未知错误'}, 请刷新页面重试`);
+  } finally {
+    loading.value = false;
   }
-};
-
-onMounted(() => {
-  initData();
-  fetchInstances();
-  document.addEventListener('keydown', handleKeyboardShortcuts);
-});
-
-// 组件卸载时清理事件监听器
-onMounted(() => {
-  return () => {
-    document.removeEventListener('keydown', handleKeyboardShortcuts);
-  };
 });
 </script>
 
 <style scoped>
-.form-instance-container {
-  padding: 24px;
+.instance-management-container {
+  padding: 12px;
   min-height: 100vh;
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .header-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+  align-items: center;
 }
 
 .btn-create {
-  background: #1890ff;
+  background: linear-gradient(135deg, #1890ff 0%);
   border: none;
+  flex-shrink: 0;
+}
+
+.search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-input {
+  width: 300px;
+  min-width: 200px;
+}
+
+.status-filter,
+.priority-filter,
+.process-filter {
+  width: 120px;
+  min-width: 100px;
 }
 
 .stats-row {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .stats-card {
@@ -2107,63 +2158,64 @@ onMounted(() => {
   margin-bottom: 24px;
 }
 
-.form-name-cell {
+.instance-title-cell {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.form-badge {
+.priority-badge {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.status-draft {
-  background-color: #faad14;
-}
-
-.status-processing {
-  background-color: #1890ff;
-}
-
-.status-completed {
+.priority-low {
   background-color: #52c41a;
 }
 
-.status-rejected {
-  background-color: #f5222d;
+.priority-normal {
+  background-color: #1890ff;
 }
 
-.status-cancelled {
-  background-color: #d9d9d9;
-}
-
-.status-pending {
-  background-color: #fadb14;
-}
-
-.status-overdue {
+.priority-high {
   background-color: #ff4d4f;
 }
 
-.form-name-text {
-  font-weight: 500;
+.title-content {
+  flex: 1;
+  min-width: 0;
 }
 
-.instance-id {
+.title-text {
+  font-weight: 500;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.serial-number {
   font-size: 12px;
   color: #8c8c8c;
+  margin-top: 2px;
 }
 
-.creator-info {
+.text-gray {
+  color: #999;
+  font-style: italic;
+}
+
+.operator-info,
+.assignee-info {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.creator-name {
+.operator-name,
+.assignee-name {
   font-size: 14px;
+  word-break: break-all;
 }
 
 .date-info {
@@ -2183,366 +2235,14 @@ onMounted(() => {
 
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   justify-content: center;
   flex-wrap: wrap;
-}
-
-.pagination-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.detail-dialog .instance-details {
-  margin-bottom: 20px;
-}
-
-.detail-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.detail-header h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #1f2937;
-}
-
-.comments-btn {
-  margin-left: auto;
-}
-
-.form-data-preview,
-.flow-records {
-  margin-top: 24px;
-}
-
-.form-data-preview h3,
-.flow-records h3 {
-  margin-bottom: 16px;
-  color: #1f2937;
-  font-size: 18px;
-}
-
-.flow-item {
-  padding: 8px 0;
-}
-
-.flow-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.flow-node {
-  font-weight: 500;
-}
-
-.flow-action {
-  background-color: #f0f0f0;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.flow-time {
-  color: #8c8c8c;
-  font-size: 12px;
-  margin-left: auto;
-}
-
-.flow-operator,
-.flow-comment,
-.flow-duration {
-  font-size: 14px;
-  margin-top: 4px;
-}
-
-.detail-footer {
-  margin-top: 24px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.process-selection {
-  margin-bottom: 24px;
-}
-
-.instance-form-header {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.back-button {
-  margin-right: 16px;
-}
-
-.instance-form-title {
-  flex: 1;
-}
-
-.instance-form h3 {
-  margin-bottom: 16px;
-  font-size: 18px;
-  color: #1f2937;
-}
-
-.instance-form p {
-  margin-bottom: 24px;
-  color: #6b7280;
-}
-
-.action-area {
-  margin-top: 24px;
-  padding: 16px;
-  border-radius: 4px;
-}
-
-.mt-16 {
-  margin-top: 16px;
-}
-
-.mt-8 {
-  margin-top: 8px;
-}
-
-/* 评论对话框样式 */
-.comments-dialog {
-  .ant-modal-body {
-    padding: 0;
-  }
-}
-
-.comments-container {
-  display: flex;
-  flex-direction: column;
-  height: 600px;
-}
-
-.comments-list-container {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  background-color: #fafafa;
-}
-
-.comments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.comment-item {
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
-}
-
-.comment-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.comment-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.comment-info {
-  flex: 1;
-}
-
-.comment-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.comment-author {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.comment-time {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.comment-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.comment-content {
-  padding-left: 44px;
-  line-height: 1.6;
-  color: #374151;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.replies-container {
-  margin-top: 16px;
-  padding-left: 44px;
-  border-left: 2px solid #e5e7eb;
-}
-
-.reply-item {
-  background-color: #f9fafb;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-
-.reply-item:last-child {
-  margin-bottom: 0;
-}
-
-.reply-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.reply-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.reply-author {
-  font-weight: 500;
-  color: #1f2937;
-  font-size: 14px;
-}
-
-.reply-time {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.reply-content {
-  padding-left: 32px;
-  line-height: 1.5;
-  color: #4b5563;
-  font-size: 14px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.empty-comments {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-}
-
-.add-comment-section {
-  background: white;
-  border-top: 1px solid #e5e7eb;
-}
-
-.comment-input-container {
-  padding: 20px;
-}
-
-.replying-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background-color: #f0f9ff;
-  border: 1px solid #0ea5e9;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  font-size: 14px;
-  color: #0369a1;
-}
-
-.comment-textarea {
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  transition: all 0.3s ease;
-}
-
-.comment-textarea:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.comment-actions-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 12px;
-}
-
-.comment-tips {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.comment-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-/* 自定义模态框底部样式 */
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 16px 0;
-  border-top: 1px solid #f0f0f0;
-  margin-top: 24px;
-}
-
-/* 流程信息相关样式 */
-.process-info-section {
-  margin-bottom: 20px;
-}
-
-.selected-process-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.selected-process-info span {
-  flex: 1;
-}
-
-.basic-info-summary {
-  background-color: #f8f9fa;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #e9ecef;
-}
-
-.basic-info-summary h4 {
-  margin: 0 0 12px 0;
-  color: #495057;
-  font-size: 14px;
-  font-weight: 600;
 }
 
 /* 选择器样式 */
-.category-loading,
-.category-empty,
-.process-loading,
-.process-empty {
+.selector-loading,
+.selector-empty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2551,20 +2251,19 @@ onMounted(() => {
   font-size: 14px;
 }
 
-.category-option,
-.process-option {
+.process-option,
+.user-option {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 8px;
 }
 
-.category-name,
-.process-name {
+.process-name,
+.user-name {
   font-weight: 500;
   color: #262626;
 }
 
-.category-desc,
 .process-desc {
   font-size: 12px;
   color: #8c8c8c;
@@ -2572,6 +2271,11 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
+}
+
+.user-real-name {
+  font-size: 12px;
+  color: #8c8c8c;
 }
 
 .load-more-option {
@@ -2599,62 +2303,561 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-/* 选择器下拉列表样式优化 */
-:deep(.ant-select-dropdown) {
-  .load-more-option.ant-select-item-option-disabled {
-    color: #1890ff !important;
-    cursor: pointer !important;
-    background-color: #fafafa !important;
-  }
-
-  .load-more-option.ant-select-item-option-disabled:hover {
-    background-color: #f0f0f0 !important;
-  }
+/* 表单数据编辑样式 */
+.form-data-section {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 16px;
+  background: #fafafa;
 }
 
-@media (max-width: 768px) {
-  .form-instance-container {
-    padding: 16px;
-  }
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
+.section-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.json-editor {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: white;
+  transition: all 0.3s;
+}
+
+.json-editor:hover {
+  border-color: #40a9ff;
+}
+
+.json-editor:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.json-error {
+  border-color: #ff4d4f !important;
+}
+
+.json-error:focus {
+  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2) !important;
+}
+
+.json-error-message {
+  margin-top: 8px;
+}
+
+.json-help {
+  margin-top: 12px;
+}
+
+/* 详情对话框样式 */
+.detail-dialog .instance-details {
+  margin-bottom: 20px;
+}
+
+.detail-header {
+  margin-bottom: 24px;
+}
+
+.title-section h2 {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+  color: #1f2937;
+  word-break: break-all;
+}
+
+.meta-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.serial-number {
+  font-size: 14px;
+  color: #666;
+  background: #f5f5f5;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.form-data-preview {
+  margin-top: 24px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.form-data-preview h3 {
+  margin: 0 0 16px 0;
+  color: #1f2937;
+  font-size: 18px;
+}
+
+.form-data-content {
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.json-content {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #495057;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.detail-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* 评论样式 */
+.comments-content {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.comments-list {
+  space-y: 16px;
+}
+
+.comment-item {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: white;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.commenter-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.commenter-name {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.comment-time {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.comment-content {
+  line-height: 1.6;
+  color: #495057;
+  margin-bottom: 12px;
+}
+
+.comment-replies {
+  margin-left: 32px;
+  border-left: 2px solid #e8e8e8;
+  padding-left: 16px;
+}
+
+.reply-item {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 6px;
+}
+
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.replier-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.replier-name {
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.reply-time {
+  font-size: 11px;
+  color: #8c8c8c;
+}
+
+.reply-content {
+  line-height: 1.5;
+  color: #495057;
+  font-size: 14px;
+}
+
+.empty-comments {
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* 时间线样式 */
+.timeline-content {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.timeline-item {
+  margin-bottom: 16px;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-type {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.action-time {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.action-content {
+  padding-left: 8px;
+}
+
+.action-comment {
+  margin: 8px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.action-data {
+  margin-top: 8px;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.empty-timeline {
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* 流转记录样式 */
+.flow-content {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.flow-item {
+  margin-bottom: 16px;
+}
+
+.flow-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.flow-action {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.flow-time {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.flow-content-detail {
+  padding-left: 8px;
+}
+
+.status-change {
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.from-status,
+.to-status {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.from-status {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.to-status {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.arrow {
+  color: #8c8c8c;
+  font-weight: bold;
+}
+
+.flow-comment {
+  margin-top: 8px;
+  padding: 8px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  line-height: 1.5;
+  color: #495057;
+}
+
+.empty-flow {
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* 响应式对话框 */
+.responsive-modal :deep(.ant-modal) {
+  max-width: calc(100vw - 16px);
+  margin: 8px;
+}
+
+.instance-form-modal :deep(.ant-modal-body) {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .instance-management-container {
+    padding: 8px;
   }
 
   .header-actions {
     flex-direction: column;
-    gap: 8px;
+    align-items: stretch;
+  }
+
+  .search-filters {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .status-filter,
+  .priority-filter,
+  .process-filter {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .btn-create {
+    padding: 4px 8px;
+    min-width: auto;
+  }
+
+  .stats-card :deep(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .stats-card :deep(.ant-statistic-content) {
+    font-size: 16px;
   }
 
   .action-buttons {
-    justify-content: flex-start;
+    gap: 2px;
   }
 
-  .detail-header {
+  .action-buttons .ant-btn {
+    padding: 0 4px;
+    font-size: 12px;
+  }
+
+  .section-header {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+    align-items: stretch;
   }
 
-  .comments-container {
-    height: 500px;
+  .header-actions {
+    justify-content: center;
   }
 
-  .comment-content,
-  .reply-content {
-    padding-left: 0;
+  .json-editor {
+    font-size: 12px;
   }
 
-  .replies-container {
-    padding-left: 20px;
-  }
-
-  .comment-meta {
+  .timeline-header,
+  .flow-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
+
+  .detail-footer {
+    justify-content: center;
+  }
+
+  .detail-footer .ant-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+
+  .meta-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .load-more-content {
+    padding: 6px 8px;
+  }
+
+  .comment-header,
+  .reply-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .status-change {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+/* 平板端适配 */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .instance-management-container {
+    padding: 16px;
+  }
+
+  .search-input {
+    width: 250px;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .stats-card {
+    text-align: center;
+  }
+
+  .operator-info,
+  .assignee-info {
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .operator-name,
+  .assignee-name {
+    font-size: 12px;
+  }
+
+  .date-info {
+    text-align: center;
+  }
+
+  .date {
+    font-size: 12px;
+  }
+
+  .time {
+    font-size: 10px;
+  }
+
+  .instance-title-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .priority-badge {
+    align-self: flex-start;
+  }
+
+  .process-desc,
+  .user-real-name {
+    max-width: 120px;
+  }
+
+  .load-more-content {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .action-data {
+    font-size: 10px;
+  }
+}
+
+/* 表格滚动优化 */
+.table-container :deep(.ant-table-wrapper) {
+  overflow: auto;
+}
+
+.table-container :deep(.ant-table-thead > tr > th) {
+  white-space: nowrap;
+}
+
+.table-container :deep(.ant-table-tbody > tr > td) {
+  word-break: break-word;
 }
 </style>

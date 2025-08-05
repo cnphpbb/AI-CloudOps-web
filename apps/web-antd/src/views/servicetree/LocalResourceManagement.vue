@@ -491,7 +491,7 @@ import {
   type Status,
   type AuthMode,
 } from '#/api/core/tree_local';
-import { getTreeList, type TreeNodeListItem } from '#/api/core/tree_node';
+import { getTreeList, type TreeNode } from '#/api/core/tree_node';
 
 interface LocalResourceView extends TreeLocalResource {
   tree_node_id?: number;
@@ -531,7 +531,7 @@ const selectedTreeNodeId = ref<number | undefined>(undefined);
 const currentResource = ref<LocalResourceView | null>(null);
 const localResources = ref<LocalResourceView[]>([]);
 const currentDetail = ref<LocalResourceView | null>(null);
-const treeData = ref<TreeNodeListItem[]>([]);
+const treeData = ref<TreeNode[]>([]);
 
 const pagination = reactive({
   current: 1,
@@ -685,7 +685,7 @@ const getAuthModeText = (authMode?: AuthMode): string => {
 const getTreeNodeName = (treeNodeId?: number): string => {
   if (!treeNodeId) return '-';
 
-  const findNode = (nodes: TreeNodeListItem[]): string => {
+  const findNode = (nodes: TreeNode[]): string => {
     for (const node of nodes) {
       if (node.id === treeNodeId) {
         return node.name;
