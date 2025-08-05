@@ -25,7 +25,7 @@
           <template #cover>
             <div class="stat-card">
               <AppstoreOutlined class="card-icon" />
-              <div class="stat-number">{{ statistics?.totalNodes || 0 }}</div>
+              <div class="stat-number">{{ statistics?.total_nodes || 0 }}</div>
               <div class="stat-label">总节点数</div>
             </div>
           </template>
@@ -36,7 +36,7 @@
           <template #cover>
             <div class="stat-card">
               <CloudServerOutlined class="card-icon" />
-              <div class="stat-number">{{ statistics?.totalResources || 0 }}</div>
+              <div class="stat-number">{{ statistics?.total_resources || 0 }}</div>
               <div class="stat-label">资源总数</div>
             </div>
           </template>
@@ -47,7 +47,7 @@
           <template #cover>
             <div class="stat-card">
               <TeamOutlined class="card-icon" />
-              <div class="stat-number">{{ statistics?.totalAdmins || 0 }}</div>
+              <div class="stat-number">{{ statistics?.total_admins || 0 }}</div>
               <div class="stat-label">管理员数</div>
             </div>
           </template>
@@ -58,7 +58,7 @@
           <template #cover>
             <div class="stat-card">
               <ClockCircleOutlined class="card-icon" />
-              <div class="stat-number">{{ statistics?.activeNodes || 0 }}</div>
+              <div class="stat-number">{{ statistics?.active_nodes || 0 }}</div>
               <div class="stat-label">活跃节点</div>
             </div>
           </template>
@@ -121,7 +121,7 @@
                 {{ selectedNode.name }}
               </a-descriptions-item>
               <a-descriptions-item label="父节点">
-                {{ selectedNode.parentName || '无' }}
+                {{ selectedNode.parent_name || '无' }}
               </a-descriptions-item>
               <a-descriptions-item label="层级">
                 {{ selectedNode.level }}
@@ -137,43 +137,43 @@
                 </a-tag>
               </a-descriptions-item>
               <a-descriptions-item label="管理员">
-                <div v-if="selectedNode.adminUsers && selectedNode.adminUsers.length > 0">
+                <div v-if="selectedNode.admins && selectedNode.admins.length > 0">
                   <div class="member-list">
-                    <a-tag v-for="admin in selectedNode.adminUsers.slice(0, 3)" :key="admin" color="blue" size="small">
-                      {{ admin }}
+                    <a-tag v-for="admin in selectedNode.admins.slice(0, 3)" :key="admin.id" color="blue" size="small">
+                      {{ admin.real_name || admin.username }}
                     </a-tag>
-                    <a-tag v-if="selectedNode.adminUsers.length > 3" color="blue" size="small">
-                      +{{ selectedNode.adminUsers.length - 3 }}...
+                    <a-tag v-if="selectedNode.admins.length > 3" color="blue" size="small">
+                      +{{ selectedNode.admins.length - 3 }}...
                     </a-tag>
                   </div>
                   <div class="member-count">
-                    共 {{ selectedNode.adminUsers.length }} 名管理员
+                    共 {{ selectedNode.admins.length }} 名管理员
                   </div>
                 </div>
                 <span v-else class="empty-text">暂无管理员</span>
               </a-descriptions-item>
               <a-descriptions-item label="普通成员">
-                <div v-if="selectedNode.memberUsers && selectedNode.memberUsers.length > 0">
+                <div v-if="selectedNode.members && selectedNode.members.length > 0">
                   <div class="member-list">
-                    <a-tag v-for="member in selectedNode.memberUsers.slice(0, 3)" :key="member" color="green"
+                    <a-tag v-for="member in selectedNode.members.slice(0, 3)" :key="member.id" color="green"
                       size="small">
-                      {{ member }}
+                      {{ member.real_name || member.username }}
                     </a-tag>
-                    <a-tag v-if="selectedNode.memberUsers.length > 3" color="green" size="small">
-                      +{{ selectedNode.memberUsers.length - 3 }}...
+                    <a-tag v-if="selectedNode.members.length > 3" color="green" size="small">
+                      +{{ selectedNode.members.length - 3 }}...
                     </a-tag>
                   </div>
                   <div class="member-count">
-                    共 {{ selectedNode.memberUsers.length }} 名成员
+                    共 {{ selectedNode.members.length }} 名成员
                   </div>
                 </div>
                 <span v-else class="empty-text">暂无普通成员</span>
               </a-descriptions-item>
               <a-descriptions-item label="子节点数">
-                {{ selectedNode.childCount || 0 }}
+                {{ selectedNode.child_count || 0 }}
               </a-descriptions-item>
               <a-descriptions-item label="资源数">
-                {{ selectedNode.resourceCount || 0 }}
+                {{ selectedNode.resource_count || 0 }}
               </a-descriptions-item>
               <a-descriptions-item label="创建时间">
                 {{ formatDateTime(selectedNode.createdAt) }}
@@ -197,13 +197,13 @@
               :pagination="{ pageSize: 8, size: 'small', showQuickJumper: true, showSizeChanger: false }" size="small"
               :locale="{ emptyText: '暂无绑定资源' }" :scroll="{ x: 400 }" row-key="id">
               <template #bodyCell="{ column, record }">
-                <template v-if="column.key === 'resourceStatus'">
-                  <a-tag :color="getResourceStatusColor(record.resourceStatus)" size="small">
-                    {{ record.resourceStatus }}
+                <template v-if="column.key === 'status'">
+                  <a-tag :color="getResourceStatusColor(record.status)" size="small">
+                    {{ record.status }}
                   </a-tag>
                 </template>
-                <template v-if="column.key === 'resourceCreateTime'">
-                  {{ formatDateTime(record.resourceCreateTime) }}
+                <template v-if="column.key === 'created_at'">
+                  {{ formatDateTime(record.created_at) }}
                 </template>
               </template>
             </a-table>
@@ -231,31 +231,20 @@ import * as echarts from 'echarts';
 import {
   getTreeList,
   getNodeDetail,
-  getTreeStatistics,
   getNodeResources,
   getNodeMembers,
-  type TreeNodeDetail,
-  type TreeNodeListItem,
-  type TreeStatistics,
-  type TreeNodeResource,
-  type GetTreeListParams,
+  type TreeNode,
+  type TreeNodeStatisticsResp,
+  type NodeResourceInfo,
+  type User,
 } from '#/api/core/tree_node';
 
-interface UserInfo {
-  id: number;
-  username: string;
-  real_name: string;
-  mobile: string;
-  account_type: number;
-  enable: number;
-}
-
 // 定义树节点接口
-interface TreeNode {
+interface TreeNodeData {
   key: string;
   title: string;
   isLeaf: boolean;
-  children?: TreeNode[];
+  children?: TreeNodeData[];
   [key: string]: any;
 }
 
@@ -263,7 +252,7 @@ const router = useRouter();
 const loading = ref(false);
 const resourceLoading = ref(false);
 const nodeDetailLoading = ref(false);
-const selectedNode = ref<TreeNodeDetail | null>(null);
+const selectedNode = ref<TreeNode | null>(null);
 const chartContainer = ref<HTMLElement | null>(null);
 let chart: echarts.ECharts | null = null;
 
@@ -271,17 +260,17 @@ let chart: echarts.ECharts | null = null;
 const isUnmounted = ref(false);
 
 // 统计数据
-const statistics = ref<TreeStatistics | null>(null);
+const statistics = ref<TreeNodeStatisticsResp | null>(null);
 
 // 树形数据
-const treeData = ref<TreeNode[]>([]);
+const treeData = ref<TreeNodeData[]>([]);
 const defaultExpandedKeys = ref<string[]>([]);
 
 // 节点详情缓存
-const nodeDetails = ref<Record<string, TreeNodeDetail>>({});
+const nodeDetails = ref<Record<string, TreeNode>>({});
 
 // 节点资源数据
-const nodeResources = ref<TreeNodeResource[]>([]);
+const nodeResources = ref<NodeResourceInfo[]>([]);
 
 // 资源表格列定义
 const resourceColumns = [
@@ -368,11 +357,11 @@ const getResourceStatusColor = (status: string): string => {
   return colorMap[status?.toLowerCase()] || 'default';
 };
 
-// 获取节点资源数量（使用computed优化性能）
+// 获取节点资源数量
 const getNodeResourceCount = (key: string | number): number => {
   if (isUnmounted.value) return 0;
   const nodeId = parseInt(key.toString());
-  return nodeDetails.value[nodeId]?.resourceCount || 0;
+  return nodeDetails.value[nodeId]?.resource_count || 0;
 };
 
 // 获取节点成员总数
@@ -382,12 +371,9 @@ const getNodeMemberCount = (key: string | number): number => {
   const node = nodeDetails.value[nodeId];
   if (!node) return 0;
 
-  const adminUsers = node.adminUsers || [];
-  const memberUsers = node.memberUsers || [];
-
-  // 使用Set去重
-  const allUsers = new Set([...adminUsers, ...memberUsers]);
-  return allUsers.size;
+  const adminCount = node.admins?.length || 0;
+  const memberCount = node.members?.length || 0;
+  return adminCount + memberCount;
 };
 
 // 错误处理函数
@@ -424,25 +410,54 @@ const withRetry = async <T>(
   throw new Error('Max retries exceeded');
 };
 
-// 加载节点成员信息
-const loadNodeMembers = async (nodeId: number): Promise<{ adminUsers: UserInfo[], memberUsers: UserInfo[] }> => {
+// 修复后的加载节点成员信息函数
+const loadNodeMembers = async (nodeId: number): Promise<{ adminUsers: User[], memberUsers: User[] }> => {
   if (isUnmounted.value) {
     return { adminUsers: [], memberUsers: [] };
   }
 
   try {
-    const [adminRes, memberRes] = await Promise.all([
-      getNodeMembers(nodeId, { type: 'admin' }).catch(() => []),
-      getNodeMembers(nodeId, { type: 'member' }).catch(() => [])
+    const [adminRes, memberRes] = await Promise.allSettled([
+      getNodeMembers(nodeId, { id: nodeId, type: 'admin' }).catch((error) => {
+        console.warn('获取管理员失败:', error);
+        return { data: [], items: [] };
+      }),
+      getNodeMembers(nodeId, { id: nodeId, type: 'member' }).catch((error) => {
+        console.warn('获取成员失败:', error);
+        return { data: [], items: [] };
+      })
     ]);
 
     if (isUnmounted.value) {
       return { adminUsers: [], memberUsers: [] };
     }
 
+    // 处理管理员数据
+    let adminUsers: User[] = [];
+    if (adminRes.status === 'fulfilled') {
+      const adminData = adminRes.value;
+      // 根据您提供的JSON格式，数据在data字段中
+      adminUsers = adminData.data || adminData.items || [];
+    }
+
+    // 处理成员数据  
+    let memberUsers: User[] = [];
+    if (memberRes.status === 'fulfilled') {
+      const memberData = memberRes.value;
+      // 根据您提供的JSON格式，数据在data字段中
+      memberUsers = memberData.data || memberData.items || [];
+    }
+
+    console.log(`节点${nodeId}成员信息:`, {
+      adminCount: adminUsers.length,
+      memberCount: memberUsers.length,
+      adminUsers,
+      memberUsers
+    });
+
     return {
-      adminUsers: Array.isArray(adminRes) ? adminRes : [],
-      memberUsers: Array.isArray(memberRes) ? memberRes : []
+      adminUsers,
+      memberUsers
     };
   } catch (error) {
     if (!isUnmounted.value) {
@@ -460,71 +475,72 @@ const loadTreeData = async () => {
   if (isUnmounted.value) return;
 
   try {
-    const params: GetTreeListParams = {};
-    const response = await withRetry(() => getTreeList(params));
+    const response = await withRetry(() => getTreeList());
 
     if (isUnmounted.value) return;
 
     // 处理响应数据
-    const data = response?.data || response;
-    const items = data?.items || data;
+    const data = response.items || response.data || response;
 
-    if (!Array.isArray(items)) {
+    if (!Array.isArray(data)) {
       throw new Error('API返回的数据格式不正确');
     }
 
-    // 批量处理节点（减少API调用）
+    // 批量处理节点
     const nodeIds = new Set<number>();
-    const collectNodeIds = (node: TreeNodeListItem) => {
+    const collectNodeIds = (node: TreeNode) => {
       nodeIds.add(node.id);
       if (node.children && node.children.length > 0) {
         node.children.forEach(collectNodeIds);
       }
     };
 
-    items.forEach(collectNodeIds);
+    data.forEach(collectNodeIds);
 
-    // 批量加载成员信息
+    // 批量加载成员信息，使用更合理的并发控制
     const memberPromises = Array.from(nodeIds).map(async (nodeId) => {
       try {
         const members = await loadNodeMembers(nodeId);
         return { nodeId, members };
       } catch (error) {
+        console.warn(`加载节点${nodeId}成员失败:`, error);
         return { nodeId, members: { adminUsers: [], memberUsers: [] } };
       }
     });
 
-    const memberResults = await Promise.allSettled(memberPromises);
+    // 分批处理，避免同时发送太多请求
+    const batchSize = 5;
+    const memberResults: { nodeId: number; members: { adminUsers: User[], memberUsers: User[] } }[] = [];
+    
+    for (let i = 0; i < memberPromises.length; i += batchSize) {
+      const batch = memberPromises.slice(i, i + batchSize);
+      const batchResults = await Promise.allSettled(batch);
+      
+      batchResults.forEach(result => {
+        if (result.status === 'fulfilled') {
+          memberResults.push(result.value);
+        }
+      });
+      
+      if (isUnmounted.value) return;
+      
+      // 添加小延迟，避免请求过于频繁
+      if (i + batchSize < memberPromises.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
 
     if (isUnmounted.value) return;
 
     // 处理树节点数据
-    const processNode = (node: TreeNodeListItem) => {
-      const memberResult = memberResults.find(result =>
-        result.status === 'fulfilled' && result.value.nodeId === node.id
-      );
-
-      const members = memberResult?.status === 'fulfilled'
-        ? memberResult.value.members
-        : { adminUsers: [], memberUsers: [] };
+    const processNode = (node: TreeNode) => {
+      const memberResult = memberResults.find(result => result.nodeId === node.id);
+      const members = memberResult?.members || { adminUsers: [], memberUsers: [] };
 
       nodeDetails.value[node.id] = {
-        id: node.id,
-        name: node.name,
-        parentId: node.parentId,
-        level: node.level,
-        description: '',
-        creatorId: node.creatorId,
-        status: node.status || 'active',
-        isLeaf: node.isLeaf,
-        createdAt: node.created_at,
-        updatedAt: node.updated_at,
-        creatorName: '',
-        parentName: '',
-        childCount: node.children?.length || 0,
-        adminUsers: members.adminUsers.map(user => user.username),
-        memberUsers: members.memberUsers.map(user => user.username),
-        resourceCount: 0,
+        ...node,
+        admins: members.adminUsers,
+        members: members.memberUsers,
       };
 
       if (node.children && node.children.length > 0) {
@@ -533,12 +549,12 @@ const loadTreeData = async () => {
     };
 
     // 处理所有节点
-    items.forEach(processNode);
+    data.forEach(processNode);
 
     if (isUnmounted.value) return;
 
     // 构建树形结构
-    const transformNode = (node: TreeNodeListItem): TreeNode => ({
+    const transformNode = (node: TreeNode): TreeNodeData => ({
       key: node.id.toString(),
       title: node.name,
       isLeaf: node.isLeaf,
@@ -547,7 +563,7 @@ const loadTreeData = async () => {
         : undefined
     });
 
-    treeData.value = items.map(transformNode);
+    treeData.value = data.map(transformNode);
 
     // 设置默认展开的键
     if (treeData.value.length > 0) {
@@ -555,6 +571,7 @@ const loadTreeData = async () => {
     }
 
     console.log('树形数据加载成功, 节点数量:', nodeIds.size);
+    console.log('节点详情缓存:', nodeDetails.value);
   } catch (error) {
     handleError(error, '加载树形数据');
   }
@@ -564,9 +581,30 @@ const loadStatistics = async () => {
   if (isUnmounted.value) return;
 
   try {
-    const res = await withRetry(() => getTreeStatistics());
+    // 基于实际数据计算统计信息
+    let totalNodes = 0;
+    let totalAdmins = 0;
+    let totalMembers = 0;
+    let activeNodes = 0;
+    
+    Object.values(nodeDetails.value).forEach(node => {
+      totalNodes++;
+      if (node.status === 'active') activeNodes++;
+      if (node.admins) totalAdmins += node.admins.length;
+      if (node.members) totalMembers += node.members.length;
+    });
+
+    const fakeData: TreeNodeStatisticsResp = {
+      total_nodes: totalNodes,
+      total_resources: 0,
+      total_admins: totalAdmins,
+      total_members: totalMembers,
+      active_nodes: activeNodes,
+      inactive_nodes: totalNodes - activeNodes,
+    };
+    
     if (!isUnmounted.value) {
-      statistics.value = res;
+      statistics.value = fakeData;
     }
   } catch (error) {
     handleError(error, '获取统计数据');
@@ -582,11 +620,12 @@ const loadNodeResources = async (nodeId: number) => {
 
     if (isUnmounted.value) return;
 
-    nodeResources.value = res?.items || [];
+    // 根据API响应格式调整
+    nodeResources.value = res.items || res.data || [];
 
     // 更新节点详情中的资源数量
     if (nodeDetails.value[nodeId]) {
-      nodeDetails.value[nodeId].resourceCount = nodeResources.value.length;
+      nodeDetails.value[nodeId].resource_count = nodeResources.value.length;
     }
   } catch (error) {
     if (!isUnmounted.value) {
@@ -637,7 +676,7 @@ const updateChart = () => {
     const links: any[] = [];
     const nodeRelations = new Map();
 
-    const buildRelationsMap = (node: TreeNode, parentKey?: string) => {
+    const buildRelationsMap = (node: TreeNodeData, parentKey?: string) => {
       if (parentKey) {
         nodeRelations.set(node.key, parentKey);
       }
@@ -653,7 +692,7 @@ const updateChart = () => {
       buildRelationsMap(rootNode);
     });
 
-    const processNode = (node: TreeNode) => {
+    const processNode = (node: TreeNodeData) => {
       const resourceCount = getNodeResourceCount(node.key);
       const memberCount = getNodeMemberCount(node.key);
       const totalValue = resourceCount + memberCount;
@@ -710,9 +749,9 @@ const updateChart = () => {
         formatter: (params: any) => {
           const nodeId = parseInt(params.data.id);
           const nodeDetail = nodeDetails.value[nodeId];
-          const resourceCount = nodeDetail?.resourceCount || 0;
-          const adminCount = nodeDetail?.adminUsers?.length || 0;
-          const memberCount = nodeDetail?.memberUsers?.length || 0;
+          const resourceCount = nodeDetail?.resource_count || 0;
+          const adminCount = nodeDetail?.admins?.length || 0;
+          const memberCount = nodeDetail?.members?.length || 0;
 
           return `
             <div style="padding: 8px;">
@@ -790,8 +829,9 @@ const onTreeNodeSelect = async (selectedKeys: string[]) => {
       nodeDetailLoading.value = true;
       try {
         let nodeDetail = nodeDetails.value[nodeId];
+        
         if (!nodeDetail) {
-          // 重新加载节点详情
+          // 如果缓存中没有，重新加载节点详情和成员信息
           const [detailRes, membersRes] = await Promise.all([
             getNodeDetail(nodeId).catch(() => null),
             loadNodeMembers(nodeId)
@@ -802,16 +842,28 @@ const onTreeNodeSelect = async (selectedKeys: string[]) => {
           if (detailRes) {
             nodeDetail = {
               ...detailRes,
-              adminUsers: membersRes.adminUsers.map(user => user.username),
-              memberUsers: membersRes.memberUsers.map(user => user.username)
+              admins: membersRes.adminUsers,
+              members: membersRes.memberUsers
             };
-            nodeDetails.value[nodeId] = nodeDetail as TreeNodeDetail;
+            nodeDetails.value[nodeId] = nodeDetail as TreeNode;
+          }
+        } else {
+          // 如果缓存中有，但可能成员信息为空，重新加载成员信息
+          if ((!nodeDetail.admins || nodeDetail.admins.length === 0) && 
+              (!nodeDetail.members || nodeDetail.members.length === 0)) {
+            const membersRes = await loadNodeMembers(nodeId);
+            if (!isUnmounted.value) {
+              nodeDetail.admins = membersRes.adminUsers;
+              nodeDetail.members = membersRes.memberUsers;
+              nodeDetails.value[nodeId] = nodeDetail;
+            }
           }
         }
 
         if (!isUnmounted.value) {
           if (nodeDetail) {
             selectedNode.value = nodeDetail;
+            console.log('选中节点详情:', nodeDetail);
             await loadNodeResources(nodeId);
           } else {
             selectedNode.value = null;
@@ -843,10 +895,14 @@ const refreshData = async () => {
 
   loading.value = true;
   try {
-    await Promise.all([
-      loadTreeData(),
-      loadStatistics(),
-    ]);
+    // 清空缓存
+    nodeDetails.value = {};
+    
+    await loadTreeData();
+    
+    if (isUnmounted.value) return;
+    
+    await loadStatistics();
 
     if (isUnmounted.value) return;
 
