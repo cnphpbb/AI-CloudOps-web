@@ -1,247 +1,114 @@
 import { requestClient } from '#/api/request';
+import type { WorkorderInstanceCommentItem } from './workorder_instance_comment';
+import type { WorkorderInstanceFlowItem } from './workorder_instance_flow';
+import type { WorkorderInstanceTimelineItem } from './workorder_instance_time_line';
 
-// 工单状态常量
+// 工单状态
 export const InstanceStatus = {
-  Draft: 0, // 草稿
-  Processing: 1, // 处理中
-  Completed: 2, // 已完成
-  Cancelled: 3, // 已取消
-  Rejected: 4, // 已拒绝
-  Pending: 5, // 待处理
-  Overdue: 6, // 已超时
-};
+  Draft: 1, // 草稿
+  Pending: 2, // 待处理
+  Processing: 3, // 处理中
+  Completed: 4, // 已完成
+  Rejected: 5, // 已拒绝
+  Cancelled: 6, // 已取消
+} as const;
 
-// 优先级常量
+// 工单优先级
 export const Priority = {
-  Low: 0, // 低
-  Normal: 1, // 普通
-  High: 2, // 高
-  Urgent: 3, // 紧急
-  Critical: 4, // 严重
-};
+  Low: 1, // 低
+  Normal: 2, // 普通
+  High: 3, // 高
+} as const;
 
-// 工单实例请求结构
-export interface CreateInstanceReq {
+// WorkorderInstance 工单实例
+export interface WorkorderInstanceItem {
+  id: number; // 工单ID
+  created_at: string; // 创建时间
+  updated_at: string; // 更新时间
   title: string; // 工单标题
-  template_id?: number; // 模板ID
-  process_id?: number; // 流程ID
-  description?: string; // 描述
-  priority?: number; // 优先级
-  category_id?: number; // 分类ID
-  due_date?: string; // 截止时间
+  serial_number: string; // 工单编号
+  process_id: number; // 流程ID
+  form_data: any; // 表单数据
+  status: number; // 状态
+  priority: number; // 优先级
+  operator_id: number; // 操作人ID
+  operator_name: string; // 操作人名称
+  assignee_id?: number; // 当前处理人ID
+  description?: string; // 详细描述
   tags?: string[]; // 标签
-  assignee_id?: number; // 处理人ID
-  form_data?: Record<string, any>; // 表单数据
+  due_date?: string; // 截止时间
+  completed_at?: string; // 完成时间
+  comments?: WorkorderInstanceCommentItem[]; // 评论
+  flows?: WorkorderInstanceFlowItem[]; // 流转记录
+  timelines?: WorkorderInstanceTimelineItem[]; // 时间线
 }
 
-export interface UpdateInstanceReq {
-  id: number;
-  title: string;
-  description?: string;
-  priority?: number;
-  category_id?: number;
-  due_date?: string;
-  tags?: string[];
-  form_data?: Record<string, any>; // 表单数据
+// 创建工单实例请求
+export interface CreateWorkorderInstanceReq {
+  title: string; // 工单标题
+  process_id: number; // 流程ID
+  form_data: any; // 表单数据
+  status: number; // 状态
+  priority: number; // 优先级
+  assignee_id?: number; // 当前处理人ID
+  description?: string; // 详细描述
+  tags?: string[]; // 标签
+  due_date?: string; // 截止时间
 }
 
-export interface ListInstanceReq {
-  page?: number;
-  size?: number;
-  status?: number;
-  search?: string;
-  priority?: number;
-  category_id?: number;
-  creator_id?: number;
-  assignee_id?: number;
-  process_id?: number;
-  template_id?: number;
-  start_date?: string;
-  end_date?: string;
-  tags?: string[];
-  overdue?: boolean;
-}
-
-export interface MyInstanceReq {
-  page?: number;
-  size?: number;
-  search?: string;  
-  type?: 'created' | 'assigned' | 'all';
-  status?: number;
-  priority?: number;
-  category_id?: number;
-  process_id?: number;
-  start_date?: string;
-  end_date?: string;
-}
-
-export interface TransferInstanceReq {
-  instance_id: number;
-  assignee_id: number;
-  comment?: string;
-}
-
-// 工单实例基础接口
-export interface Instance {
-  id: number;
-  title: string;
-  template_id?: number;
-  process_id: number;
-  form_data?: Record<string, any>;
-  current_step: string;
-  status: number;
-  priority: number;
-  category_id?: number;
-  creator_id: number;
-  description?: string;
-  creator_name?: string;
-  assignee_id?: number;
-  assignee_name?: string;
-  completed_at?: string;
-  due_date?: string;
-  tags?: string[];
-  process_data?: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-  template?: any;
-  process?: any;
-  category?: any;
-}
-
-// 工单评论接口
-export interface InstanceComment {
-  id: number;
-  instance_id: number;
-  user_id: number;
-  content: string;
-  creator_id: number;
-  creator_name?: string;
-  parent_id?: number;
-  is_system: boolean;
-  created_at: string;
-  updated_at: string;
-  children?: InstanceComment[];
-}
-
-// 工单流转记录接口
-export interface InstanceFlow {
-  id: number;
-  instance_id: number;
-  step_id: string;
-  step_name: string;
-  action: string;
-  operator_id: number;
-  operator_name?: string;
-  comment?: string;
-  form_data?: Record<string, any>;
-  duration?: number;
-  from_step_id?: string;
-  to_step_id?: string;
-  from_user_id?: number;
-  to_user_id?: number;
-  to_user_name?: string;
-  created_at: string;
-  updated_at: string;
+// 更新工单实例请求
+export interface UpdateWorkorderInstanceReq {
+  id: number; // 工单ID
+  title?: string; // 工单标题
+  description?: string; // 详细描述
+  priority?: number; // 优先级
+  tags?: string[]; // 标签
+  due_date?: string; // 截止时间
+  status?: number; // 状态
+  assignee_id?: number; // 当前处理人ID
+  form_data?: any; // 表单数据
+  completed_at?: string; // 完成时间
 }
 
 // 删除工单实例请求
-export interface DeleteInstanceReq {
-  id: number;
+export interface DeleteWorkorderInstanceReq {
+  id: number; // 工单ID
 }
 
-// 获取工单详情请求
-export interface DetailInstanceReq {
-  id: number;
+// 工单实例详情请求
+export interface DetailWorkorderInstanceReq {
+  id: number; // 工单ID
 }
 
-// 工单评论请求
-export interface InstanceCommentReq {
-  instance_id: number;
-  content: string;
-  parent_id?: number;
+// 工单实例列表请求
+export interface ListWorkorderInstanceReq {
+  page: number; // 页码
+  size: number; // 每页大小
+  search?: string; // 搜索关键词
+  status?: number; // 状态
+  priority?: number; // 优先级
+  process_id?: number; // 流程ID
 }
 
-// 获取工单评论请求
-export interface GetInstanceCommentsReq {
-  id: number;
+// 提交工单请求
+export interface SubmitWorkorderInstanceReq {
+  id: number; // 工单ID
 }
 
-// 获取工单流转记录请求
-export interface GetInstanceFlowsReq {
-  id: number;
+// 指派工单请求
+export interface AssignWorkorderInstanceReq {
+  id: number; // 工单ID
+  assignee_id: number; // 指派的处理人ID
 }
 
-// 获取流程定义请求
-export interface GetProcessDefinitionReq {
-  id: number;
+// 审批通过工单请求
+export interface ApproveWorkorderInstanceReq {
+  id: number; // 工单ID
+  comment?: string; // 审批意见
 }
 
-// 工单操作请求
-export interface InstanceActionReq {
-  instance_id: number;
-  action: 'approve' | 'reject' | 'transfer' | 'revoke' | 'cancel';
-  comment?: string;
-  form_data?: Record<string, any>;
-  assignee_id?: number;
-  step_id: string;
+// 拒绝工单请求
+export interface RejectWorkorderInstanceReq {
+  id: number; // 工单ID
+  comment: string; // 拒绝理由
 }
-
-// 创建工单实例
-export const createInstance = (data: CreateInstanceReq) => {
-  return requestClient.post('/workorder/instance/create', data);
-};
-
-// 更新工单实例
-export const updateInstance = (id: number, data: UpdateInstanceReq) => {
-  return requestClient.put(`/workorder/instance/update/${id}`, data);
-};
-
-// 删除工单实例
-export const deleteInstance = (id: number) => {
-  return requestClient.delete(`/workorder/instance/delete/${id}`);
-};
-
-// 获取工单实例列表
-export const listInstance = (params: ListInstanceReq) => {
-  return requestClient.get('/workorder/instance/list', { params });
-};
-
-// 获取工单实例详情
-export const detailInstance = (id: number) => {
-  return requestClient.get(`/workorder/instance/detail/${id}`);
-};
-
-// 转交工单实例
-export const transferInstance = (id: number, data: TransferInstanceReq) => {
-  return requestClient.post(`/workorder/instance/transfer/${id}`, data);
-};
-
-// 获取我的工单实例
-export const getMyInstances = (params: MyInstanceReq) => {
-  return requestClient.get('/workorder/instance/my', { params });
-};
-
-// 添加工单评论
-export const commentInstance = (id: number, data: InstanceCommentReq) => {
-  return requestClient.post(`/workorder/instance/comment/${id}`, data);
-};
-
-// 获取工单评论
-export const getInstanceComments = (id: number) => {
-  return requestClient.get(`/workorder/instance/comment/${id}`);
-};
-
-// 工单流程操作
-export const processInstanceFlow = (id: number, data: InstanceActionReq) => {
-  return requestClient.post(`/workorder/instance/flow/action/${id}`, data);
-};
-
-// 获取工单流转记录
-export const getInstanceFlows = (id: number) => {
-  return requestClient.get(`/workorder/instance/flow/${id}`);
-};
-
-// 获取流程定义
-export const getProcessDefinition = (pid: number) => {
-  return requestClient.get(`/workorder/instance/flow/process/${pid}/definition`);
-};
