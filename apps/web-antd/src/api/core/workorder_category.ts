@@ -1,85 +1,80 @@
 import { requestClient } from '#/api/request';
 
-// 分类实体
-export interface Category {
-  id: number;
-  name: string;
-  parent_id?: number | null;
-  icon: string;
-  sort_order: number;
-  status: number | 1 | 2;
-  description: string;
-  creator_id?: number;
-  creator_name?: string;
-  created_at?: string;
-  updated_at?: string;
+// 分类状态常量
+export const CategoryStatus = {
+  Enabled: 1, // 启用
+  Disabled: 2, // 禁用
+} as const;
+
+// 工单分类实体
+export interface WorkorderCategoryItem {
+  id?: number; // 分类ID
+  created_at: string; // 创建时间
+  updated_at: string; // 更新时间
+  name: string; // 分类名称
+  status: number; // 状态：1-启用，2-禁用
+  description?: string; // 分类描述
+  operator_id: number; // 操作人ID
+  operator_name: string; // 操作人名称
 }
 
-// 创建分类请求结构
-export interface CreateCategoryReq {
-  name: string;
-  parent_id?: number | null;
-  icon: string;
-  sort_order: number;
-  description: string;
-  status?: number | 1 | 2;
+// 创建工单分类请求
+export interface CreateWorkorderCategoryReq {
+  name: string; // 分类名称
+  status: number; // 状态
+  description?: string; // 分类描述
 }
 
-// 更新分类请求结构
-export interface UpdateCategoryReq {
-  id: number;
-  name: string;
-  parent_id?: number | null;
-  icon: string;
-  sort_order: number;
-  description: string;
-  status: number | 1 | 2;
+// 更新工单分类请求
+export interface UpdateWorkorderCategoryReq {
+  id: number; // 分类ID
+  name: string; // 分类名称
+  description?: string; // 分类描述
+  status: number; // 状态
 }
 
-// 删除分类请求结构
-export interface DeleteCategoryReq {
-  id: number;
+// 删除工单分类请求
+export interface DeleteWorkorderCategoryReq {
+  id: number; // 分类ID
 }
 
-// 列表请求结构
-export interface ListCategoryReq {
-  page: number;
-  size: number;
-  search?: string;
-  status?: number | 1 | 2;
+// 获取工单分类详情请求
+export interface DetailWorkorderCategoryReq {
+  id: number; // 分类ID
 }
 
-// 详情请求结构
-export interface DetailCategoryReq {
-  id: number;
+// 工单分类列表请求
+export interface ListWorkorderCategoryReq {
+  page: number; // 页码
+  size: number; // 每页大小
+  search?: string; // 搜索关键词
+  status?: number; // 状态
 }
 
-// 创建分类
-export async function createCategory(data: CreateCategoryReq) {
+export async function createWorkorderCategory(
+  data: CreateWorkorderCategoryReq,
+) {
   return requestClient.post('/workorder/category/create', data);
 }
 
-// 更新分类
-export async function updateCategory(data: UpdateCategoryReq) {
+export async function updateWorkorderCategory(
+  data: UpdateWorkorderCategoryReq,
+) {
   return requestClient.put(`/workorder/category/update/${data.id}`, data);
 }
 
-// 删除分类
-export async function deleteCategory(data: DeleteCategoryReq) {
+export async function deleteWorkorderCategory(
+  data: DeleteWorkorderCategoryReq,
+) {
   return requestClient.delete(`/workorder/category/delete/${data.id}`);
 }
 
-// 获取分类列表
-export async function listCategory(data: ListCategoryReq) {
-  return requestClient.get('/workorder/category/list', { params: data });
+export async function listWorkorderCategory(params: ListWorkorderCategoryReq) {
+  return requestClient.get('/workorder/category/list', { params });
 }
 
-// 获取分类详情
-export async function detailCategory(data: DetailCategoryReq) {
+export async function detailWorkorderCategory(
+  data: DetailWorkorderCategoryReq,
+) {
   return requestClient.get(`/workorder/category/detail/${data.id}`);
-}
-
-// 获取分类统计
-export async function getCategoryStatistics() {
-  return requestClient.get('/workorder/category/statistics');
 }

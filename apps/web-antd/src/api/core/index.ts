@@ -16,5 +16,4 @@ export * from './workorder_category';
 export * from './workorder_form_design';
 export * from './workorder_instance';
 export * from './workorder_process';
-export * from './workorder_statistic';
 export * from './workorder_template';

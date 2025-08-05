@@ -41,6 +41,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: '流程设计',
+        path: '/process_design',
+        component: () => import('#/views/workorder/ProcessDesign.vue'),
+        meta: {
+          icon: 'lucide:pencil',
+          title: '流程设计',
+        },
+      },
+      {
         name: '流程管理',
         path: '/process',
         component: () => import('#/views/workorder/Process.vue'),
@@ -58,22 +67,13 @@ const routes: RouteRecordRaw[] = [
           title: '工单实例',
         },
       },
-      {
-        name: '通知配置',
-        path: '/notification',
-        component: () => import('#/views/workorder/Notification.vue'),
-        meta: {
-          icon: 'lucide:bell',
-          title: '通知配置',
-        },
-      },
       // {
-      //   name: '统计分析',
-      //   path: '/statistics',
-      //   component: () => import('#/views/workorder/Statistics.vue'),
+      //   name: '通知配置',
+      //   path: '/notification',
+      //   component: () => import('#/views/workorder/Notification.vue'),
       //   meta: {
-      //     icon: 'lucide:bar-chart',
-      //     title: '统计分析',
+      //     icon: 'lucide:bell',
+      //     title: '通知配置',
       //   },
       // },
       {

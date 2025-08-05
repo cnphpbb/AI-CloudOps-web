@@ -11,7 +11,13 @@
         </template>
         <template #extra>
           <a-space>
-            <a-button @click="togglePreview" type="primary" class="btn-primary">
+            <a-button @click="saveFormDesign" type="primary" class="btn-primary">
+              <template #icon>
+                <SaveOutlined />
+              </template>
+              保存设计
+            </a-button>
+            <a-button @click="togglePreview" type="default" class="btn-primary">
               <template #icon>
                 <EyeOutlined />
               </template>
@@ -27,6 +33,91 @@
         </template>
 
         <div class="designer-content">
+          <!-- 表单基础信息配置 -->
+          <div class="form-meta-config">
+            <div class="config-header">
+              <h4>表单基础信息</h4>
+            </div>
+            <a-row :gutter="16">
+              <a-col :span="24" :md="8">
+                <a-form-item label="表单名称" class="form-item">
+                  <a-input 
+                    v-model:value="formMeta.name" 
+                    placeholder="请输入表单名称" 
+                    class="config-input"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="24" :md="8">
+                <a-form-item label="表单分类" class="form-item">
+                  <a-select 
+                    v-model:value="formMeta.category_id" 
+                    placeholder="请选择分类" 
+                    class="config-input"
+                    allow-clear
+                    :loading="categoryLoading"
+                    :dropdown-render="dropdownRender"
+                    @dropdown-visible-change="onCategoryDropdownVisibleChange"
+                  >
+                    <a-select-option 
+                      v-for="category in categories" 
+                      :key="category.id" 
+                      :value="category.id"
+                    >
+                      {{ category.name }}
+                    </a-select-option>
+                  </a-select>
+                </a-form-item>
+              </a-col>
+              <a-col :span="24" :md="8">
+                <a-form-item label="表单状态" class="form-item">
+                  <a-select 
+                    v-model:value="formMeta.status" 
+                    placeholder="请选择状态" 
+                    class="config-input"
+                  >
+                    <a-select-option :value="FormDesignStatus.Draft">草稿</a-select-option>
+                    <a-select-option :value="FormDesignStatus.Published">已发布</a-select-option>
+                    <a-select-option :value="FormDesignStatus.Archived">已归档</a-select-option>
+                  </a-select>
+                </a-form-item>
+              </a-col>
+            </a-row>
+            <a-row :gutter="16">
+              <a-col :span="24" :md="16">
+                <a-form-item label="表单描述" class="form-item">
+                  <a-textarea 
+                    v-model:value="formMeta.description" 
+                    placeholder="请输入表单描述" 
+                    :rows="2"
+                    class="config-input"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="24" :md="8">
+                <a-form-item label="标签" class="form-item">
+                  <a-select 
+                    v-model:value="formMeta.tags" 
+                    mode="tags" 
+                    placeholder="输入标签后按回车" 
+                    class="config-input"
+                  />
+                </a-form-item>
+              </a-col>
+            </a-row>
+            <a-row :gutter="16">
+              <a-col :span="24" :md="12">
+                <a-form-item label="是否为模板" class="form-item switch-item">
+                  <a-switch 
+                    v-model:checked="isTemplate" 
+                    checked-children="是"
+                    un-checked-children="否"
+                  />
+                </a-form-item>
+              </a-col>
+            </a-row>
+          </div>
+
           <!-- 字段类型选择区域 -->
           <div class="field-controls">
             <div class="controls-header">
@@ -42,6 +133,14 @@
                 <PlusOutlined />
                 <span>数字</span>
               </a-button>
+              <a-button @click="addFieldType('password')" class="field-btn">
+                <PlusOutlined />
+                <span>密码</span>
+              </a-button>
+              <a-button @click="addFieldType('textarea')" class="field-btn">
+                <PlusOutlined />
+                <span>多行文本</span>
+              </a-button>
               <a-button @click="addFieldType('date')" class="field-btn">
                 <PlusOutlined />
                 <span>日期</span>
@@ -50,17 +149,17 @@
                 <PlusOutlined />
                 <span>下拉选项</span>
               </a-button>
-              <a-button @click="addFieldType('checkbox')" class="field-btn">
-                <PlusOutlined />
-                <span>复选框</span>
-              </a-button>
               <a-button @click="addFieldType('radio')" class="field-btn">
                 <PlusOutlined />
                 <span>单选框</span>
               </a-button>
-              <a-button @click="addFieldType('textarea')" class="field-btn">
+              <a-button @click="addFieldType('checkbox')" class="field-btn">
                 <PlusOutlined />
-                <span>多行文本</span>
+                <span>复选框</span>
+              </a-button>
+              <a-button @click="addFieldType('switch')" class="field-btn">
+                <PlusOutlined />
+                <span>开关</span>
               </a-button>
             </div>
           </div>
@@ -107,15 +206,15 @@
           </div>
 
           <!-- 字段列表 -->
-          <div class="field-list" v-if="formConfig.fields.length > 0">
+          <div class="field-list" v-if="formSchema.fields.length > 0">
             <div class="list-header">
               <h4>表单字段配置</h4>
-              <span class="field-count">共 {{ formConfig.fields.length }} 个字段</span>
+              <span class="field-count">共 {{ formSchema.fields.length }} 个字段</span>
             </div>
             <a-collapse>
               <a-collapse-panel 
-                v-for="(field, index) in formConfig.fields" 
-                :key="field.id"
+                v-for="(field, index) in formSchema.fields" 
+                :key="field.name"
                 :header="getFieldDisplayName(field)"
                 class="field-panel"
               >
@@ -137,7 +236,7 @@
                         type="text" 
                         size="small" 
                         @click="moveField(index, 1)"
-                        :disabled="index === formConfig.fields.length - 1"
+                        :disabled="index === formSchema.fields.length - 1"
                         class="action-btn-small"
                       >
                         <DownOutlined />
@@ -210,9 +309,9 @@
 
         <div class="preview-content">
           <div class="preview-header">
-            <h3>{{ formConfig.title }}</h3>
-            <p v-if="formConfig.description" class="preview-description">
-              {{ formConfig.description }}
+            <h3>{{ formMeta.name || '动态表单' }}</h3>
+            <p v-if="formMeta.description" class="preview-description">
+              {{ formMeta.description }}
             </p>
             <a-alert
               message="预览模式"
@@ -225,7 +324,7 @@
           </div>
           
           <DynamicForm 
-            :fields="formConfig.fields" 
+            :fields="formSchema.fields" 
             v-model:data="formData"
             :rules="formRules"
             @submit="handleSubmit"
@@ -255,14 +354,68 @@
             </a-button>
           </a-space>
         </div>
-        <pre class="json-content">{{ JSON.stringify(formConfig.fields, null, 2) }}</pre>
+        <pre class="json-content">{{ JSON.stringify(formSchema, null, 2) }}</pre>
+      </div>
+    </a-modal>
+
+    <!-- 分类选择弹窗 -->
+    <a-modal 
+      :open="showCategoryModal" 
+      title="选择表单分类" 
+      :width="600"
+      @cancel="closeCategoryModal"
+      :footer="null"
+      class="category-modal"
+    >
+      <div class="category-modal-content">
+        <div class="category-search">
+          <a-input-search
+            v-model:value="categorySearch"
+            placeholder="搜索分类名称"
+            @search="searchCategories"
+            @input="onCategorySearchInput"
+            enter-button
+            allow-clear
+          />
+        </div>
+        
+        <div class="category-list">
+          <a-spin :spinning="categoryLoading">
+            <div v-if="categories.length > 0" class="category-items">
+              <div 
+                v-for="category in categories" 
+                :key="category.id"
+                class="category-item"
+                :class="{ active: formMeta.category_id === category.id }"
+                @click="selectCategory(category)"
+              >
+                <div class="category-name">{{ category.name }}</div>
+                <div class="category-desc" v-if="category.description">{{ category.description }}</div>
+              </div>
+            </div>
+            <a-empty v-else description="暂无分类数据" />
+          </a-spin>
+        </div>
+        
+        <div class="category-pagination" v-if="categoryPagination.total > 0">
+          <a-pagination
+            v-model:current="categoryPagination.page"
+            v-model:page-size="categoryPagination.size"
+            :total="categoryPagination.total"
+            :show-size-changer="true"
+            :show-quick-jumper="true"
+            :show-total="(total: number, range: [number, number]) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`"
+            @change="onCategoryPageChange"
+            @show-size-change="onCategorySizeChange"
+          />
+        </div>
       </div>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { message } from 'ant-design-vue';
 import {
   PlusOutlined,
@@ -275,73 +428,191 @@ import {
   CodeOutlined,
   DownloadOutlined,
   UploadOutlined,
-  CopyOutlined
+  CopyOutlined,
+  SaveOutlined
 } from '@ant-design/icons-vue';
 import FieldConfig from './components/FieldConfig.vue';
 import DynamicForm from './components/DynamicForm.vue';
-
-// 字段类型定义
-interface FormField {
-  id: string;
-  type: 'text' | 'number' | 'date' | 'select' | 'checkbox' | 'radio' | 'textarea';
-  label: string;
-  name: string;
-  required: boolean;
-  placeholder?: string;
-  defaultValue?: any;
-  options?: Array<{ label: string; value: any }>;
-  rules?: any[];
-  disabled?: boolean;
-  hidden?: boolean;
-  sort_order?: number;
-}
-
-interface FormConfig {
-  title: string;
-  description?: string;
-  fields: FormField[];
-}
+import { 
+  FormDesignStatus, 
+  FormFieldType,
+  type FormField, 
+  type FormSchema,
+  type CreateWorkorderFormDesignReq,
+  createWorkorderFormDesign,
+} from '#/api/core/workorder_form_design';
+import type { WorkorderCategoryItem, ListWorkorderCategoryReq } from '#/api/core/workorder_category';
+import { listWorkorderCategory } from '#/api/core/workorder_category';
 
 // 响应式数据
 const showDesigner = ref(true);
 const showJsonViewer = ref(false);
+const showCategoryModal = ref(false);
 const dynamicFormRef = ref();
+const categories = ref<WorkorderCategoryItem[]>([]);
+const categoryLoading = ref(false);
+const categorySearch = ref('');
 
-const formConfig = reactive<FormConfig>({
-  title: '动态表单',
-  description: '这是一个通过可视化设计器生成的动态表单',
+// 分页数据
+const categoryPagination = reactive({
+  page: 1,
+  size: 10,
+  total: 0
+});
+
+// 表单元数据
+const formMeta = reactive({
+  name: '',
+  description: '',
+  status: FormDesignStatus.Draft,
+  category_id: undefined as number | undefined,
+  tags: [] as string[],
+});
+
+const isTemplate = ref(false);
+
+// 表单结构
+const formSchema = reactive<FormSchema>({
   fields: []
 });
 
 const formData = ref<Record<string, any>>({});
 const formRules = computed(() => {
   const rules: Record<string, any[]> = {};
-  formConfig.fields.forEach(field => {
+  formSchema.fields.forEach(field => {
     if (field.required) {
       rules[field.name] = [
         { required: true, message: `请输入${field.label}`, trigger: 'blur' }
       ];
-    }
-    if (field.rules) {
-      rules[field.name] = [...(rules[field.name] || []), ...field.rules];
     }
   });
   return rules;
 });
 
 // 字段类型映射
-const fieldTypeMap = {
-  text: '文本框',
-  number: '数字',
-  date: '日期',
-  select: '下拉选项',
-  checkbox: '复选框',
-  radio: '单选框',
-  textarea: '多行文本'
+const fieldTypeMap: Record<string, string> = {
+  [FormFieldType.Text]: '文本框',
+  [FormFieldType.Number]: '数字',
+  [FormFieldType.Password]: '密码',
+  [FormFieldType.Textarea]: '多行文本',
+  [FormFieldType.Select]: '下拉选项',
+  [FormFieldType.Radio]: '单选框',
+  [FormFieldType.Checkbox]: '复选框',
+  [FormFieldType.Date]: '日期',
+  [FormFieldType.Switch]: '开关'
 };
 
-// 生成唯一ID
-const generateId = () => `field_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+/**
+ * 加载分类数据（支持分页和搜索）
+ */
+const loadCategories = async (resetPage = false) => {
+  if (resetPage) {
+    categoryPagination.page = 1;
+  }
+  
+  categoryLoading.value = true;
+  try {
+    const params: ListWorkorderCategoryReq = {
+      page: categoryPagination.page,
+      size: categoryPagination.size,
+      search: categorySearch.value
+    };
+    
+    const response = await listWorkorderCategory(params);
+    categories.value = response.items || [];
+    categoryPagination.total = response.total || 0;
+  } catch (error) {
+    console.error('加载分类失败:', error);
+    message.error('加载分类数据失败');
+  } finally {
+    categoryLoading.value = false;
+  }
+};
+
+/**
+ * 分类下拉框显示状态变化
+ */
+const onCategoryDropdownVisibleChange = (visible: boolean) => {
+  if (visible) {
+    showCategoryModal.value = true;
+  }
+};
+
+/**
+ * 关闭分类选择弹窗
+ */
+const closeCategoryModal = () => {
+  showCategoryModal.value = false;
+  categorySearch.value = '';
+  categoryPagination.page = 1;
+  categoryPagination.size = 10;
+};
+
+/**
+ * 选择分类
+ */
+const selectCategory = (category: WorkorderCategoryItem) => {
+  formMeta.category_id = category.id;
+  closeCategoryModal();
+  message.success(`已选择分类：${category.name}`);
+};
+
+/**
+ * 搜索分类
+ */
+const searchCategories = () => {
+  loadCategories(true);
+};
+
+/**
+ * 分类搜索输入变化（去抖处理）
+ */
+let searchTimer: NodeJS.Timeout;
+const onCategorySearchInput = () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    loadCategories(true);
+  }, 500);
+};
+
+/**
+ * 分类分页改变
+ */
+const onCategoryPageChange = (page: number, size: number) => {
+  categoryPagination.page = page;
+  categoryPagination.size = size;
+  loadCategories();
+};
+
+/**
+ * 分类每页条数改变
+ */
+const onCategorySizeChange = (_current: number, size: number) => {
+  categoryPagination.page = 1;
+  categoryPagination.size = size;
+  loadCategories();
+};
+
+/**
+ * 自定义下拉框渲染（用于触发弹窗）
+ */
+const dropdownRender = () => {
+  // 这个函数不会被调用，因为我们通过 dropdown-visible-change 事件来处理
+  return null;
+};
+
+// 监听分类弹窗显示状态，初始化数据
+watch(showCategoryModal, (visible) => {
+  if (visible) {
+    loadCategories(true);
+  }
+});
+
+// 生成唯一字段名
+const generateFieldName = (type: string) => {
+  const count = formSchema.fields.length + 1;
+  return `${type}_field_${count}`;
+};
 
 // 获取字段显示名称
 const getFieldDisplayName = (field: FormField) => {
@@ -352,60 +623,51 @@ const getFieldDisplayName = (field: FormField) => {
 };
 
 // 添加字段
-const addFieldType = (type: FormField['type']) => {
-  const fieldNumber = formConfig.fields.length + 1;
+const addFieldType = (type: string) => {
+  const fieldNumber = formSchema.fields.length + 1;
   const field: FormField = {
-    id: generateId(),
+    name: generateFieldName(type),
     type,
     label: `${fieldTypeMap[type]}${fieldNumber}`,
-    name: `field_${fieldNumber}`,
-    required: false,
+    required: 0,
     placeholder: `请输入${fieldTypeMap[type]}`,
-    defaultValue: getDefaultValue(type),
-    options: needsOptions(type) ? [
-      { label: '选项1', value: 'option1' },
-      { label: '选项2', value: 'option2' }
-    ] : undefined,
-    sort_order: fieldNumber,
-    disabled: false,
-    hidden: false
+    default: getDefaultValue(type),
+    options: needsOptions(type) ? ['选项1', '选项2'] : undefined
   };
   
-  formConfig.fields.push(field);
+  formSchema.fields.push(field);
   message.success(`已添加${fieldTypeMap[type]}字段`);
 };
 
 // 获取默认值
-const getDefaultValue = (type: FormField['type']) => {
+const getDefaultValue = (type: string) => {
   switch (type) {
-    case 'checkbox':
+    case FormFieldType.Checkbox:
       return [];
-    case 'number':
-      return undefined;
-    case 'date':
-      return undefined;
+    case FormFieldType.Number:
+      return 0;
+    case FormFieldType.Switch:
+      return false;
     default:
       return '';
   }
 };
 
 // 判断是否需要选项
-const needsOptions = (type: FormField['type']) => {
-  return ['select', 'radio', 'checkbox'].includes(type);
+const needsOptions = (type: string) => {
+  return [FormFieldType.Select, FormFieldType.Radio, FormFieldType.Checkbox].includes(type as any);
 };
 
 // 更新字段
 const updateField = (index: number, updatedField: FormField) => {
-  // 使用深拷贝而非直接引用，避免响应式引用导致的循环更新
-  formConfig.fields[index] = JSON.parse(JSON.stringify(updatedField));
+  formSchema.fields[index] = JSON.parse(JSON.stringify(updatedField));
 };
 
 // 移除字段
 const removeField = (index: number) => {
-  const field = formConfig.fields[index];
-  formConfig.fields.splice(index, 1);
+  const field = formSchema.fields[index];
+  formSchema.fields.splice(index, 1);
   
-  // 从表单数据中移除对应字段
   if (field && field.name in formData.value) {
     delete formData.value[field.name];
   }
@@ -416,28 +678,17 @@ const removeField = (index: number) => {
 // 移动字段
 const moveField = (index: number, direction: number) => {
   const newIndex = index + direction;
-  if (newIndex >= 0 && newIndex < formConfig.fields.length) {
-    const temp = formConfig.fields[index];
-    formConfig.fields[index] = formConfig.fields[newIndex]!;
-    formConfig.fields[newIndex] = temp!;
-    
-    // 更新移动后的字段顺序
-    updateSortOrders();
-    
+  if (newIndex >= 0 && newIndex < formSchema.fields.length) {
+    const temp = formSchema.fields[index];
+    formSchema.fields[index] = formSchema.fields[newIndex]!;
+    formSchema.fields[newIndex] = temp!;
     message.success('字段位置已调整');
   }
 };
 
-// 更新所有字段的排序顺序
-const updateSortOrders = () => {
-  formConfig.fields.forEach((field, index) => {
-    field.sort_order = index + 1;
-  });
-};
-
 // 切换预览模式
 const togglePreview = () => {
-  if (showDesigner.value && formConfig.fields.length === 0) {
+  if (showDesigner.value && formSchema.fields.length === 0) {
     message.warning('请先添加表单字段');
     return;
   }
@@ -451,9 +702,9 @@ const togglePreview = () => {
 // 初始化表单数据
 const initFormData = () => {
   const data: Record<string, any> = {};
-  formConfig.fields.forEach(field => {
-    if (field.defaultValue !== undefined) {
-      data[field.name] = field.defaultValue;
+  formSchema.fields.forEach(field => {
+    if (field.default !== undefined) {
+      data[field.name] = field.default;
     } else {
       data[field.name] = getDefaultValue(field.type);
     }
@@ -472,14 +723,44 @@ const resetForm = () => {
 
 // 清空表单配置
 const clearForm = () => {
-  if (formConfig.fields.length === 0) {
+  if (formSchema.fields.length === 0) {
     message.info('表单已为空');
     return;
   }
   
-  formConfig.fields = [];
+  formSchema.fields = [];
   formData.value = {};
   message.success('表单配置已清空');
+};
+
+// 保存表单设计
+const saveFormDesign = async () => {
+  if (!formMeta.name) {
+    message.error('请输入表单名称');
+    return;
+  }
+  
+  if (formSchema.fields.length === 0) {
+    message.error('请至少添加一个表单字段');
+    return;
+  }
+
+  try {
+    const data: CreateWorkorderFormDesignReq = {
+      name: formMeta.name,
+      description: formMeta.description,
+      schema: formSchema,
+      status: formMeta.status,
+      category_id: formMeta.category_id,
+      tags: formMeta.tags,
+      is_template: isTemplate.value ? 1 : 2
+    };
+
+    await createWorkorderFormDesign(data);
+    message.success('表单设计保存成功');
+  } catch (error) {
+    message.error('保存失败，请重试');
+  }
 };
 
 // 提交表单
@@ -498,7 +779,6 @@ const submitForm = async () => {
 const handleSubmit = (data: Record<string, any>) => {
   console.log('表单数据:', data);
   message.success('表单提交成功！数据已输出到控制台');
-  // 这里可以调用API提交数据
 };
 
 // 切换JSON查看器
@@ -508,28 +788,23 @@ const toggleJsonViewer = () => {
 
 // 复制JSON配置
 const copyJson = async () => {
-  const text = JSON.stringify(formConfig.fields, null, 2);
+  const text = JSON.stringify(formSchema, null, 2);
   try {
     await navigator.clipboard.writeText(text);
     message.success('配置已复制到剪贴板');
   } catch (error) {
-    // 降级方案
-    try {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed'; // 防止页面滚动
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textarea);
-      if (successful) {
-        message.success('配置已复制到剪贴板');
-      } else {
-        throw new Error('execCommand 失败');
-      }
-    } catch (e) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    if (successful) {
+      message.success('配置已复制到剪贴板');
+    } else {
       message.error('复制失败，请手动复制');
     }
   }
@@ -537,15 +812,15 @@ const copyJson = async () => {
 
 // 导出配置
 const exportConfig = () => {
-  const dataStr = JSON.stringify(formConfig.fields, null, 2);
+  const dataStr = JSON.stringify(formSchema, null, 2);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `form-fields-${Date.now()}.json`;
+  link.download = `form-design-${Date.now()}.json`;
   link.click();
   URL.revokeObjectURL(url);
-  message.success('字段配置导出成功');
+  message.success('表单设计导出成功');
 };
 
 // 导入配置
@@ -553,24 +828,25 @@ const importConfig = (file: File) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const fields = JSON.parse(e.target?.result as string);
-      if (Array.isArray(fields)) {
-        formConfig.fields = fields;
-        message.success('字段配置导入成功');
-      } else if (fields.fields && Array.isArray(fields.fields)) {
-        // 兼容旧格式
-        formConfig.fields = fields.fields;
-        message.success('字段配置导入成功');
+      const config = JSON.parse(e.target?.result as string);
+      if (config.fields && Array.isArray(config.fields)) {
+        formSchema.fields = config.fields;
+        message.success('表单设计导入成功');
       } else {
-        message.error('字段配置文件格式不正确');
+        message.error('文件格式不正确');
       }
     } catch (error) {
-      message.error('字段配置文件解析失败');
+      message.error('文件解析失败');
     }
   };
   reader.readAsText(file);
   return false;
 };
+
+// 组件挂载时加载数据
+onMounted(() => {
+  // 初始化时不加载分类数据，只在用户点击下拉框时加载
+});
 </script>
 
 <style scoped>
@@ -580,7 +856,6 @@ const importConfig = (file: File) => {
   min-height: 100vh;
 }
 
-/* 卡片样式 */
 .designer-card,
 .preview-card {
   border-radius: 8px;
@@ -597,7 +872,6 @@ const importConfig = (file: File) => {
   color: #1f2937;
 }
 
-/* 主要按钮样式 */
 .btn-primary {
   background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
   border: none;
@@ -609,12 +883,31 @@ const importConfig = (file: File) => {
   box-shadow: 0 4px 8px rgba(24, 144, 255, 0.3);
 }
 
-/* 设计器内容 */
 .designer-content {
   padding: 16px;
 }
 
-/* 字段控制区域 */
+.form-meta-config {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.config-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.config-header h4 {
+  margin: 0 0 8px 0;
+  color: #1f2937;
+  font-size: 16px;
+  font-weight: 600;
+}
+
 .field-controls {
   background: white;
   border-radius: 8px;
@@ -673,7 +966,6 @@ const importConfig = (file: File) => {
   font-weight: 500;
 }
 
-/* 配置管理区域 */
 .config-actions {
   background: white;
   border-radius: 8px;
@@ -733,7 +1025,6 @@ const importConfig = (file: File) => {
   font-weight: 500;
 }
 
-/* 上传组件包装器 */
 .upload-wrapper {
   width: 100%;
 }
@@ -743,7 +1034,6 @@ const importConfig = (file: File) => {
   display: block;
 }
 
-/* 字段列表 */
 .field-list {
   background: white;
   border-radius: 8px;
@@ -776,7 +1066,6 @@ const importConfig = (file: File) => {
   border-radius: 12px;
 }
 
-/* 字段面板 */
 .field-panel :deep(.ant-collapse-header) {
   background: #fafafa;
   border: 1px solid #e8e8e8;
@@ -813,7 +1102,6 @@ const importConfig = (file: File) => {
   background: #f0f0f0;
 }
 
-/* 空状态 */
 .empty-form {
   background: white;
   border-radius: 8px;
@@ -831,7 +1119,6 @@ const importConfig = (file: File) => {
   margin-bottom: 16px;
 }
 
-/* 预览内容 */
 .preview-content {
   padding: 24px;
   background: #fafafa;
@@ -866,7 +1153,6 @@ const importConfig = (file: File) => {
   margin: 20px 0 0 0;
 }
 
-/* JSON 查看器 */
 .json-modal :deep(.ant-modal-content) {
   border-radius: 8px;
 }
@@ -897,7 +1183,119 @@ const importConfig = (file: File) => {
   color: #495057;
 }
 
-/* 响应式设计 */
+.form-item {
+  margin-bottom: 16px;
+}
+
+.form-item :deep(.ant-form-item-label) {
+  font-weight: 500;
+  color: #374151;
+}
+
+.switch-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.config-input {
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.config-input:focus,
+.config-input:hover {
+  border-color: #1890ff;
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1);
+}
+
+/* 分类选择弹窗样式 */
+.category-modal :deep(.ant-modal-content) {
+  border-radius: 8px;
+}
+
+.category-modal-content {
+  max-height: 60vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.category-search {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.category-list {
+  flex: 1;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.category-items {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.category-item {
+  padding: 12px 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.category-item:hover {
+  border-color: #1890ff;
+  background: #f0f8ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+.category-item.active {
+  border-color: #1890ff;
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.category-name {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.category-desc {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.category-pagination {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+  text-align: center;
+}
+
+.category-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+.category-items::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.category-items::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.category-items::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
 @media (max-width: 768px) {
   .dynamic-form-container {
     padding: 12px;
@@ -941,6 +1339,14 @@ const importConfig = (file: File) => {
   .field-actions {
     flex-wrap: wrap;
   }
+  
+  .category-modal-content {
+    max-height: 50vh;
+  }
+  
+  .category-items {
+    max-height: 200px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -950,7 +1356,8 @@ const importConfig = (file: File) => {
   }
   
   .controls-header,
-  .actions-header {
+  .actions-header,
+  .config-header {
     text-align: left;
   }
   
@@ -961,9 +1368,12 @@ const importConfig = (file: File) => {
   .preview-description {
     font-size: 14px;
   }
+  
+  .category-modal-content {
+    max-height: 40vh;
+  }
 }
 
-/* 动画效果 */
 .field-panel {
   transition: all 0.3s ease;
 }
@@ -973,7 +1383,6 @@ const importConfig = (file: File) => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* 滚动条优化 */
 .json-content::-webkit-scrollbar {
   width: 6px;
   height: 6px;

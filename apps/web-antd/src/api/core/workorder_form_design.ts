@@ -1,157 +1,118 @@
 import { requestClient } from '#/api/request';
-import type { Category } from '#/api/core/workorder_category';
+import type { WorkorderCategoryItem } from './workorder_category';
 
-export interface ListFormDesignReq {
-  page: number;
-  size: number;
-  category_id?: number;
-  status?: number;
-  search?: string;
-}
+export const FormDesignStatus = {
+  Draft: 1,
+  Published: 2,
+  Archived: 3,
+} as const;
 
-export interface DetailFormDesignReq {
-  id: number;
-}
-
-export interface PublishFormDesignReq {
-  id: number;
-}
-
-export interface CloneFormDesignReq {
-  id: number;
-  name: string;
-}
-
-export interface PreviewFormDesignReq {
-  id: number;
-}
-
-export interface FormFieldOption {
-  label: string;
-  value: any;
-}
-
-export interface FormFieldValidation {
-  min_length?: number;
-  max_length?: number;
-  min?: number;
-  max?: number;
-  pattern?: string;
-  message?: string;
-}
+export const FormFieldType = {
+  Text: 'text',
+  Number: 'number',
+  Password: 'password',
+  Textarea: 'textarea',
+  Select: 'select',
+  Radio: 'radio',
+  Checkbox: 'checkbox',
+  Date: 'date',
+  Switch: 'switch',
+} as const;
 
 export interface FormField {
-  id: string;
-  type: string;
-  label: string;
-  name: string;
-  required: boolean;
-  placeholder?: string;
-  default_value?: any;
-  options?: FormFieldOption[];
-  validation?: FormFieldValidation;
-  props?: Record<string, any>;
-  sort_order: number;
-  disabled: boolean;
-  hidden: boolean;
-  description?: string;
+  name: string; // 字段名称
+  type: string; // 字段类型
+  label: string; // 字段标签
+  required?: number; // 是否必填
+  placeholder?: string; // 占位符
+  default?: any; // 默认值
+  options?: string[]; // 选项（如下拉、单选等）
 }
 
 export interface FormSchema {
-  fields: FormField[];
-  layout?: string;
-  style?: string;
+  fields: FormField[]; // 字段列表
 }
 
-export interface CreateFormDesignReq {
-  name: string;
-  description: string;
-  schema: FormSchema;
-  category_id?: number;
-  user_id?: number;
-  user_name?: string;
-  status?: number;
-  version?: number;
-}
-
-export interface UpdateFormDesignReq {
+export interface WorkorderFormDesignItem {
   id: number;
-  name: string;
-  description: string;
-  schema: FormSchema;
-  category_id?: number;
-  status?: number;
-  version?: number;
-}
-
-export interface DeleteFormDesignReq {
-  id: number;
-}
-
-export interface FormDesignResp {
-  id: number;
-  name: string;
-  description: string;
-  schema: FormSchema;
-  version: number;
-  status: number;
-  category_id?: number;
-  category?: Category;
-  creator_id: number;
-  creator_name: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface PreviewFormDesignResp {
-  id: number;
+  name: string;
+  description: string;
   schema: FormSchema;
+  status: number;
+  category_id?: number;
+  operator_id?: number;
+  operator_name?: string;
+  tags?: string[];
+  is_template: number;
+  category?: WorkorderCategoryItem;
 }
 
-export interface ValidateFormDesignResp {
-  is_valid: boolean;
-  errors?: string[];
+export interface CreateWorkorderFormDesignReq {
+  name: string; // 表单名称
+  description?: string; // 表单描述
+  schema: FormSchema; // 表单结构
+  status: number; // 状态：1-草稿，2-已发布，3-已归档
+  category_id?: number; // 分类ID
+  tags?: string[]; // 标签
+  is_template: number; // 是否为模板：1-是，2-否
 }
 
-export interface FormStatisticsResp {
-  draft: number;
-  published: number;
-  disabled: number;
+export interface UpdateWorkorderFormDesignReq {
+  id: number; // 表单ID
+  name: string; // 表单名称
+  description?: string; // 表单描述
+  schema: FormSchema; // 表单结构
+  status: number; // 状态：1-草稿，2-已发布，3-已归档
+  category_id?: number; // 分类ID
+  tags?: string[]; // 标签
+  is_template: number; // 是否为模板：1-是，2-否
 }
 
-// 表单设计相关接口
-export async function createFormDesign(data: CreateFormDesignReq) {
+export interface DeleteWorkorderFormDesignReq {
+  id: number; // 表单ID
+}
+
+export interface DetailWorkorderFormDesignReq {
+  id: number; // 表单ID
+}
+
+export interface ListWorkorderFormDesignReq {
+  page: number; // 页码
+  size: number; // 每页大小
+  search?: string; // 搜索关键词
+  category_id?: number; // 分类ID
+  status?: number; // 状态
+  is_template?: number; // 是否为模板
+}
+
+export async function createWorkorderFormDesign(
+  data: CreateWorkorderFormDesignReq,
+) {
   return requestClient.post('/workorder/form-design/create', data);
 }
 
-export async function updateFormDesign(data: UpdateFormDesignReq) {
+export async function updateWorkorderFormDesign(
+  data: UpdateWorkorderFormDesignReq,
+) {
   return requestClient.put(`/workorder/form-design/update/${data.id}`, data);
 }
 
-export async function deleteFormDesign(data: DeleteFormDesignReq) {
+export async function deleteWorkorderFormDesign(
+  data: DeleteWorkorderFormDesignReq,
+) {
   return requestClient.delete(`/workorder/form-design/delete/${data.id}`);
 }
 
-export async function listFormDesign(data: ListFormDesignReq) {
-  return requestClient.get('/workorder/form-design/list', { params: data });
+export async function listWorkorderFormDesign(
+  params: ListWorkorderFormDesignReq,
+) {
+  return requestClient.get('/workorder/form-design/list', { params });
 }
 
-export async function detailFormDesign(data: DetailFormDesignReq) {
+export async function detailWorkorderFormDesign(
+  data: DetailWorkorderFormDesignReq,
+) {
   return requestClient.get(`/workorder/form-design/detail/${data.id}`);
-}
-
-export async function publishFormDesign(data: PublishFormDesignReq) {
-  return requestClient.post(`/workorder/form-design/publish/${data.id}`);
-}
-
-export async function cloneFormDesign(data: CloneFormDesignReq) {
-  return requestClient.post(`/workorder/form-design/clone/${data.id}`, data);
-}
-
-export async function previewFormDesign(data: PreviewFormDesignReq) {
-  return requestClient.get(`/workorder/form-design/preview/${data.id}`);
-}
-
-export async function getFormStatistics() {
-  return requestClient.get('/workorder/form-design/statistics');
 }

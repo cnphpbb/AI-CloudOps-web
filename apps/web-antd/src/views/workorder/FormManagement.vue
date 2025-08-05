@@ -9,21 +9,48 @@
           <span class="btn-text">创建新表单</span>
         </a-button>
         <div class="search-filters">
-          <a-input-search v-model:value="searchQuery" placeholder="搜索表单..." class="search-input" @search="handleSearch"
-            @change="handleSearchChange" allow-clear />
-          <a-select v-model:value="categoryFilter" placeholder="选择分类" class="category-filter"
-            @change="handleCategoryChange" allow-clear>
+          <a-input-search 
+            v-model:value="searchQuery" 
+            placeholder="搜索表单..." 
+            class="search-input" 
+            @search="handleSearch"
+            @change="handleSearchChange" 
+            allow-clear 
+          />
+          <a-select 
+            v-model:value="categoryFilter" 
+            placeholder="选择分类" 
+            class="category-filter"
+            @change="handleCategoryChange" 
+            allow-clear
+          >
             <a-select-option :value="undefined">全部分类</a-select-option>
             <a-select-option v-for="category in categories" :key="category.id" :value="category.id">
               {{ category.name }}
             </a-select-option>
           </a-select>
-          <a-select v-model:value="statusFilter" placeholder="状态" class="status-filter" @change="handleStatusChange"
-            allow-clear>
+          <a-select 
+            v-model:value="statusFilter" 
+            placeholder="状态" 
+            class="status-filter" 
+            @change="handleStatusChange"
+            allow-clear
+          >
             <a-select-option :value="undefined">全部状态</a-select-option>
             <a-select-option :value="1">草稿</a-select-option>
             <a-select-option :value="2">已发布</a-select-option>
-            <a-select-option :value="3">已禁用</a-select-option>
+            <a-select-option :value="3">已归档</a-select-option>
+          </a-select>
+          <a-select 
+            v-model:value="templateFilter" 
+            placeholder="模板类型" 
+            class="template-filter" 
+            @change="handleTemplateChange"
+            allow-clear
+          >
+            <a-select-option :value="undefined">全部类型</a-select-option>
+            <a-select-option :value="1">模板</a-select-option>
+            <a-select-option :value="2">非模板</a-select-option>
           </a-select>
           <a-button @click="handleResetFilters" class="reset-btn">
             重置
@@ -63,7 +90,7 @@
         </a-col>
         <a-col :xs="12" :sm="12" :md="6" :lg="6">
           <a-card class="stats-card">
-            <a-statistic title="已禁用" :value="stats.disabled" :value-style="{ color: '#cf1322' }">
+            <a-statistic title="已归档" :value="stats.archived" :value-style="{ color: '#cf1322' }">
               <template #prefix>
                 <StopOutlined />
               </template>
@@ -75,29 +102,36 @@
 
     <div class="table-container">
       <a-card>
-        <a-table :data-source="formDesigns" :columns="columns" :pagination="paginationConfig" :loading="loading"
-          row-key="id" bordered :scroll="{ x: 1200 }" @change="handleTableChange">
+        <a-table 
+          :data-source="formDesigns" 
+          :columns="columns" 
+          :pagination="paginationConfig" 
+          :loading="loading"
+          row-key="id" 
+          bordered 
+          :scroll="{ x: 1400 }" 
+          @change="handleTableChange"
+        >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="form-name-cell">
                 <div class="form-badge" :class="getStatusClass(record.status)"></div>
                 <span class="form-name-text">{{ record.name }}</span>
+                <a-tag v-if="record.is_template === 1" color="purple" size="small">模板</a-tag>
               </div>
             </template>
 
             <template v-if="column.key === 'category'">
-              <a-tag v-if="record.category_name" color="blue">
-                {{ record.category_name }}
+              <a-tag v-if="record.category?.name" color="blue">
+                {{ record.category.name }}
               </a-tag>
               <span v-else class="text-gray">未分类</span>
             </template>
 
             <template v-if="column.key === 'description'">
-              <span class="description-text">{{ record.description || '无描述' }}</span>
-            </template>
-
-            <template v-if="column.key === 'version'">
-              <a-tag color="blue">v{{ record.version }}</a-tag>
+              <a-tooltip :title="record.description" placement="topLeft">
+                <span class="description-text">{{ record.description || '无描述' }}</span>
+              </a-tooltip>
             </template>
 
             <template v-if="column.key === 'status'">
@@ -106,12 +140,46 @@
               </a-tag>
             </template>
 
-            <template v-if="column.key === 'creator'">
-              <div class="creator-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.creator_name || '') }">
-                  {{ getInitials(record.creator_name) }}
+            <template v-if="column.key === 'operator'">
+              <div class="operator-info">
+                <a-avatar 
+                  size="small" 
+                  :style="{ backgroundColor: getAvatarColor(record.operator_name || '') }"
+                >
+                  {{ getInitials(record.operator_name) }}
                 </a-avatar>
-                <span class="creator-name">{{ record.creator_name }}</span>
+                <span class="operator-name">{{ record.operator_name || '系统' }}</span>
+              </div>
+            </template>
+
+            <template v-if="column.key === 'tags'">
+              <div class="tags-cell">
+                <a-tag 
+                  v-for="tag in (record.tags || []).slice(0, 2)" 
+                  :key="tag" 
+                  size="small"
+                >
+                  {{ tag }}
+                </a-tag>
+                <a-popover 
+                  v-if="(record.tags || []).length > 2" 
+                  placement="topLeft"
+                  trigger="hover"
+                >
+                  <template #content>
+                    <div class="tags-popover">
+                      <a-tag 
+                        v-for="tag in record.tags" 
+                        :key="tag" 
+                        size="small"
+                        style="margin-bottom: 4px;"
+                      >
+                        {{ tag }}
+                      </a-tag>
+                    </div>
+                  </template>
+                  <a-tag size="small" color="default">+{{ (record.tags || []).length - 2 }}</a-tag>
+                </a-popover>
               </div>
             </template>
 
@@ -138,8 +206,8 @@
                       </a-menu-item>
                       <a-menu-divider />
                       <a-menu-item key="publish" v-if="record.status === 1">发布</a-menu-item>
-                      <a-menu-item key="unpublish" v-if="record.status === 2">取消发布</a-menu-item>
-                      <a-menu-item key="clone">克隆</a-menu-item>
+                      <a-menu-item key="archive" v-if="record.status === 2">归档</a-menu-item>
+                      <a-menu-item key="unarchive" v-if="record.status === 3">取消归档</a-menu-item>
                       <a-menu-divider />
                       <a-menu-item key="delete" danger>删除</a-menu-item>
                     </a-menu>
@@ -156,9 +224,16 @@
       </a-card>
     </div>
 
-    <!-- 表单创建/编辑对话框 - 修改分类选择为真实分页选择器 -->
-    <a-modal :open="formDialogVisible" :title="formDialog.isEdit ? '编辑表单' : '创建表单'" :width="formDialogWidth"
-      @ok="saveForm" @cancel="closeFormDialog" :destroy-on-close="true" class="responsive-modal form-design-modal">
+    <!-- 表单创建/编辑对话框 -->
+    <a-modal 
+      :open="formDialogVisible" 
+      :title="formDialog.isEdit ? '编辑表单' : '创建表单'" 
+      :width="formDialogWidth"
+      @ok="saveForm" 
+      @cancel="closeFormDialog" 
+      :destroy-on-close="true" 
+      class="responsive-modal form-design-modal"
+    >
       <a-form ref="formRef" :model="formDialog.form" :rules="formRules" layout="vertical">
         <a-form-item label="表单名称" name="name">
           <a-input v-model:value="formDialog.form.name" placeholder="请输入表单名称" />
@@ -168,13 +243,22 @@
           <a-textarea v-model:value="formDialog.form.description" :rows="3" placeholder="请输入表单描述" />
         </a-form-item>
 
-        <!-- 修改为真实分页选择器 -->
+        <!-- 分类选择器 - 使用真分页 -->
         <a-form-item label="分类" name="category_id">
-          <a-select v-model:value="formDialog.form.category_id" placeholder="请选择分类" style="width: 100%" show-search
-            :filter-option="false" option-label-prop="children"
+          <a-select 
+            v-model:value="formDialog.form.category_id" 
+            placeholder="请选择分类" 
+            style="width: 100%" 
+            show-search
+            :filter-option="false" 
+            option-label-prop="children"
             :not-found-content="categorySelectorLoading ? undefined : (categorySearchKeyword ? '无搜索结果' : '无数据')"
-            @search="handleCategorySearch" @dropdown-visible-change="handleCategoryDropdownChange"
-            @popup-scroll="handleCategoryScroll" allow-clear :loading="categorySelectorLoading">
+            @search="handleCategorySearch" 
+            @dropdown-visible-change="handleCategoryDropdownChange"
+            @popup-scroll="handleCategoryScroll" 
+            allow-clear 
+            :loading="categorySelectorLoading"
+          >
             <template #notFoundContent>
               <div v-if="categorySelectorLoading" class="category-loading">
                 <a-spin size="small" />
@@ -185,7 +269,6 @@
               </div>
             </template>
 
-            <!-- 分类选项 -->
             <a-select-option v-for="cat in formDialogCategories" :key="cat.id" :value="cat.id">
               <div class="category-option">
                 <span class="category-name">{{ cat.name }}</span>
@@ -193,12 +276,19 @@
               </div>
             </a-select-option>
 
-            <!-- 加载更多指示器 -->
-            <a-select-option v-if="categoryPagination.hasMore" :value="'__load_more__'" disabled
-              class="load-more-option">
+            <a-select-option 
+              v-if="categoryPagination.hasMore" 
+              :value="'__load_more__'" 
+              disabled
+              class="load-more-option"
+            >
               <div class="load-more-content" @click.stop="loadMoreCategories">
-                <a-button type="link" size="small" :loading="categorySelectorLoading"
-                  style="padding: 0; height: auto; font-size: 12px;">
+                <a-button 
+                  type="link" 
+                  size="small" 
+                  :loading="categorySelectorLoading"
+                  style="padding: 0; height: auto; font-size: 12px;"
+                >
                   <template v-if="!categorySelectorLoading">
                     <Icon icon="material-symbols:keyboard-arrow-down" style="margin-right: 4px;" />
                     加载更多 ({{ categoryPagination.current }}/{{ totalPages }})
@@ -212,11 +302,30 @@
           </a-select>
         </a-form-item>
 
+        <a-form-item label="标签" name="tags">
+          <a-select
+            v-model:value="formDialog.form.tags"
+            mode="tags"
+            placeholder="请输入标签，按回车添加"
+            style="width: 100%"
+            :max-tag-count="5"
+            :max-tag-text-length="10"
+          >
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="是否为模板" name="is_template">
+          <a-radio-group v-model:value="formDialog.form.is_template">
+            <a-radio :value="2">否</a-radio>
+            <a-radio :value="1">是</a-radio>
+          </a-radio-group>
+        </a-form-item>
+
         <a-form-item label="状态" name="status" v-if="formDialog.isEdit">
           <a-select v-model:value="formDialog.form.status" placeholder="请选择状态" style="width: 100%">
             <a-select-option :value="1">草稿</a-select-option>
             <a-select-option :value="2">已发布</a-select-option>
-            <a-select-option :value="3">已禁用</a-select-option>
+            <a-select-option :value="3">已归档</a-select-option>
           </a-select>
         </a-form-item>
 
@@ -237,12 +346,22 @@
               </div>
             </div>
 
-            <a-textarea v-model:value="formDialog.form.fieldsJson" placeholder="请输入表单字段JSON配置..." :rows="12"
-              class="json-editor" :class="{ 'json-error': jsonValidationError }" />
+            <a-textarea 
+              v-model:value="formDialog.form.fieldsJson" 
+              placeholder="请输入表单字段JSON配置..." 
+              :rows="12"
+              class="json-editor" 
+              :class="{ 'json-error': jsonValidationError }" 
+            />
 
             <div v-if="jsonValidationError" class="json-error-message">
-              <a-alert type="error" :message="jsonValidationError" show-icon closable
-                @close="jsonValidationError = ''" />
+              <a-alert 
+                type="error" 
+                :message="jsonValidationError" 
+                show-icon 
+                closable
+                @close="jsonValidationError = ''" 
+              />
             </div>
 
             <div class="json-help">
@@ -251,14 +370,26 @@
           </div>
         </a-form-item>
 
-        <a-alert v-if="!formDialog.isEdit" message="提示" description="您可以现在设计表单字段，也可以创建后再进行设计。" type="info" show-icon
-          style="margin-bottom: 16px;" />
+        <a-alert 
+          v-if="!formDialog.isEdit" 
+          message="提示" 
+          description="您可以现在设计表单字段，也可以创建后再进行设计。" 
+          type="info" 
+          show-icon
+          style="margin-bottom: 16px;" 
+        />
       </a-form>
     </a-modal>
 
     <!-- 字段示例对话框 -->
-    <a-modal :open="exampleDialogVisible" title="表单字段JSON示例" :width="800" :footer="null" @cancel="closeExampleDialog"
-      class="example-dialog">
+    <a-modal 
+      :open="exampleDialogVisible" 
+      title="表单字段JSON示例" 
+      :width="800" 
+      :footer="null" 
+      @cancel="closeExampleDialog"
+      class="example-dialog"
+    >
       <div class="example-content">
         <a-tabs>
           <a-tab-pane key="simple" tab="简单示例">
@@ -277,19 +408,15 @@
       </div>
     </a-modal>
 
-    <!-- 克隆对话框 -->
-    <a-modal :open="cloneDialogVisible" title="克隆表单" :width="dialogWidth" @ok="confirmClone" @cancel="closeCloneDialog"
-      :destroy-on-close="true">
-      <a-form :model="cloneDialog.form" layout="vertical">
-        <a-form-item label="新表单名称" name="name" :rules="[{ required: true, message: '请输入新表单名称' }]">
-          <a-input v-model:value="cloneDialog.form.name" placeholder="请输入新表单名称" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
     <!-- 预览对话框 -->
-    <a-modal :open="previewDialogVisible" title="表单预览" :width="previewDialogWidth" :footer="null"
-      @cancel="closePreviewDialog" class="preview-dialog">
+    <a-modal 
+      :open="previewDialogVisible" 
+      title="表单预览" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="closePreviewDialog" 
+      class="preview-dialog"
+    >
       <div v-if="previewDialog.form" class="form-preview-wrapper">
         <a-spin :spinning="previewLoading">
           <div class="preview-header">
@@ -304,53 +431,95 @@
 
           <div class="preview-form">
             <a-form :model="previewFormData" layout="vertical" class="dynamic-form">
-              <template v-for="field in previewDialog.form.schema.fields" :key="field.id">
+              <template v-for="field in previewDialog.form.schema.fields" :key="field.name">
                 <a-form-item :label="field.label" :name="field.name" :required="field.required" class="form-field">
                   <!-- 文本输入框 -->
-                  <a-input v-if="field.type === 'text'" v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder" class="preview-input" />
+                  <a-input 
+                    v-if="field.type === FormFieldType.Text" 
+                    v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder" 
+                    class="preview-input" 
+                  />
 
                   <!-- 数字输入框 -->
-                  <a-input-number v-else-if="field.type === 'number'" v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder" style="width: 100%" class="preview-input" />
+                  <a-input-number 
+                    v-else-if="field.type === FormFieldType.Number" 
+                    v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder" 
+                    style="width: 100%" 
+                    class="preview-input" 
+                  />
+
+                  <!-- 密码输入框 -->
+                  <a-input-password 
+                    v-else-if="field.type === FormFieldType.Password" 
+                    v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder" 
+                    class="preview-input" 
+                  />
+
+                  <!-- 多行文本 -->
+                  <a-textarea 
+                    v-else-if="field.type === FormFieldType.Textarea" 
+                    v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder" 
+                    :rows="4" 
+                    class="preview-input" 
+                  />
 
                   <!-- 日期选择器 -->
-                  <a-date-picker v-else-if="field.type === 'date'" v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder" style="width: 100%" class="preview-input" />
+                  <a-date-picker 
+                    v-else-if="field.type === FormFieldType.Date" 
+                    v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder" 
+                    style="width: 100%" 
+                    class="preview-input" 
+                  />
 
                   <!-- 下拉选择 -->
-                  <a-select v-else-if="field.type === 'select'" v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder || '请选择'" style="width: 100%" class="preview-input">
-                    <a-select-option v-for="option in field.options" :key="option.value" :value="option.value">
-                      {{ option.label }}
+                  <a-select 
+                    v-else-if="field.type === FormFieldType.Select" 
+                    v-model:value="previewFormData[field.name]"
+                    :placeholder="field.placeholder || '请选择'" 
+                    style="width: 100%" 
+                    class="preview-input"
+                  >
+                    <a-select-option v-for="option in field.options" :key="option" :value="option">
+                      {{ option }}
                     </a-select-option>
                   </a-select>
 
                   <!-- 单选框组 -->
-                  <a-radio-group v-else-if="field.type === 'radio'" v-model:value="previewFormData[field.name]"
-                    class="preview-radio-group">
+                  <a-radio-group 
+                    v-else-if="field.type === FormFieldType.Radio" 
+                    v-model:value="previewFormData[field.name]"
+                    class="preview-radio-group"
+                  >
                     <div class="radio-options">
-                      <a-radio v-for="option in field.options" :key="option.value" :value="option.value"
-                        class="preview-radio">
-                        {{ option.label }}
+                      <a-radio v-for="option in field.options" :key="option" :value="option" class="preview-radio">
+                        {{ option }}
                       </a-radio>
                     </div>
                   </a-radio-group>
 
                   <!-- 复选框组 -->
-                  <a-checkbox-group v-else-if="field.type === 'checkbox'" v-model:value="previewFormData[field.name]"
-                    class="preview-checkbox-group">
+                  <a-checkbox-group 
+                    v-else-if="field.type === FormFieldType.Checkbox" 
+                    v-model:value="previewFormData[field.name]"
+                    class="preview-checkbox-group"
+                  >
                     <div class="checkbox-options">
-                      <a-checkbox v-for="option in field.options" :key="option.value" :value="option.value"
-                        class="preview-checkbox">
-                        {{ option.label }}
+                      <a-checkbox v-for="option in field.options" :key="option" :value="option" class="preview-checkbox">
+                        {{ option }}
                       </a-checkbox>
                     </div>
                   </a-checkbox-group>
 
-                  <!-- 多行文本 -->
-                  <a-textarea v-else-if="field.type === 'textarea'" v-model:value="previewFormData[field.name]"
-                    :placeholder="field.placeholder" :rows="4" class="preview-input" />
+                  <!-- 开关 -->
+                  <a-switch 
+                    v-else-if="field.type === FormFieldType.Switch" 
+                    v-model:checked="previewFormData[field.name]"
+                  />
                 </a-form-item>
               </template>
 
@@ -371,35 +540,55 @@
     </a-modal>
 
     <!-- 详情对话框 -->
-    <a-modal :open="detailDialogVisible" title="表单详情" :width="previewDialogWidth" :footer="null"
-      @cancel="closeDetailDialog" class="detail-dialog">
+    <a-modal 
+      :open="detailDialogVisible" 
+      title="表单详情" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="closeDetailDialog" 
+      class="detail-dialog"
+    >
       <div v-if="detailDialog.form" class="form-details">
         <div class="detail-header">
           <h2>{{ detailDialog.form.name }}</h2>
-          <a-tag :color="getStatusColor(detailDialog.form.status)">
-            {{ getStatusText(detailDialog.form.status) }}
-          </a-tag>
+          <div class="detail-tags">
+            <a-tag :color="getStatusColor(detailDialog.form.status)">
+              {{ getStatusText(detailDialog.form.status) }}
+            </a-tag>
+            <a-tag v-if="detailDialog.form.is_template === 1" color="purple">模板</a-tag>
+          </div>
         </div>
 
         <a-descriptions bordered :column="1" :labelStyle="{ width: '120px' }">
           <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
-          <a-descriptions-item label="版本">v{{ detailDialog.form.version }}</a-descriptions-item>
           <a-descriptions-item label="分类">
             <a-tag v-if="detailDialog.form.category" color="blue">
               {{ detailDialog.form.category.name }}
             </a-tag>
             <span v-else class="text-gray">未分类</span>
           </a-descriptions-item>
-          <a-descriptions-item label="创建人">{{ detailDialog.form.creator_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '')
-            }}</a-descriptions-item>
+          <a-descriptions-item label="操作人">{{ detailDialog.form.operator_name || '系统' }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '') }}</a-descriptions-item>
+          <a-descriptions-item label="更新时间">{{ formatFullDateTime(detailDialog.form.updated_at || '') }}</a-descriptions-item>
+          <a-descriptions-item label="标签" v-if="detailDialog.form.tags && detailDialog.form.tags.length">
+            <div class="detail-tags-list">
+              <a-tag v-for="tag in detailDialog.form.tags" :key="tag" size="small">{{ tag }}</a-tag>
+            </div>
+          </a-descriptions-item>
           <a-descriptions-item label="描述">{{ detailDialog.form.description || '无描述' }}</a-descriptions-item>
         </a-descriptions>
 
         <div class="schema-preview">
           <h3>表单结构</h3>
-          <a-table :data-source="detailDialog.form.schema.fields" :columns="schemaColumns" :pagination="false" bordered
-            size="small" row-key="name" :scroll="{ x: 600 }">
+          <a-table 
+            :data-source="detailDialog.form.schema.fields" 
+            :columns="schemaColumns" 
+            :pagination="false" 
+            bordered
+            size="small" 
+            row-key="name" 
+            :scroll="{ x: 600 }"
+          >
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'required'">
                 <a-tag :color="record.required ? 'red' : ''">
@@ -416,7 +605,7 @@
         <div class="detail-footer">
           <a-button @click="closeDetailDialog">关闭</a-button>
           <a-button type="primary" @click="handleEditForm(detailDialog.form)">编辑</a-button>
-          <a-button type="default" @click="handleDesignForm(detailDialog.form)">设计表单</a-button>
+          <a-button type="default" @click="handlePreviewForm(detailDialog.form)">预览</a-button>
         </div>
       </div>
     </a-modal>
@@ -424,9 +613,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import { useRouter } from 'vue-router';
 import {
   PlusOutlined,
   FormOutlined,
@@ -438,45 +626,29 @@ import {
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
-  listFormDesign,
-  detailFormDesign,
-  createFormDesign,
-  updateFormDesign,
-  deleteFormDesign,
-  publishFormDesign,
-  cloneFormDesign,
-  previewFormDesign,
-  getFormStatistics,
-  type FormDesignResp,
+  listWorkorderFormDesign,
+  detailWorkorderFormDesign,
+  createWorkorderFormDesign,
+  updateWorkorderFormDesign,
+  deleteWorkorderFormDesign,
+  FormDesignStatus,
+  FormFieldType,
+  type WorkorderFormDesignItem,
   type FormField,
   type FormSchema,
-  type ListFormDesignReq,
-  type CreateFormDesignReq,
-  type UpdateFormDesignReq,
+  type ListWorkorderFormDesignReq,
+  type CreateWorkorderFormDesignReq,
+  type UpdateWorkorderFormDesignReq
 } from '#/api/core/workorder_form_design';
-import type { Category } from '#/api/core/workorder_category';
-import { listCategory } from '#/api/core/workorder_category';
+import type { WorkorderCategoryItem } from '#/api/core/workorder_category';
+import { listWorkorderCategory } from '#/api/core/workorder_category';
 
-const router = useRouter();
-
-// 响应式对话框宽度
-const dialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '80%';
-    return '600px';
-  }
-  return '600px';
-});
-
-// 表单对话框宽度（更大以容纳JSON编辑器）
 const formDialogWidth = computed(() => {
   if (typeof window !== 'undefined') {
     const width = window.innerWidth;
     if (width < 768) return '95%';
     if (width < 1024) return '90%';
-    return '900px'; // 增大宽度以容纳JSON编辑器
+    return '900px';
   }
   return '900px';
 });
@@ -491,19 +663,18 @@ const previewDialogWidth = computed(() => {
   return '80%';
 });
 
-// 计算总页数
 const totalPages = computed(() => {
   return Math.ceil(categoryPagination.total / categoryPagination.pageSize);
 });
 
 // 列定义
 const columns = [
-  { title: '表单名称', dataIndex: 'name', key: 'name', width: 180, fixed: 'left' },
-  { title: '分类', dataIndex: 'category_name', key: 'category', width: 120, align: 'center' as const },
+  { title: '表单名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
+  { title: '分类', dataIndex: 'category', key: 'category', width: 120, align: 'center' as const },
   { title: '描述', dataIndex: 'description', key: 'description', width: 200, ellipsis: true },
-  { title: '版本', dataIndex: 'version', key: 'version', width: 100, align: 'center' as const },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 120, align: 'center' as const },
-  { title: '创建人', dataIndex: 'creator_name', key: 'creator', width: 150 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
+  { title: '操作人', dataIndex: 'operator_name', key: 'operator', width: 120 },
+  { title: '标签', dataIndex: 'tags', key: 'tags', width: 150 },
   { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
   { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
 ];
@@ -521,17 +692,18 @@ const previewLoading = ref(false);
 const searchQuery = ref('');
 const categoryFilter = ref<number | undefined>(undefined);
 const statusFilter = ref<number | undefined>(undefined);
-const formDesigns = ref<FormDesignResp[]>([]);
-const categories = ref<Category[]>([]);
+const templateFilter = ref<number | undefined>(undefined);
+const formDesigns = ref<WorkorderFormDesignItem[]>([]);
+const categories = ref<WorkorderCategoryItem[]>([]);
 const previewFormData = ref<Record<string, any>>({});
 
 // 表单对话框中的分页分类数据
-const formDialogCategories = ref<Category[]>([]);
+const formDialogCategories = ref<WorkorderCategoryItem[]>([]);
 const categorySelectorLoading = ref(false);
 const categorySearchKeyword = ref('');
 let categorySearchTimeout: any = null;
 
-// 分类分页状态 - 参考API页面的分页配置
+// 分类分页状态
 const categoryPagination = reactive({
   current: 1,
   pageSize: 20,
@@ -562,16 +734,15 @@ const stats = reactive({
   total: 0,
   published: 0,
   draft: 0,
-  disabled: 0
+  archived: 0
 });
 
 // 对话框状态
 const formDialogVisible = ref(false);
-const cloneDialogVisible = ref(false);
 const detailDialogVisible = ref(false);
 const previewDialogVisible = ref(false);
 
-// 表单对话框数据 - 新增fieldsJson字段
+// 表单对话框数据
 const formDialog = reactive({
   isEdit: false,
   form: {
@@ -579,27 +750,21 @@ const formDialog = reactive({
     name: '',
     description: '',
     category_id: undefined as number | undefined,
-    status: 1 as number,
-    fieldsJson: '' // 新增：用于编辑字段JSON
-  }
-});
-
-// 克隆对话框数据
-const cloneDialog = reactive({
-  form: {
-    name: '',
-    originalId: 0
+    status: FormDesignStatus.Draft as number,
+    tags: [] as string[],
+    is_template: 2 as number,
+    fieldsJson: ''
   }
 });
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as FormDesignResp | null
+  form: null as WorkorderFormDesignItem | null
 });
 
 // 预览对话框数据
 const previewDialog = reactive({
-  form: null as FormDesignResp | null
+  form: null as WorkorderFormDesignItem | null
 });
 
 // 表单验证规则
@@ -614,207 +779,160 @@ const formRules = {
 };
 
 // 字段帮助文本
-const fieldsHelpText = `支持的字段类型：text(文本), number(数字), date(日期), select(下拉), radio(单选), checkbox(复选), textarea(多行文本)。
-必需属性：id, type, label, name, required, sort_order。
-可选属性：placeholder, default_value, options, validation, disabled, hidden, description。`;
+const fieldsHelpText = `支持的字段类型：text(文本), number(数字), password(密码), textarea(多行文本), select(下拉), radio(单选), checkbox(复选), date(日期), switch(开关)。
+必需属性：name, type, label, required, placeholder, default, options（选择类型必需）。`;
 
 // 字段示例
 const simpleFieldsExample = JSON.stringify([
   {
-    "id": "field1",
+    "name": "name",
     "type": "text",
     "label": "姓名",
-    "name": "name",
-    "required": true,
-    "placeholder": "请输入姓名",
-    "sort_order": 1,
-    "disabled": false,
-    "hidden": false
+    "required": 1,
+    "placeholder": "请输入姓名"
   },
   {
-    "id": "field2",
+    "name": "gender",
     "type": "select",
     "label": "性别",
-    "name": "gender",
-    "required": true,
+    "required": 1,
     "placeholder": "请选择性别",
-    "options": [
-      { "label": "男", "value": "male" },
-      { "label": "女", "value": "female" }
-    ],
-    "sort_order": 2,
-    "disabled": false,
-    "hidden": false
+    "options": ["男", "女"]
   }
 ], null, 2);
 
 const complexFieldsExample = JSON.stringify([
   {
-    "id": "field1",
+    "name": "username",
     "type": "text",
     "label": "用户名",
-    "name": "username",
-    "required": true,
-    "placeholder": "请输入用户名",
-    "validation": {
-      "min_length": 3,
-      "max_length": 20,
-      "pattern": "^[a-zA-Z0-9_]+$",
-      "message": "用户名只能包含字母、数字和下划线，长度3-20位"
-    },
-    "sort_order": 1,
-    "disabled": false,
-    "hidden": false,
-    "description": "用户登录名，注册后不可修改"
+    "required": 1,
+    "placeholder": "请输入用户名"
   },
   {
-    "id": "field2",
+    "name": "age",
     "type": "number",
     "label": "年龄",
-    "name": "age",
-    "required": true,
+    "required": 1,
     "placeholder": "请输入年龄",
-    "validation": {
-      "min": 1,
-      "max": 120,
-      "message": "年龄必须在1-120之间"
-    },
-    "default_value": 18,
-    "sort_order": 2,
-    "disabled": false,
-    "hidden": false
+    "default": 18
   },
   {
-    "id": "field3",
+    "name": "hobbies",
     "type": "checkbox",
     "label": "兴趣爱好",
-    "name": "hobbies",
-    "required": false,
-    "options": [
-      { "label": "读书", "value": "reading" },
-      { "label": "运动", "value": "sports" },
-      { "label": "音乐", "value": "music" },
-      { "label": "旅行", "value": "travel" }
-    ],
-    "default_value": ["reading"],
-    "sort_order": 3,
-    "disabled": false,
-    "hidden": false
+    "required": 0,
+    "options": ["读书", "运动", "音乐", "旅行"],
+    "default": ["读书"]
   }
 ], null, 2);
 
 const allTypesFieldsExample = JSON.stringify([
   {
-    "id": "text_field",
+    "name": "text_input",
     "type": "text",
     "label": "文本字段",
-    "name": "text_input",
-    "required": true,
-    "placeholder": "请输入文本",
-    "sort_order": 1,
-    "disabled": false,
-    "hidden": false
+    "required": 1,
+    "placeholder": "请输入文本"
   },
   {
-    "id": "number_field",
+    "name": "number_input",
     "type": "number",
     "label": "数字字段",
-    "name": "number_input",
-    "required": false,
-    "placeholder": "请输入数字",
-    "sort_order": 2,
-    "disabled": false,
-    "hidden": false
+    "required": 0,
+    "placeholder": "请输入数字"
   },
   {
-    "id": "date_field",
-    "type": "date",
-    "label": "日期字段",
-    "name": "date_input",
-    "required": false,
-    "placeholder": "请选择日期",
-    "sort_order": 3,
-    "disabled": false,
-    "hidden": false
+    "name": "password_input",
+    "type": "password",
+    "label": "密码字段",
+    "required": 1,
+    "placeholder": "请输入密码"
   },
   {
-    "id": "select_field",
-    "type": "select",
-    "label": "下拉选择",
-    "name": "select_input",
-    "required": true,
-    "placeholder": "请选择",
-    "options": [
-      { "label": "选项1", "value": "option1" },
-      { "label": "选项2", "value": "option2" },
-      { "label": "选项3", "value": "option3" }
-    ],
-    "sort_order": 4,
-    "disabled": false,
-    "hidden": false
-  },
-  {
-    "id": "radio_field",
-    "type": "radio",
-    "label": "单选字段",
-    "name": "radio_input",
-    "required": true,
-    "options": [
-      { "label": "是", "value": "yes" },
-      { "label": "否", "value": "no" }
-    ],
-    "sort_order": 5,
-    "disabled": false,
-    "hidden": false
-  },
-  {
-    "id": "checkbox_field",
-    "type": "checkbox",
-    "label": "复选字段",
-    "name": "checkbox_input",
-    "required": false,
-    "options": [
-      { "label": "选项A", "value": "a" },
-      { "label": "选项B", "value": "b" },
-      { "label": "选项C", "value": "c" }
-    ],
-    "sort_order": 6,
-    "disabled": false,
-    "hidden": false
-  },
-  {
-    "id": "textarea_field",
+    "name": "textarea_input",
     "type": "textarea",
     "label": "多行文本",
-    "name": "textarea_input",
-    "required": false,
-    "placeholder": "请输入详细内容",
-    "sort_order": 7,
-    "disabled": false,
-    "hidden": false
+    "required": 0,
+    "placeholder": "请输入详细内容"
+  },
+  {
+    "name": "date_input",
+    "type": "date",
+    "label": "日期字段",
+    "required": 0,
+    "placeholder": "请选择日期"
+  },
+  {
+    "name": "select_input",
+    "type": "select",
+    "label": "下拉选择",
+    "required": 1,
+    "placeholder": "请选择",
+    "options": ["选项1", "选项2", "选项3"]
+  },
+  {
+    "name": "radio_input",
+    "type": "radio",
+    "label": "单选字段",
+    "required": 1,
+    "options": ["是", "否"]
+  },
+  {
+    "name": "checkbox_input",
+    "type": "checkbox",
+    "label": "复选字段",
+    "required": 0,
+    "options": ["选项A", "选项B", "选项C"]
+  },
+  {
+    "name": "switch_input",
+    "type": "switch",
+    "label": "开关字段",
+    "required": 0,
+    "default": false
   }
 ], null, 2);
 
 // 辅助方法
 const getStatusColor = (status: number): string => {
-  const colorMap = { 1: 'orange', 2: 'green', 3: 'default' };
+  const colorMap = { 
+    [FormDesignStatus.Draft]: 'orange', 
+    [FormDesignStatus.Published]: 'green', 
+    [FormDesignStatus.Archived]: 'default' 
+  };
   return colorMap[status as keyof typeof colorMap] || 'default';
 };
 
 const getStatusText = (status: number): string => {
-  const textMap = { 1: '草稿', 2: '已发布', 3: '已禁用' };
+  const textMap = { 
+    [FormDesignStatus.Draft]: '草稿', 
+    [FormDesignStatus.Published]: '已发布', 
+    [FormDesignStatus.Archived]: '已归档' 
+  };
   return textMap[status as keyof typeof textMap] || '未知';
 };
 
 const getStatusClass = (status: number): string => {
-  const classMap = { 1: 'status-draft', 2: 'status-published', 3: 'status-disabled' };
+  const classMap = { 
+    [FormDesignStatus.Draft]: 'status-draft', 
+    [FormDesignStatus.Published]: 'status-published', 
+    [FormDesignStatus.Archived]: 'status-archived' 
+  };
   return classMap[status as keyof typeof classMap] || '';
 };
 
 const getFieldTypeName = (type: string): string => {
   const typeMap: Record<string, string> = {
-    text: '文本框', number: '数字', date: '日期', select: '下拉选择',
-    checkbox: '复选框', radio: '单选框', textarea: '多行文本'
+    text: '文本框', 
+    number: '数字', 
+    password: '密码',
+    textarea: '多行文本',
+    date: '日期', 
+    select: '下拉选择',
+    checkbox: '复选框', 
+    radio: '单选框',
+    switch: '开关'
   };
   return typeMap[type] || type;
 };
@@ -851,7 +969,7 @@ const getAvatarColor = (name: string): string => {
 // 分页分类加载方法
 const loadFormDialogCategories = async (reset: boolean = false, search?: string): Promise<void> => {
   if (categorySelectorLoading.value && !reset) {
-    return; // 避免重复请求
+    return;
   }
 
   categorySelectorLoading.value = true;
@@ -863,21 +981,18 @@ const loadFormDialogCategories = async (reset: boolean = false, search?: string)
       search: search !== undefined ? search : categorySearchKeyword.value || undefined
     };
 
-    const response = await listCategory(params);
+    const response = await listWorkorderCategory(params);
 
     if (response) {
       if (reset) {
-        // 重置数据
         formDialogCategories.value = response.items || [];
         categoryPagination.current = 1;
       } else {
-        // 追加数据，去重
         const existingIds = new Set(formDialogCategories.value.map(cat => cat.id));
         const newItems = (response.items || []).filter((cat: any) => !existingIds.has(cat.id));
         formDialogCategories.value = [...formDialogCategories.value, ...newItems];
       }
 
-      // 更新分页信息
       categoryPagination.total = response.total || 0;
       categoryPagination.hasMore = (response.items || []).length === categoryPagination.pageSize &&
         formDialogCategories.value.length < categoryPagination.total;
@@ -886,7 +1001,6 @@ const loadFormDialogCategories = async (reset: boolean = false, search?: string)
     console.error('加载分类列表失败:', error);
     if (reset) {
       message.error(error.message || '加载分类列表失败');
-      // 重置状态
       formDialogCategories.value = [];
       categoryPagination.current = 1;
       categoryPagination.total = 0;
@@ -901,12 +1015,10 @@ const loadFormDialogCategories = async (reset: boolean = false, search?: string)
 const handleCategorySearch = (value: string): void => {
   categorySearchKeyword.value = value;
 
-  // 清除之前的定时器
   if (categorySearchTimeout) {
     clearTimeout(categorySearchTimeout);
   }
 
-  // 防抖处理
   categorySearchTimeout = setTimeout(() => {
     categoryPagination.current = 1;
     loadFormDialogCategories(true, value);
@@ -916,14 +1028,13 @@ const handleCategorySearch = (value: string): void => {
 // 处理下拉框显示/隐藏
 const handleCategoryDropdownChange = (open: boolean): void => {
   if (open) {
-    // 首次打开或数据为空时加载数据
     if (formDialogCategories.value.length === 0) {
       loadFormDialogCategories(true);
     }
   }
 };
 
-// 处理滚动加载更多 - 参考API页面的滚动处理
+// 处理滚动加载更多
 const handleCategoryScroll = (e: Event): void => {
   const { target } = e;
   if (!target) return;
@@ -931,8 +1042,7 @@ const handleCategoryScroll = (e: Event): void => {
   const element = target as HTMLElement;
   const { scrollTop, scrollHeight, clientHeight } = element;
 
-  // 滚动到底部时触发加载更多
-  if (scrollTop + clientHeight >= scrollHeight - 10 && // 提前10px触发
+  if (scrollTop + clientHeight >= scrollHeight - 10 && 
     categoryPagination.hasMore &&
     !categorySelectorLoading.value) {
     loadMoreCategories();
@@ -980,23 +1090,21 @@ const validateFieldsJson = (): void => {
       throw new Error('字段配置必须是数组格式');
     }
 
-    // 验证每个字段的必需属性
     parsed.forEach((field: any, index: number) => {
-      const requiredProps = ['id', 'type', 'label', 'name', 'required', 'sort_order', 'disabled', 'hidden'];
+      const requiredProps = ['name', 'type', 'label', 'required'];
       const missingProps = requiredProps.filter(prop => field[prop] === undefined);
 
       if (missingProps.length > 0) {
         throw new Error(`字段 ${index + 1} 缺少必需属性: ${missingProps.join(', ')}`);
       }
 
-      // 验证字段类型
-      const validTypes = ['text', 'number', 'date', 'select', 'radio', 'checkbox', 'textarea'];
+      const validTypes = Object.values(FormFieldType);
       if (!validTypes.includes(field.type)) {
         throw new Error(`字段 ${index + 1} 的类型 "${field.type}" 不支持`);
       }
 
-      // 验证选择类型字段必须有options
-      if (['select', 'radio', 'checkbox'].includes(field.type) && (!field.options || !Array.isArray(field.options))) {
+      if ([FormFieldType.Select, FormFieldType.Radio, FormFieldType.Checkbox].includes(field.type) && 
+          (!field.options || !Array.isArray(field.options))) {
         throw new Error(`字段 ${index + 1} (${field.type}类型) 必须包含options数组`);
       }
     });
@@ -1040,39 +1148,31 @@ const parseFieldsJson = (jsonStr: string): FormField[] => {
 };
 
 // 更新统计数据
-const updateStats = async () => {
-  try {
-    const response = await getFormStatistics();
-    if (response) {
-      stats.draft = response.draft;
-      stats.published = response.published;
-      stats.disabled = response.disabled;
-      stats.total = response.draft + response.published + response.disabled;
-    }
-  } catch (error) {
-    console.error('加载统计数据失败:', error);
-  }
+const updateStats = (items: WorkorderFormDesignItem[]) => {
+  stats.total = items.length;
+  stats.draft = items.filter(item => item.status === FormDesignStatus.Draft).length;
+  stats.published = items.filter(item => item.status === FormDesignStatus.Published).length;
+  stats.archived = items.filter(item => item.status === FormDesignStatus.Archived).length;
 };
 
 // 数据加载
 const loadFormDesigns = async (): Promise<void> => {
   loading.value = true;
   try {
-    const params: ListFormDesignReq = {
+    const params: ListWorkorderFormDesignReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchQuery.value || undefined,
       status: statusFilter.value,
-      category_id: categoryFilter.value
+      category_id: categoryFilter.value,
+      is_template: templateFilter.value
     };
 
-    const response = await listFormDesign(params);
+    const response = await listWorkorderFormDesign(params);
     if (response) {
       formDesigns.value = response.items || [];
       paginationConfig.total = response.total || 0;
-      stats.total = response.total || 0;
-      // 调用API更新统计数据
-      await updateStats();
+      updateStats(response.items || []);
     }
   } catch (error) {
     console.error('加载表单列表失败:', error);
@@ -1084,7 +1184,7 @@ const loadFormDesigns = async (): Promise<void> => {
 
 const loadCategories = async (): Promise<void> => {
   try {
-    const response = await listCategory({ page: 1, size: 100 });
+    const response = await listWorkorderCategory({ page: 1, size: 100 });
     categories.value = response.items || [];
   } catch (error) {
     console.error('加载分类列表失败:', error);
@@ -1124,10 +1224,16 @@ const handleStatusChange = (): void => {
   loadFormDesigns();
 };
 
+const handleTemplateChange = (): void => {
+  paginationConfig.current = 1;
+  loadFormDesigns();
+};
+
 const handleResetFilters = (): void => {
   searchQuery.value = '';
   categoryFilter.value = undefined;
   statusFilter.value = undefined;
+  templateFilter.value = undefined;
   paginationConfig.current = 1;
   loadFormDesigns();
   message.success('过滤条件已重置');
@@ -1140,19 +1246,19 @@ const handleCreateForm = (): void => {
     name: '',
     description: '',
     category_id: undefined,
-    status: 1,
+    status: FormDesignStatus.Draft,
+    tags: [],
+    is_template: 2,
     fieldsJson: ''
   };
   jsonValidationError.value = '';
   formDialogVisible.value = true;
-
-  // 重置分类选择器状态
   resetCategorySelector();
 };
 
-const handleEditForm = async (record: FormDesignResp): Promise<void> => {
+const handleEditForm = async (record: WorkorderFormDesignItem): Promise<void> => {
   try {
-    const response = await detailFormDesign({ id: record.id });
+    const response = await detailWorkorderFormDesign({ id: record.id });
     if (response) {
       formDialog.isEdit = true;
       formDialog.form = {
@@ -1161,13 +1267,13 @@ const handleEditForm = async (record: FormDesignResp): Promise<void> => {
         description: response.description,
         category_id: response.category_id,
         status: response.status,
+        tags: response.tags || [],
+        is_template: response.is_template,
         fieldsJson: JSON.stringify(response.schema.fields || [], null, 2)
       };
       jsonValidationError.value = '';
       formDialogVisible.value = true;
       detailDialogVisible.value = false;
-
-      // 重置分类选择器状态并预加载分类信息
       await loadCategoryForEdit(response);
     }
   } catch (error) {
@@ -1177,44 +1283,40 @@ const handleEditForm = async (record: FormDesignResp): Promise<void> => {
 };
 
 // 为编辑模式加载分类信息的专用方法
-const loadCategoryForEdit = async (formData: FormDesignResp): Promise<void> => {
-  // 重置分类选择器状态
+const loadCategoryForEdit = async (formData: WorkorderFormDesignItem): Promise<void> => {
   resetCategorySelector();
 
   try {
-    // 加载分类列表
     await loadFormDialogCategories(true);
 
-    // 如果当前分类不在列表中，尝试单独加载该分类信息
     if (formData.category_id && !formDialogCategories.value.find(cat => cat.id === formData.category_id)) {
-      // 如果API返回了完整的分类信息，直接添加到选择列表
       if (formData.category && formData.category.name) {
-        const categoryInfo: Category = {
+        const categoryInfo: WorkorderCategoryItem = {
           id: formData.category_id,
           name: formData.category.name,
           description: formData.category.description || '',
-          icon: '',
-          sort_order: 0,
+          created_at: '',
+          updated_at: '',
           status: 1,
-          parent_id: null
+          operator_id: 0,
+          operator_name: ''
         };
 
-        // 将分类信息添加到列表前面，确保显示
         formDialogCategories.value = [categoryInfo, ...formDialogCategories.value];
       }
     }
   } catch (error) {
     console.error('加载编辑模式分类信息失败:', error);
-    // 即使加载失败，也确保当前分类信息可用
     if (formData.category_id && formData.category?.name) {
-      const categoryInfo: Category = {
+      const categoryInfo: WorkorderCategoryItem = {
         id: formData.category_id,
         name: formData.category.name || `分类${formData.category_id}`,
         description: formData.category?.description || '',
-        icon: '',
-        sort_order: 0,
+        created_at: '',
+        updated_at: '',
         status: 1,
-        parent_id: null
+        operator_id: 0,
+        operator_name: ''
       };
       formDialogCategories.value = [categoryInfo];
     }
@@ -1230,16 +1332,15 @@ const resetCategorySelector = (): void => {
   categorySearchKeyword.value = '';
   categorySelectorLoading.value = false;
 
-  // 清除搜索定时器
   if (categorySearchTimeout) {
     clearTimeout(categorySearchTimeout);
     categorySearchTimeout = null;
   }
 };
 
-const handleViewForm = async (record: FormDesignResp): Promise<void> => {
+const handleViewForm = async (record: WorkorderFormDesignItem): Promise<void> => {
   try {
-    const response = await detailFormDesign({ id: record.id });
+    const response = await detailWorkorderFormDesign({ id: record.id });
     if (response) {
       detailDialog.form = response;
       detailDialogVisible.value = true;
@@ -1250,18 +1351,7 @@ const handleViewForm = async (record: FormDesignResp): Promise<void> => {
   }
 };
 
-// 新增：跳转到表单设计页面
-const handleDesignForm = (record: FormDesignResp): void => {
-  // 这里可以跳转到表单设计页面，传递表单ID
-  router.push({
-    name: 'FormDesign', // 假设表单设计页面的路由名称
-    params: { id: record.id },
-    query: { mode: 'design' }
-  });
-  detailDialogVisible.value = false;
-};
-
-const handleMenuClick = (command: string, record: FormDesignResp): void => {
+const handleMenuClick = (command: string, record: WorkorderFormDesignItem): void => {
   switch (command) {
     case 'preview':
       handlePreviewForm(record);
@@ -1269,11 +1359,11 @@ const handleMenuClick = (command: string, record: FormDesignResp): void => {
     case 'publish':
       publishForm(record);
       break;
-    case 'unpublish':
-      unpublishForm(record);
+    case 'archive':
+      archiveForm(record);
       break;
-    case 'clone':
-      showCloneDialog(record);
+    case 'unarchive':
+      unarchiveForm(record);
       break;
     case 'delete':
       confirmDelete(record);
@@ -1281,12 +1371,12 @@ const handleMenuClick = (command: string, record: FormDesignResp): void => {
   }
 };
 
-const handlePreviewForm = async (record: FormDesignResp): Promise<void> => {
+const handlePreviewForm = async (record: WorkorderFormDesignItem): Promise<void> => {
   previewLoading.value = true;
   previewDialogVisible.value = true;
 
   try {
-    const response = await previewFormDesign({ id: record.id });
+    const response = await detailWorkorderFormDesign({ id: record.id });
     if (response) {
       previewDialog.form = response;
       initPreviewFormData(response.schema);
@@ -1299,9 +1389,19 @@ const handlePreviewForm = async (record: FormDesignResp): Promise<void> => {
   }
 };
 
-const publishForm = async (record: FormDesignResp): Promise<void> => {
+const publishForm = async (record: WorkorderFormDesignItem): Promise<void> => {
   try {
-    await publishFormDesign({ id: record.id });
+    const updateData: UpdateWorkorderFormDesignReq = {
+      id: record.id,
+      name: record.name,
+      description: record.description,
+      schema: record.schema,
+      status: FormDesignStatus.Published,
+      category_id: record.category_id,
+      tags: record.tags,
+      is_template: record.is_template
+    };
+    await updateWorkorderFormDesign(updateData);
     message.success(`表单 "${record.name}" 已发布`);
     loadFormDesigns();
   } catch (error) {
@@ -1310,52 +1410,49 @@ const publishForm = async (record: FormDesignResp): Promise<void> => {
   }
 };
 
-const unpublishForm = async (record: FormDesignResp): Promise<void> => {
+const archiveForm = async (record: WorkorderFormDesignItem): Promise<void> => {
   try {
-    const updateData: UpdateFormDesignReq = {
+    const updateData: UpdateWorkorderFormDesignReq = {
       id: record.id,
       name: record.name,
       description: record.description,
       schema: record.schema,
+      status: FormDesignStatus.Archived,
       category_id: record.category_id,
-      status: 1
+      tags: record.tags,
+      is_template: record.is_template
     };
-    await updateFormDesign(updateData);
-    message.success(`表单 "${record.name}" 已取消发布`);
+    await updateWorkorderFormDesign(updateData);
+    message.success(`表单 "${record.name}" 已归档`);
     loadFormDesigns();
   } catch (error) {
-    console.error('取消发布表单失败:', error);
-    message.error('取消发布表单失败');
+    console.error('归档表单失败:', error);
+    message.error('归档表单失败');
   }
 };
 
-const showCloneDialog = (record: FormDesignResp): void => {
-  cloneDialog.form.name = `${record.name} 的副本`;
-  cloneDialog.form.originalId = record.id;
-  cloneDialogVisible.value = true;
-};
-
-const confirmClone = async (): Promise<void> => {
-  if (!cloneDialog.form.name.trim()) {
-    message.error('请输入新表单名称');
-    return;
-  }
-
+const unarchiveForm = async (record: WorkorderFormDesignItem): Promise<void> => {
   try {
-    await cloneFormDesign({
-      id: cloneDialog.form.originalId,
-      name: cloneDialog.form.name
-    });
-    message.success(`表单已克隆为 "${cloneDialog.form.name}"`);
-    cloneDialogVisible.value = false;
+    const updateData: UpdateWorkorderFormDesignReq = {
+      id: record.id,
+      name: record.name,
+      description: record.description,
+      schema: record.schema,
+      status: FormDesignStatus.Draft,
+      category_id: record.category_id,
+      tags: record.tags,
+      is_template: record.is_template
+    };
+    await updateWorkorderFormDesign(updateData);
+    message.success(`表单 "${record.name}" 已取消归档`);
     loadFormDesigns();
   } catch (error) {
-    console.error('克隆表单失败:', error);
-    message.error('克隆表单失败');
+    console.error('取消归档表单失败:', error);
+    message.error('取消归档表单失败');
   }
 };
 
-const confirmDelete = (record: FormDesignResp): void => {
+const confirmDelete = (record: WorkorderFormDesignItem): void => {
   Modal.confirm({
     title: '警告',
     content: `确定要删除表单 "${record.name}" 吗？`,
@@ -1364,7 +1461,7 @@ const confirmDelete = (record: FormDesignResp): void => {
     cancelText: '取消',
     async onOk() {
       try {
-        await deleteFormDesign({ id: record.id });
+        await deleteWorkorderFormDesign({ id: record.id });
         message.success(`表单 "${record.name}" 已删除`);
         loadFormDesigns();
       } catch (error) {
@@ -1375,7 +1472,7 @@ const confirmDelete = (record: FormDesignResp): void => {
   });
 };
 
-// 表单保存 - 支持字段JSON编辑
+// 表单保存
 const saveForm = async (): Promise<void> => {
   if (!formDialog.form.name.trim()) {
     message.error('表单名称不能为空');
@@ -1387,7 +1484,6 @@ const saveForm = async (): Promise<void> => {
     return;
   }
 
-  // 解析字段JSON
   let fields: FormField[] = [];
   try {
     fields = parseFieldsJson(formDialog.form.fieldsJson);
@@ -1402,24 +1498,29 @@ const saveForm = async (): Promise<void> => {
     };
 
     if (formDialog.isEdit && formDialog.form.id) {
-      const updateData: UpdateFormDesignReq = {
+      const updateData: UpdateWorkorderFormDesignReq = {
         id: formDialog.form.id,
         name: formDialog.form.name,
         description: formDialog.form.description,
         schema: schema,
+        status: formDialog.form.status,
         category_id: formDialog.form.category_id,
-        status: formDialog.form.status
+        tags: formDialog.form.tags,
+        is_template: formDialog.form.is_template
       };
-      await updateFormDesign(updateData);
+      await updateWorkorderFormDesign(updateData);
       message.success(`表单 "${formDialog.form.name}" 已更新`);
     } else {
-      const createData: CreateFormDesignReq = {
+      const createData: CreateWorkorderFormDesignReq = {
         name: formDialog.form.name,
         description: formDialog.form.description,
         schema: schema,
-        category_id: formDialog.form.category_id
+        status: formDialog.form.status,
+        category_id: formDialog.form.category_id,
+        tags: formDialog.form.tags,
+        is_template: formDialog.form.is_template
       };
-      await createFormDesign(createData);
+      await createWorkorderFormDesign(createData);
       message.success(`表单 "${formDialog.form.name}" 已创建`);
     }
 
@@ -1437,25 +1538,29 @@ const initPreviewFormData = (schema: FormSchema): void => {
 
   schema.fields.forEach((field: FormField) => {
     switch (field.type) {
-      case 'text':
-      case 'textarea':
-        data[field.name] = field.default_value || '';
+      case FormFieldType.Text:
+      case FormFieldType.Password:
+      case FormFieldType.Textarea:
+        data[field.name] = field.default || '';
         break;
-      case 'number':
-        data[field.name] = field.default_value || undefined;
+      case FormFieldType.Number:
+        data[field.name] = field.default || undefined;
         break;
-      case 'date':
-        data[field.name] = field.default_value || undefined;
+      case FormFieldType.Date:
+        data[field.name] = field.default || undefined;
         break;
-      case 'select':
-      case 'radio':
-        data[field.name] = field.default_value || undefined;
+      case FormFieldType.Select:
+      case FormFieldType.Radio:
+        data[field.name] = field.default || undefined;
         break;
-      case 'checkbox':
-        data[field.name] = field.default_value || [];
+      case FormFieldType.Checkbox:
+        data[field.name] = field.default || [];
+        break;
+      case FormFieldType.Switch:
+        data[field.name] = field.default || false;
         break;
       default:
-        data[field.name] = field.default_value || '';
+        data[field.name] = field.default || '';
     }
   });
 
@@ -1476,10 +1581,6 @@ const closeFormDialog = (): void => {
   resetCategorySelector();
 };
 
-const closeCloneDialog = (): void => {
-  cloneDialogVisible.value = false;
-};
-
 const closeDetailDialog = (): void => {
   detailDialogVisible.value = false;
 };
@@ -1494,7 +1595,6 @@ const closePreviewDialog = (): void => {
 onMounted(() => {
   loadCategories();
   loadFormDesigns();
-  updateStats(); // 单独获取统计数据
 });
 </script>
 
@@ -1535,7 +1635,8 @@ onMounted(() => {
 }
 
 .category-filter,
-.status-filter {
+.status-filter,
+.template-filter {
   width: 120px;
   min-width: 100px;
 }
@@ -1579,7 +1680,7 @@ onMounted(() => {
   background-color: #52c41a;
 }
 
-.status-disabled {
+.status-archived {
   background-color: #d9d9d9;
 }
 
@@ -1601,15 +1702,29 @@ onMounted(() => {
   font-style: italic;
 }
 
-.creator-info {
+.operator-info {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.creator-name {
+.operator-name {
   font-size: 14px;
   word-break: break-all;
+}
+
+.tags-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.tags-popover {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 200px;
 }
 
 .date-info {
@@ -1634,7 +1749,7 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-/* 分页分类选择器样式 - 参考API页面样式 */
+/* 分页分类选择器样式 */
 .category-loading,
 .category-empty {
   display: flex;
@@ -1799,6 +1914,18 @@ onMounted(() => {
   font-size: 24px;
   color: #1f2937;
   word-break: break-all;
+}
+
+.detail-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detail-tags-list {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .schema-preview {
@@ -1983,7 +2110,8 @@ onMounted(() => {
   }
 
   .category-filter,
-  .status-filter {
+  .status-filter,
+  .template-filter {
     width: 100%;
     min-width: auto;
   }
@@ -2070,6 +2198,14 @@ onMounted(() => {
   .load-more-content {
     padding: 6px 8px;
   }
+
+  .tags-cell {
+    max-width: 120px;
+  }
+
+  .tags-popover {
+    max-width: 150px;
+  }
 }
 
 /* 平板端适配 */
@@ -2101,13 +2237,13 @@ onMounted(() => {
     text-align: center;
   }
 
-  .creator-info {
+  .operator-info {
     flex-direction: column;
     gap: 4px;
     align-items: center;
   }
 
-  .creator-name {
+  .operator-name {
     font-size: 12px;
   }
 
@@ -2135,6 +2271,15 @@ onMounted(() => {
   .load-more-content {
     padding: 4px 6px;
     font-size: 12px;
+  }
+
+  .tags-cell {
+    max-width: 100px;
+  }
+
+  .detail-tags,
+  .detail-tags-list {
+    gap: 4px;
   }
 }
 
