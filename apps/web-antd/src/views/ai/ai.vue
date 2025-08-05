@@ -49,12 +49,37 @@
 
       <!-- 状态栏 -->
       <div class="status-bar">
-        <div class="status-indicator">
-          <div class="status-dot" :class="{ 'online': isConnected }"></div>
-          <span class="status-text">
-            {{ connectionStatus }}
-          </span>
+        <div class="status-left">
+          <div class="status-indicator">
+            <div class="status-dot" :class="{ 'online': isConnected }"></div>
+            <span class="status-text">
+              {{ connectionStatus }}
+            </span>
+          </div>
+          
+          <!-- 模式切换器 -->
+          <div class="mode-switcher">
+            <button 
+              class="mode-button" 
+              :class="{ 'active': currentMode === 'rag' }"
+              @click="switchMode('rag')"
+              title="RAG模式 - 基于知识库回答"
+            >
+              <FileText :size="12" />
+              RAG
+            </button>
+            <button 
+              class="mode-button" 
+              :class="{ 'active': currentMode === 'mcp' }"
+              @click="switchMode('mcp')"
+              title="MCP模式 - 工具调用模式"
+            >
+              <Zap :size="12" />
+              MCP
+            </button>
+          </div>
         </div>
+        
         <div class="message-count">
           {{ Math.max(0, chatMessages.length - 1) }} 条对话
         </div>
@@ -182,6 +207,11 @@
 
         <div class="input-hints">
           <span class="hint-item">Shift+Enter发送</span>
+          <div class="mode-info">
+            <span class="mode-indicator" :class="currentMode">
+              {{ currentMode === 'rag' ? 'RAG模式' : 'MCP模式' }}
+            </span>
+          </div>
           <span class="shortcut-hint">
             <span class="shortcut-key">Ctrl + /</span>
             快速打开
@@ -246,6 +276,9 @@ const floatWindow = ref(null);
 const messageInput = ref(null);
 const sessionId = ref('');
 
+// 模式管理
+const currentMode = ref('rag'); // 默认为rag模式
+
 // 高级选项
 const useWebSearch = ref(false);
 const maxContextDocs = ref(5);
@@ -257,6 +290,28 @@ const connectionStatus = computed(() => {
   if (!sessionId.value) return '未连接';
   return isConnected.value ? '已连接' : '连接中...';
 });
+
+// 模式切换函数
+const switchMode = (mode) => {
+  if (currentMode.value === mode) return;
+  
+  currentMode.value = mode;
+  message.info(`已切换到${mode === 'rag' ? 'RAG' : 'MCP'}模式`);
+  // 重新初始化会话
+  initSession();
+};
+
+// 显示成功和错误消息的辅助函数
+const showSuccess = (msg) => {
+  message.success(msg);
+};
+
+const showError = (msg) => {
+  errorMessage.value = msg;
+  setTimeout(() => {
+    errorMessage.value = '';
+  }, 5000);
+};
 
 // 悬浮窗位置和大小
 const windowPosition = reactive({
@@ -352,6 +407,7 @@ const resetWindow = () => {
   sessionId.value = '';
   errorMessage.value = '';
   showAdvancedOptions.value = false;
+  currentMode.value = 'rag'; // 重置为默认模式
   initChatMessages();
 };
 
@@ -491,9 +547,10 @@ const sendMessage = async (value) => {
   scrollToBottom();
 
   try {
-    // 构建查询参数
+    // 构建查询参数 - 根据当前模式添加mode参数
     const queryParams = {
       question: trimmedValue,
+      mode: currentMode.value, // 添加mode参数
       session_id: sessionId.value,
       use_web_search: useWebSearch.value,
       max_context_docs: parseInt(maxContextDocs.value)
@@ -897,6 +954,12 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .status-indicator {
   display: flex;
   align-items: center;
@@ -920,9 +983,74 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
+/* 模式切换器 */
+.mode-switcher {
+  display: flex;
+  background: #374151;
+  border-radius: 6px;
+  border: 1px solid #4a5568;
+  overflow: hidden;
+}
+
+.mode-button {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.mode-button:hover {
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-button.active {
+  color: white;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.mode-button:not(:last-child) {
+  border-right: 1px solid #4a5568;
+}
+
 .message-count {
   color: #9ca3af;
   font-weight: 500;
+}
+
+/* 模式指示器 */
+.mode-info {
+  display: flex;
+  align-items: center;
+}
+
+.mode-indicator {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+  transition: all 0.2s ease;
+}
+
+.mode-indicator.rag {
+  color: #3b82f6;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.mode-indicator.mcp {
+  color: #10b981;
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
 }
 
 /* 错误提示横幅 */
@@ -1455,6 +1583,15 @@ onBeforeUnmount(() => {
   .action-button {
     width: 28px;
     height: 28px;
+  }
+
+  .status-left {
+    gap: 8px;
+  }
+
+  .mode-button {
+    padding: 3px 6px;
+    font-size: 10px;
   }
 }
 </style>
