@@ -837,6 +837,12 @@ import {
 
 import type { UserInfo } from '@vben/types';
 
+import {
+  type WorkorderProcessItem,
+  type ListWorkorderProcessReq,
+  listWorkorderProcess
+} from '#/api/core/workorder_process';
+
 // 列定义
 const columns = [
   {
@@ -899,7 +905,7 @@ const total = ref(0);
 
 // 数据列表
 const instanceList = ref<WorkorderInstanceItem[]>([]);
-const processes = ref<any[]>([]);
+const processes = ref<WorkorderProcessItem[]>([]);
 
 // 主用户数据 - 实现真分页
 const users = ref<UserInfo[]>([]);
@@ -1023,8 +1029,8 @@ const approvalDialog = reactive({
 // JSON验证错误
 const formDataValidationError = ref('');
 
-// 流程选择器相关
-const dialogProcesses = ref<any[]>([]);
+// 流程选择器相关 - 使用真分页
+const dialogProcesses = ref<WorkorderProcessItem[]>([]);
 const processSelectorLoading = ref(false);
 const processSearchKeyword = ref('');
 let processSearchTimeout: any = null;
@@ -1405,7 +1411,7 @@ const loadMoreMainUsers = async (): Promise<void> => {
   await loadUsers(false);
 };
 
-// 流程选择器方法
+// 流程选择器方法 - 使用listWorkorderProcess接口实现动态分页
 const loadDialogProcesses = async (reset: boolean = false, search?: string): Promise<void> => {
   if (processSelectorLoading.value && !reset) {
     return;
@@ -1414,21 +1420,34 @@ const loadDialogProcesses = async (reset: boolean = false, search?: string): Pro
   processSelectorLoading.value = true;
 
   try {
-    const params: GetUserListReq = {
-      page: 1,
-      size: 10,
-      search: '',
+    const params: ListWorkorderProcessReq = {
+      page: reset ? 1 : processPagination.current,
+      size: processPagination.pageSize,
+      search: search || processSearchKeyword.value || ''
     };
-    const res = await getUserList(params);
-    const mockProcesses = res.items || [];
 
-    if (reset) {
-      dialogProcesses.value = mockProcesses;
-      processPagination.current = 1;
+    const res = await listWorkorderProcess(params);
+    
+    if (res && res.items) {
+      if (reset) {
+        dialogProcesses.value = res.items;
+        processPagination.current = 1;
+      } else {
+        // 追加模式，用于加载更多
+        dialogProcesses.value = [...dialogProcesses.value, ...res.items];
+        processPagination.current += 1;
+      }
+
+      processPagination.total = res.total || 0;
+      processPagination.hasMore = (processPagination.current * processPagination.pageSize) < processPagination.total;
+    } else {
+      if (reset) {
+        dialogProcesses.value = [];
+        processPagination.current = 1;
+        processPagination.total = 0;
+        processPagination.hasMore = false;
+      }
     }
-
-    processPagination.total = mockProcesses.length;
-    processPagination.hasMore = false;
   } catch (error: any) {
     console.error('加载流程列表失败:', error);
     if (reset) {
@@ -1440,6 +1459,27 @@ const loadDialogProcesses = async (reset: boolean = false, search?: string): Pro
     }
   } finally {
     processSelectorLoading.value = false;
+  }
+};
+
+const loadProcesses = async (reset: boolean = false, search?: string): Promise<void> => {
+  try {
+    const params: ListWorkorderProcessReq = {
+      page: 1,
+      size: 100, // 主列表筛选器加载较多数据
+      search: search || ''
+    };
+
+    const res = await listWorkorderProcess(params);
+    
+    if (res && res.items) {
+      processes.value = res.items;
+    } else {
+      processes.value = [];
+    }
+  } catch (error: any) {
+    console.error('加载流程数据失败:', error);
+    processes.value = [];
   }
 };
 
@@ -1483,7 +1523,6 @@ const loadMoreProcesses = async (): Promise<void> => {
     return;
   }
 
-  processPagination.current += 1;
   await loadDialogProcesses(false);
 };
 
@@ -1782,8 +1821,8 @@ const handleViewComments = async (instance: WorkorderInstanceItem) => {
     };
 
     const res = await getInstanceCommentsTree(params);
-    if (res && res.items) {
-      commentsList.value = res.items;
+    if (res) {
+      commentsList.value = res;
     } else {
       commentsList.value = [];
     }
@@ -1806,7 +1845,7 @@ const handleViewTimeline = async (instance: WorkorderInstanceItem) => {
     };
 
     const res = await listWorkorderInstanceTimeline(params);
-    if (res && res.items) {
+    if (res) {
       timelineList.value = res.items;
     } else {
       timelineList.value = [];
@@ -2090,7 +2129,8 @@ onMounted(async () => {
   try {
     await Promise.all([
       loadInstances(),
-      loadUsers(true) // 初始化加载用户数据（第一页）
+      loadUsers(true), // 初始化加载用户数据（第一页）
+      loadProcesses(true) // 初始化加载流程数据
     ]);
   } catch (error: any) {
     console.error('初始化数据加载失败:', error);

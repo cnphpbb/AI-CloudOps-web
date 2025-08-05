@@ -95,7 +95,7 @@ export interface CreateWorkorderProcessReq {
   status: number; // 状态
   category_id?: number; // 分类ID
   tags?: string[]; // 标签
-  is_default: number; // 是否为默认流程
+  is_default: 1 | 2; // 是否为默认流程
 }
 
 export interface UpdateWorkorderProcessReq {
@@ -107,7 +107,7 @@ export interface UpdateWorkorderProcessReq {
   status: number; // 状态
   category_id?: number; // 分类ID
   tags?: string[]; // 标签
-  is_default: number; // 是否为默认流程
+  is_default: 1 | 2; // 是否为默认流程
 }
 
 // 删除工单流程请求
@@ -128,7 +128,7 @@ export interface ListWorkorderProcessReq {
   category_id?: number; // 分类ID
   form_design_id?: number; // 关联表单设计ID
   status?: number; // 状态
-  is_default?: number; // 是否为默认流程
+  is_default?: 1 | 2; // 是否为默认流程
 }
 
 export async function createWorkorderProcess(

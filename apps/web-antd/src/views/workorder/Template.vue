@@ -9,15 +9,29 @@
           创建模板
         </a-button>
         <div class="search-filters">
-          <a-input-search v-model:value="searchQuery" placeholder="搜索模板名称..." class="search-input" @search="handleSearch"
-            allow-clear />
-          <a-select v-model:value="statusFilter" placeholder="状态" class="status-filter" @change="handleStatusChange">
+          <a-input-search 
+            v-model:value="searchQuery" 
+            placeholder="搜索模板名称..." 
+            class="search-input" 
+            @search="handleSearch"
+            allow-clear 
+          />
+          <a-select 
+            v-model:value="statusFilter" 
+            placeholder="状态" 
+            class="status-filter" 
+            @change="handleStatusChange"
+          >
             <a-select-option :value="null">全部状态</a-select-option>
-            <a-select-option :value="1">草稿</a-select-option>
-            <a-select-option :value="2">已发布</a-select-option>
-            <a-select-option :value="3">已禁用</a-select-option>
+            <a-select-option :value="1">启用</a-select-option>
+            <a-select-option :value="2">禁用</a-select-option>
           </a-select>
-          <a-select v-model:value="categoryFilter" placeholder="分类" class="category-filter" @change="handleCategoryChange">
+          <a-select 
+            v-model:value="categoryFilter" 
+            placeholder="分类" 
+            class="category-filter" 
+            @change="handleCategoryChange"
+          >
             <a-select-option :value="null">全部分类</a-select-option>
             <a-select-option v-for="category in categories" :key="category.id" :value="category.id">
               {{ category.name }}
@@ -40,7 +54,7 @@
         </a-col>
         <a-col :span="6">
           <a-card class="stats-card">
-            <a-statistic title="已发布" :value="stats.published" :value-style="{ color: '#52c41a' }">
+            <a-statistic title="启用" :value="stats.enabled" :value-style="{ color: '#52c41a' }">
               <template #prefix>
                 <CheckCircleOutlined />
               </template>
@@ -49,18 +63,18 @@
         </a-col>
         <a-col :span="6">
           <a-card class="stats-card">
-            <a-statistic title="草稿" :value="stats.draft" :value-style="{ color: '#faad14' }">
+            <a-statistic title="禁用" :value="stats.disabled" :value-style="{ color: '#cf1322' }">
               <template #prefix>
-                <EditOutlined />
+                <StopOutlined />
               </template>
             </a-statistic>
           </a-card>
         </a-col>
         <a-col :span="6">
           <a-card class="stats-card">
-            <a-statistic title="已禁用" :value="stats.disabled" :value-style="{ color: '#cf1322' }">
+            <a-statistic title="本月新增" :value="stats.thisMonth" :value-style="{ color: '#faad14' }">
               <template #prefix>
-                <StopOutlined />
+                <EditOutlined />
               </template>
             </a-statistic>
           </a-card>
@@ -70,8 +84,16 @@
 
     <div class="table-container">
       <a-card>
-        <a-table :data-source="templateList" :columns="columns" :pagination="paginationConfig" :loading="loading"
-          row-key="id" bordered :scroll="{ x: 1300 }" @change="handleTableChange">
+        <a-table 
+          :data-source="templateList" 
+          :columns="columns" 
+          :pagination="paginationConfig" 
+          :loading="loading"
+          row-key="id" 
+          bordered 
+          :scroll="{ x: 1300 }" 
+          @change="handleTableChange"
+        >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="template-name-cell">
@@ -84,10 +106,6 @@
               <span class="description-text">{{ record.description || '无描述' }}</span>
             </template>
 
-            <template v-if="column.key === 'version'">
-              <a-tag color="blue">v{{ record.version }}</a-tag>
-            </template>
-
             <template v-if="column.key === 'status'">
               <a-tag :color="getStatusColor(record.status)">
                 {{ getStatusText(record.status) }}
@@ -95,19 +113,19 @@
             </template>
 
             <template v-if="column.key === 'category'">
-              <a-tag v-if="record.category_name" color="blue">
-                {{ record.category_name }}
+              <a-tag v-if="record.category?.name" color="blue">
+                {{ record.category.name }}
               </a-tag>
               <span v-else class="text-gray">未分类</span>
             </template>
 
             <template v-if="column.key === 'process'">
-              <span v-if="record.process_name">{{ record.process_name }}</span>
+              <span v-if="record.process?.name">{{ record.process.name }}</span>
               <span v-else class="text-gray">未关联</span>
             </template>
 
             <template v-if="column.key === 'form_design'">
-              <span v-if="record.form_design_name">{{ record.form_design_name }}</span>
+              <span v-if="record.form_design?.name">{{ record.form_design.name }}</span>
               <span v-else class="text-gray">未关联</span>
             </template>
 
@@ -138,10 +156,6 @@
                 <a-dropdown>
                   <template #overlay>
                     <a-menu @click="(e: any) => handleCommand(e.key, record)">
-                      <a-menu-item key="publish" v-if="record.status === 1">发布</a-menu-item>
-                      <a-menu-item key="unpublish" v-if="record.status === 2">取消发布</a-menu-item>
-                      <a-menu-item key="validate">验证模板</a-menu-item>
-                      <a-menu-item key="clone">克隆</a-menu-item>
                       <a-menu-divider />
                       <a-menu-item key="delete" danger>删除</a-menu-item>
                     </a-menu>
@@ -159,9 +173,16 @@
     </div>
 
     <!-- 模板创建/编辑对话框 -->
-    <a-modal :open="templateDialog.visible" :title="templateDialog.isEdit ? '编辑模板' : '创建模板'" :width="formDialogWidth"
-      @ok="saveTemplate" @cancel="() => { templateDialog.visible = false }" :destroy-on-close="true"
-      class="responsive-modal template-form-modal" :confirm-loading="loading">
+    <a-modal 
+      :open="templateDialog.visible" 
+      :title="templateDialog.isEdit ? '编辑模板' : '创建模板'" 
+      :width="formDialogWidth"
+      @ok="saveTemplate" 
+      @cancel="() => { templateDialog.visible = false }" 
+      :destroy-on-close="true"
+      class="responsive-modal template-form-modal" 
+      :confirm-loading="loading"
+    >
       <a-form ref="formRef" :model="templateDialog.form" :rules="formRules" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
@@ -170,9 +191,11 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="版本号" name="version">
-              <a-input v-model:value="templateDialog.form.version" placeholder="请输入版本号"
-                :disabled="templateDialog.isEdit" />
+            <a-form-item label="状态" name="status">
+              <a-select v-model:value="templateDialog.form.status" placeholder="请选择状态">
+                <a-select-option :value="1">启用</a-select-option>
+                <a-select-option :value="2">禁用</a-select-option>
+              </a-select>
             </a-form-item>
           </a-col>
         </a-row>
@@ -180,11 +203,20 @@
         <a-row :gutter="16">
           <a-col :span="8">
             <a-form-item label="分类" name="category_id">
-              <a-select v-model:value="templateDialog.form.category_id" placeholder="请选择分类" style="width: 100%"
-                show-search :filter-option="false" option-label-prop="children"
+              <a-select 
+                v-model:value="templateDialog.form.category_id" 
+                placeholder="请选择分类" 
+                style="width: 100%"
+                show-search 
+                :filter-option="false" 
+                option-label-prop="children"
                 :not-found-content="categorySelectorLoading ? undefined : (categorySearchKeyword ? '无搜索结果' : '无数据')"
-                @search="handleCategorySearch" @dropdown-visible-change="handleCategoryDropdownChange"
-                @popup-scroll="handleCategoryScroll" allow-clear :loading="categorySelectorLoading">
+                @search="handleCategorySearch" 
+                @dropdown-visible-change="handleCategoryDropdownChange"
+                @popup-scroll="handleCategoryScroll" 
+                allow-clear 
+                :loading="categorySelectorLoading"
+              >
                 <template #notFoundContent>
                   <div v-if="categorySelectorLoading" class="selector-loading">
                     <a-spin size="small" />
@@ -202,8 +234,12 @@
                   </div>
                 </a-select-option>
 
-                <a-select-option v-if="categoryPagination.hasMore" :value="'__load_more__'" disabled
-                  class="load-more-option">
+                <a-select-option 
+                  v-if="categoryPagination.hasMore" 
+                  :value="'__load_more__'" 
+                  disabled
+                  class="load-more-option"
+                >
                   <div class="load-more-content" @click.stop="loadMoreCategories">
                     <a-button type="link" size="small" :loading="categorySelectorLoading"
                       style="padding: 0; height: auto; font-size: 12px;">
@@ -221,11 +257,20 @@
           </a-col>
           <a-col :span="8">
             <a-form-item label="关联流程" name="process_id">
-              <a-select v-model:value="templateDialog.form.process_id" placeholder="请选择流程" style="width: 100%"
-                show-search :filter-option="false" option-label-prop="children"
+              <a-select 
+                v-model:value="templateDialog.form.process_id" 
+                placeholder="请选择流程" 
+                style="width: 100%"
+                show-search 
+                :filter-option="false" 
+                option-label-prop="children"
                 :not-found-content="processSelectorLoading ? undefined : (processSearchKeyword ? '无搜索结果' : '无数据')"
-                @search="handleProcessSearch" @dropdown-visible-change="handleProcessDropdownChange"
-                @popup-scroll="handleProcessScroll" allow-clear :loading="processSelectorLoading">
+                @search="handleProcessSearch" 
+                @dropdown-visible-change="handleProcessDropdownChange"
+                @popup-scroll="handleProcessScroll" 
+                allow-clear 
+                :loading="processSelectorLoading"
+              >
                 <template #notFoundContent>
                   <div v-if="processSelectorLoading" class="selector-loading">
                     <a-spin size="small" />
@@ -243,8 +288,12 @@
                   </div>
                 </a-select-option>
 
-                <a-select-option v-if="processPagination.hasMore" :value="'__load_more_process__'" disabled
-                  class="load-more-option">
+                <a-select-option 
+                  v-if="processPagination.hasMore" 
+                  :value="'__load_more_process__'" 
+                  disabled
+                  class="load-more-option"
+                >
                   <div class="load-more-content" @click.stop="loadMoreProcesses">
                     <a-button type="link" size="small" :loading="processSelectorLoading"
                       style="padding: 0; height: auto; font-size: 12px;">
@@ -262,11 +311,20 @@
           </a-col>
           <a-col :span="8">
             <a-form-item label="关联表单" name="form_design_id">
-              <a-select v-model:value="templateDialog.form.form_design_id" placeholder="请选择表单" style="width: 100%"
-                show-search :filter-option="false" option-label-prop="children"
+              <a-select 
+                v-model:value="templateDialog.form.form_design_id" 
+                placeholder="请选择表单" 
+                style="width: 100%"
+                show-search 
+                :filter-option="false" 
+                option-label-prop="children"
                 :not-found-content="formSelectorLoading ? undefined : (formSearchKeyword ? '无搜索结果' : '无数据')"
-                @search="handleFormSearch" @dropdown-visible-change="handleFormDropdownChange"
-                @popup-scroll="handleFormScroll" allow-clear :loading="formSelectorLoading">
+                @search="handleFormSearch" 
+                @dropdown-visible-change="handleFormDropdownChange"
+                @popup-scroll="handleFormScroll" 
+                allow-clear 
+                :loading="formSelectorLoading"
+              >
                 <template #notFoundContent>
                   <div v-if="formSelectorLoading" class="selector-loading">
                     <a-spin size="small" />
@@ -284,8 +342,12 @@
                   </div>
                 </a-select-option>
 
-                <a-select-option v-if="formPagination.hasMore" :value="'__load_more_form__'" disabled
-                  class="load-more-option">
+                <a-select-option 
+                  v-if="formPagination.hasMore" 
+                  :value="'__load_more_form__'" 
+                  disabled
+                  class="load-more-option"
+                >
                   <div class="load-more-content" @click.stop="loadMoreForms">
                     <a-button type="link" size="small" :loading="formSelectorLoading"
                       style="padding: 0; height: auto; font-size: 12px;">
@@ -303,12 +365,16 @@
           </a-col>
         </a-row>
 
-        <a-form-item label="状态" name="status" v-if="templateDialog.isEdit">
-          <a-radio-group v-model:value="templateDialog.form.status">
-            <a-radio :value="1">草稿</a-radio>
-            <a-radio :value="2">已发布</a-radio>
-            <a-radio :value="3">已禁用</a-radio>
-          </a-radio-group>
+        <a-form-item label="标签" name="tags">
+          <a-select
+            v-model:value="templateDialog.form.tags"
+            mode="tags"
+            placeholder="输入标签按回车添加"
+            style="width: 100%"
+            :max-tag-count="10"
+            allow-clear
+          >
+          </a-select>
         </a-form-item>
 
         <a-form-item label="描述" name="description">
@@ -317,19 +383,15 @@
       </a-form>
     </a-modal>
 
-    <!-- 克隆对话框 -->
-    <a-modal :open="cloneDialog.visible" title="克隆模板" :width="dialogWidth" @ok="confirmClone"
-      @cancel="() => { cloneDialog.visible = false }" :destroy-on-close="true" class="responsive-modal">
-      <a-form :model="cloneDialog.form" layout="vertical">
-        <a-form-item label="新模板名称" name="name" :rules="[{ required: true, message: '请输入新模板名称' }]">
-          <a-input v-model:value="cloneDialog.form.name" placeholder="请输入新模板名称" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
-
     <!-- 详情对话框 -->
-    <a-modal :open="detailDialog.visible" title="模板详情" :width="previewDialogWidth" :footer="null"
-      @cancel="() => { detailDialog.visible = false }" class="detail-dialog responsive-modal">
+    <a-modal 
+      :open="detailDialog.visible" 
+      title="模板详情" 
+      :width="previewDialogWidth" 
+      :footer="null"
+      @cancel="() => { detailDialog.visible = false }" 
+      class="detail-dialog responsive-modal"
+    >
       <div v-if="detailDialog.template" class="template-details">
         <div class="detail-header">
           <h2>{{ detailDialog.template.name }}</h2>
@@ -340,24 +402,34 @@
 
         <a-descriptions bordered :column="2" :labelStyle="{ width: '120px' }">
           <a-descriptions-item label="模板ID">{{ detailDialog.template.id }}</a-descriptions-item>
-          <a-descriptions-item label="版本">v{{ detailDialog.template.version }}</a-descriptions-item>
           <a-descriptions-item label="创建人">{{ detailDialog.template.operator_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.template.created_at || '') }}
+          <a-descriptions-item label="创建时间">
+            {{ formatFullDateTime(detailDialog.template.created_at || '') }}
+          </a-descriptions-item>
+          <a-descriptions-item label="更新时间">
+            {{ formatFullDateTime(detailDialog.template.updated_at || '') }}
           </a-descriptions-item>
           <a-descriptions-item label="分类">
-            <a-tag v-if="detailDialog.template.category_name" color="blue">
-              {{ detailDialog.template.category_name }}
+            <a-tag v-if="detailDialog.template.category?.name" color="blue">
+              {{ detailDialog.template.category.name }}
             </a-tag>
             <span v-else class="text-gray">未分类</span>
           </a-descriptions-item>
           <a-descriptions-item label="关联流程">
-            {{ detailDialog.template.process_name || '未关联' }}
+            {{ detailDialog.template.process?.name || '未关联' }}
           </a-descriptions-item>
           <a-descriptions-item label="关联表单" :span="2">
-            {{ detailDialog.template.form_design_name || '未关联' }}
+            {{ detailDialog.template.form_design?.name || '未关联' }}
           </a-descriptions-item>
-          <a-descriptions-item label="描述" :span="2">{{ detailDialog.template.description || '无描述'
-          }}</a-descriptions-item>
+          <a-descriptions-item label="标签" :span="2">
+            <template v-if="detailDialog.template.tags && detailDialog.template.tags.length">
+              <a-tag v-for="tag in detailDialog.template.tags" :key="tag" color="blue">{{ tag }}</a-tag>
+            </template>
+            <span v-else class="text-gray">无标签</span>
+          </a-descriptions-item>
+          <a-descriptions-item label="描述" :span="2">
+            {{ detailDialog.template.description || '无描述' }}
+          </a-descriptions-item>
         </a-descriptions>
 
         <div class="detail-footer">
@@ -383,31 +455,35 @@ import {
 
 import {
   type WorkorderTemplateItem,
-  type CreateTemplateReq,
-  type UpdateTemplateReq,
-  type DeleteTemplateReq,
-  type ListTemplateReq,
-  type DetailTemplateReq,
-  type CloneTemplateReq,
+  type CreateWorkorderTemplateReq,
+  type UpdateWorkorderTemplateReq,
+  type DeleteWorkorderTemplateReq,
+  type ListWorkorderTemplateReq,
+  type DetailWorkorderTemplateReq,
   TemplateStatus,
-  listTemplate,
-  detailTemplate,
-  createTemplate,
-  updateTemplate,
-  deleteTemplate,
-  cloneTemplate
+  listWorkorderTemplate,
+  detailWorkorderTemplate,
+  createWorkorderTemplate,
+  updateWorkorderTemplate,
+  deleteWorkorderTemplate
 } from '#/api/core/workorder_template';
 
-import { listCategory } from '#/api/core/workorder_category';
-import type { Category } from '#/api/core/workorder_category';
+import {
+  type WorkorderCategoryItem,
+  listWorkorderCategory
+} from '#/api/core/workorder_category';
 
-import { listProcess } from '#/api/core/workorder_process';
-import type { ListProcessReq } from '#/api/core/workorder_process';
+import {
+  type WorkorderProcessItem,
+  listWorkorderProcess
+} from '#/api/core/workorder_process';
 
-import { listFormDesign } from '#/api/core/workorder_form_design';
-import type { ListFormDesignReq } from '#/api/core/workorder_form_design';
+import {
+  type WorkorderFormDesignItem,
+  listWorkorderFormDesign
+} from '#/api/core/workorder_form_design';
 
-// 列定义
+// 列定义 - 修复嵌套数据显示问题
 const columns = [
   {
     title: '模板名称',
@@ -424,13 +500,6 @@ const columns = [
     ellipsis: true,
   },
   {
-    title: '版本',
-    dataIndex: 'version',
-    key: 'version',
-    width: 100,
-    align: 'center' as const,
-  },
-  {
     title: '状态',
     dataIndex: 'status',
     key: 'status',
@@ -439,21 +508,18 @@ const columns = [
   },
   {
     title: '分类',
-    dataIndex: 'category_name',
-    key: 'category',
+    key: 'category', // 修改：移除嵌套路径，使用 key 标识
     width: 120,
     align: 'center' as const,
   },
   {
     title: '关联流程',
-    dataIndex: 'process_name',
-    key: 'process',
+    key: 'process', // 修改：移除嵌套路径，使用 key 标识
     width: 150,
   },
   {
     title: '关联表单',
-    dataIndex: 'form_design_name',
-    key: 'form_design',
+    key: 'form_design', // 修改：移除嵌套路径，使用 key 标识
     width: 150,
   },
   {
@@ -488,14 +554,14 @@ const total = ref(0);
 
 // 数据列表
 const templateList = ref<WorkorderTemplateItem[]>([]);
-const categories = ref<Category[]>([]);
+const categories = ref<WorkorderCategoryItem[]>([]);
 
-// 统计数据（临时使用假数据）
+// 统计数据
 const stats = reactive({
-  total: 78,
-  published: 45,
-  draft: 28,
-  disabled: 5
+  total: 0,
+  enabled: 0,
+  disabled: 0,
+  thisMonth: 0
 });
 
 // 分页配置
@@ -517,12 +583,13 @@ const templateDialog = reactive({
     id: undefined,
     name: '',
     description: '',
-    version: '1.0',
-    status: TemplateStatus.Draft,
-    category_id: undefined,
-    process_id: undefined,
-    form_design_id: undefined
-  } as CreateTemplateReq & { id?: number; status?: number }
+    status: TemplateStatus.Enabled,
+    category_id: 0,
+    process_id: 0,
+    form_design_id: 0,
+    tags: [],
+    default_values: {}
+  } as CreateWorkorderTemplateReq & { id?: number }
 });
 
 // 表单验证规则
@@ -531,20 +598,13 @@ const formRules = {
     { required: true, message: '请输入模板名称', trigger: 'blur' },
     { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
   ],
-  version: [
-    { required: true, message: '请输入版本号', trigger: 'blur' },
-    { pattern: /^[\d]+\.[\d]+$/, message: '版本号格式应为：x.x（如：1.0、2.1）', trigger: 'blur' }
+  process_id: [
+    { required: true, message: '请选择关联流程', trigger: 'change' }
+  ],
+  form_design_id: [
+    { required: true, message: '请选择关联表单', trigger: 'change' }
   ]
 };
-
-// 克隆对话框
-const cloneDialog = reactive({
-  visible: false,
-  form: {
-    name: '',
-    id: 0
-  } as CloneTemplateReq
-});
 
 // 详情对话框
 const detailDialog = reactive({
@@ -553,7 +613,7 @@ const detailDialog = reactive({
 });
 
 // 分类选择器相关
-const dialogCategories = ref<Category[]>([]);
+const dialogCategories = ref<WorkorderCategoryItem[]>([]);
 const categorySelectorLoading = ref(false);
 const categorySearchKeyword = ref('');
 let categorySearchTimeout: any = null;
@@ -566,7 +626,7 @@ const categoryPagination = reactive({
 });
 
 // 流程选择器相关
-const dialogProcesses = ref<any[]>([]);
+const dialogProcesses = ref<WorkorderProcessItem[]>([]);
 const processSelectorLoading = ref(false);
 const processSearchKeyword = ref('');
 let processSearchTimeout: any = null;
@@ -579,7 +639,7 @@ const processPagination = reactive({
 });
 
 // 表单选择器相关
-const dialogForms = ref<any[]>([]);
+const dialogForms = ref<WorkorderFormDesignItem[]>([]);
 const formSelectorLoading = ref(false);
 const formSearchKeyword = ref('');
 let formSearchTimeout: any = null;
@@ -589,17 +649,6 @@ const formPagination = reactive({
   pageSize: 20,
   total: 0,
   hasMore: false
-});
-
-// 响应式对话框宽度
-const dialogWidth = computed(() => {
-  if (typeof window !== 'undefined') {
-    const width = window.innerWidth;
-    if (width < 768) return '95%';
-    if (width < 1024) return '80%';
-    return '600px';
-  }
-  return '600px';
 });
 
 const formDialogWidth = computed(() => {
@@ -637,8 +686,7 @@ const formTotalPages = computed(() => {
 // 辅助方法
 const getStatusColor = (status: number): string => {
   const colorMap = {
-    [TemplateStatus.Draft]: 'orange',
-    [TemplateStatus.Published]: 'green',
+    [TemplateStatus.Enabled]: 'green',
     [TemplateStatus.Disabled]: 'default'
   };
   return colorMap[status as keyof typeof colorMap] || 'default';
@@ -646,17 +694,15 @@ const getStatusColor = (status: number): string => {
 
 const getStatusText = (status: number): string => {
   const textMap = {
-    [TemplateStatus.Draft]: '草稿',
-    [TemplateStatus.Published]: '已发布',
-    [TemplateStatus.Disabled]: '已禁用'
+    [TemplateStatus.Enabled]: '启用',
+    [TemplateStatus.Disabled]: '禁用'
   };
   return textMap[status as keyof typeof textMap] || '未知';
 };
 
 const getStatusClass = (status: number): string => {
   const classMap = {
-    [TemplateStatus.Draft]: 'status-draft',
-    [TemplateStatus.Published]: 'status-published',
+    [TemplateStatus.Enabled]: 'status-enabled',
     [TemplateStatus.Disabled]: 'status-disabled'
   };
   return classMap[status as keyof typeof classMap] || '';
@@ -726,7 +772,7 @@ const loadDialogCategories = async (reset: boolean = false, search?: string): Pr
       search: search !== undefined ? search : categorySearchKeyword.value || undefined
     };
 
-    const response = await listCategory(params);
+    const response = await listWorkorderCategory(params);
 
     if (response) {
       if (reset) {
@@ -809,13 +855,13 @@ const loadDialogProcesses = async (reset: boolean = false, search?: string): Pro
   processSelectorLoading.value = true;
 
   try {
-    const params: ListProcessReq = {
+    const params = {
       page: reset ? 1 : processPagination.current,
       size: processPagination.pageSize,
       search: search !== undefined ? search : processSearchKeyword.value || undefined
     };
 
-    const response = await listProcess(params);
+    const response = await listWorkorderProcess(params);
 
     if (response) {
       if (reset) {
@@ -898,13 +944,13 @@ const loadDialogForms = async (reset: boolean = false, search?: string): Promise
   formSelectorLoading.value = true;
 
   try {
-    const params: ListFormDesignReq = {
+    const params = {
       page: reset ? 1 : formPagination.current,
       size: formPagination.pageSize,
       search: search !== undefined ? search : formSearchKeyword.value || undefined
     };
 
-    const response = await listFormDesign(params);
+    const response = await listWorkorderFormDesign(params);
 
     if (response) {
       if (reset) {
@@ -994,7 +1040,7 @@ const handleTableChange = (pagination: any): void => {
 const loadTemplates = async () => {
   loading.value = true;
   try {
-    const params: ListTemplateReq = {
+    const params: ListWorkorderTemplateReq = {
       page: currentPage.value,
       size: pageSize.value,
       search: searchQuery.value || undefined,
@@ -1002,10 +1048,23 @@ const loadTemplates = async () => {
       category_id: categoryFilter.value || undefined
     };
 
-    const res = await listTemplate(params);
+    const res = await listWorkorderTemplate(params);
     if (res && res.items) {
       templateList.value = res.items || [];
       total.value = res.total || 0;
+      
+      // 计算统计数据
+      stats.total = res.total || 0;
+      stats.enabled = res.items?.filter((item: any) => item.status === TemplateStatus.Enabled).length || 0;
+      stats.disabled = res.items?.filter((item: any) => item.status === TemplateStatus.Disabled).length || 0;
+      
+      // 计算本月新增（简单示例）
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      stats.thisMonth = res.items?.filter((item: any) => {
+        const createdAt = new Date(item.created_at);
+        return createdAt >= thisMonth;
+      }).length || 0;
     }
   } catch (error) {
     message.error('加载模板数据失败');
@@ -1017,7 +1076,7 @@ const loadTemplates = async () => {
 
 const loadCategories = async () => {
   try {
-    const res = await listCategory({ page: 1, size: 100 });
+    const res = await listWorkorderCategory({ page: 1, size: 100 });
     if (res && res.items) {
       categories.value = res.items;
     } else {
@@ -1051,11 +1110,12 @@ const handleCreateTemplate = () => {
   templateDialog.form = {
     name: '',
     description: '',
-    version: '1.0',
-    status: TemplateStatus.Draft,
+    status: TemplateStatus.Enabled,
     category_id: undefined,
-    process_id: undefined,
-    form_design_id: undefined
+    process_id: 0,
+    form_design_id: 0,
+    tags: [],
+    default_values: {}
   };
   templateDialog.visible = true;
   resetSelectors();
@@ -1066,17 +1126,18 @@ const handleEditTemplate = async (row: WorkorderTemplateItem) => {
   loading.value = true;
 
   try {
-    const res = await detailTemplate({ id: row.id } as DetailTemplateReq);
+    const res = await detailWorkorderTemplate({ id: row.id } as DetailWorkorderTemplateReq);
     if (res) {
       templateDialog.form = {
         id: res.id,
         name: res.name,
         description: res.description,
-        version: res.version,
         status: res.status,
         category_id: res.category_id,
         process_id: res.process_id,
-        form_design_id: res.form_design_id
+        form_design_id: res.form_design_id,
+        tags: res.tags || [],
+        default_values: res.default_values || {}
       };
 
       templateDialog.visible = true;
@@ -1095,7 +1156,7 @@ const handleViewTemplate = async (row: WorkorderTemplateItem) => {
   loading.value = true;
 
   try {
-    const res = await detailTemplate({ id: row.id } as DetailTemplateReq);
+    const res = await detailWorkorderTemplate({ id: row.id } as DetailWorkorderTemplateReq);
     if (res) {
       detailDialog.template = res;
       detailDialog.visible = true;
@@ -1110,140 +1171,9 @@ const handleViewTemplate = async (row: WorkorderTemplateItem) => {
 
 const handleCommand = async (command: string, row: WorkorderTemplateItem) => {
   switch (command) {
-    case 'publish':
-      await publishTemplate(row);
-      break;
-    case 'unpublish':
-      Modal.confirm({
-        title: '取消发布',
-        content: `确定要取消发布模板 "${row.name}" 吗？这将使该模板无法被新的工单使用。`,
-        async onOk() {
-          await unpublishTemplate(row);
-        }
-      });
-      break;
-    case 'validate':
-      await validateTemplate(row);
-      break;
-    case 'clone':
-      showCloneDialog(row);
-      break;
     case 'delete':
       confirmDelete(row);
       break;
-  }
-};
-
-const publishTemplate = async (template: WorkorderTemplateItem) => {
-  loading.value = true;
-  try {
-    const detail = await detailTemplate({ id: template.id });
-
-    const params: UpdateTemplateReq = {
-      id: template.id,
-      name: template.name,
-      description: template.description || '',
-      version: template.version,
-      status: TemplateStatus.Published,
-      category_id: template.category_id,
-      process_id: template.process_id,
-      form_design_id: template.form_design_id
-    };
-
-    await updateTemplate(params);
-    message.success(`模板 "${template.name}" 已发布`);
-    loadTemplates();
-  } catch (error: any) {
-    message.error(`发布模板失败: ${error.message || '未知错误'}`);
-    console.error('Failed to publish template:', error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const unpublishTemplate = async (template: WorkorderTemplateItem) => {
-  loading.value = true;
-  try {
-    const detail = await detailTemplate({ id: template.id });
-
-    const params: UpdateTemplateReq = {
-      id: template.id,
-      name: template.name,
-      description: template.description || '',
-      version: template.version,
-      status: TemplateStatus.Draft,
-      category_id: template.category_id,
-      process_id: template.process_id,
-      form_design_id: template.form_design_id
-    };
-
-    await updateTemplate(params);
-    message.success(`模板 "${template.name}" 已取消发布`);
-    loadTemplates();
-  } catch (error: any) {
-    message.error(`取消发布模板失败: ${error.message || '未知错误'}`);
-    console.error('Failed to unpublish template:', error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const validateTemplate = async (template: WorkorderTemplateItem) => {
-  loading.value = true;
-  try {
-    const detail = await detailTemplate({ id: template.id });
-
-    const errors = [];
-
-    if (!detail.process_id) {
-      errors.push('模板未关联流程');
-    }
-
-    if (!detail.form_design_id) {
-      errors.push('模板未关联表单');
-    }
-
-    if (errors.length === 0) {
-      message.success(`模板 "${template.name}" 验证通过`);
-    } else {
-      message.warning({
-        content: `模板验证失败：${errors.join(', ')}`,
-        duration: 5
-      });
-    }
-  } catch (error: any) {
-    message.error(`验证模板失败: ${error.message || '未知错误'}`);
-    console.error('Failed to validate template:', error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const showCloneDialog = (template: WorkorderTemplateItem) => {
-  cloneDialog.form = {
-    id: template.id,
-    name: `${template.name} 的副本`
-  };
-  cloneDialog.visible = true;
-};
-
-const confirmClone = async () => {
-  try {
-    if (!cloneDialog.form.name.trim()) {
-      message.error('请输入新模板名称');
-      return;
-    }
-
-    loading.value = true;
-    await cloneTemplate(cloneDialog.form);
-    message.success(`模板已克隆为 "${cloneDialog.form.name}"`);
-    cloneDialog.visible = false;
-    loadTemplates();
-  } catch (error: any) {
-    message.error(`克隆模板失败: ${error.message || '未知错误'}`);
-    console.error('Failed to clone template:', error);
-  } finally {
-    loading.value = false;
   }
 };
 
@@ -1257,11 +1187,11 @@ const confirmDelete = (template: WorkorderTemplateItem) => {
     async onOk() {
       try {
         loading.value = true;
-        const params: DeleteTemplateReq = {
+        const params: DeleteWorkorderTemplateReq = {
           id: template.id
         };
 
-        await deleteTemplate(params);
+        await deleteWorkorderTemplate(params);
         message.success(`模板 "${template.name}" 已删除`);
 
         if (templateList.value.length === 1 && currentPage.value > 1) {
@@ -1286,44 +1216,44 @@ const saveTemplate = async () => {
       return;
     }
 
-    if (!templateDialog.form.version.trim()) {
-      message.error('版本号不能为空');
+    if (!templateDialog.form.process_id) {
+      message.error('请选择关联流程');
       return;
     }
 
-    const versionPattern = /^[\d]+\.[\d]+$/;
-    if (!versionPattern.test(templateDialog.form.version)) {
-      message.error('版本号格式应为：x.x（如：1.0、2.1）');
+    if (!templateDialog.form.form_design_id) {
+      message.error('请选择关联表单');
       return;
     }
 
     loading.value = true;
 
     if (templateDialog.isEdit && templateDialog.form.id) {
-      const updateData: UpdateTemplateReq = {
+      const updateData: UpdateWorkorderTemplateReq = {
         id: templateDialog.form.id,
         name: templateDialog.form.name,
         description: templateDialog.form.description || '',
-        version: templateDialog.form.version,
-        status: templateDialog.form.status || TemplateStatus.Draft,
-        category_id: templateDialog.form.category_id,
         process_id: templateDialog.form.process_id,
-        form_design_id: templateDialog.form.form_design_id
+        form_design_id: templateDialog.form.form_design_id,
+        status: templateDialog.form.status,
+        category_id: templateDialog.form.category_id,
+        tags: templateDialog.form.tags
       };
 
-      await updateTemplate(updateData);
+      await updateWorkorderTemplate(updateData);
       message.success(`模板 "${templateDialog.form.name}" 已更新`);
     } else {
-      const createData: CreateTemplateReq = {
+      const createData: CreateWorkorderTemplateReq = {
         name: templateDialog.form.name,
         description: templateDialog.form.description,
-        version: templateDialog.form.version,
-        category_id: templateDialog.form.category_id,
         process_id: templateDialog.form.process_id,
-        form_design_id: templateDialog.form.form_design_id
+        form_design_id: templateDialog.form.form_design_id,
+        status: templateDialog.form.status,
+        category_id: templateDialog.form.category_id,
+        tags: templateDialog.form.tags
       };
 
-      await createTemplate(createData);
+      await createWorkorderTemplate(createData);
       message.success(`模板 "${templateDialog.form.name}" 已创建`);
 
       currentPage.value = 1;
@@ -1410,14 +1340,15 @@ const loadCategoryForEdit = async (templateData: WorkorderTemplateItem): Promise
     await loadDialogCategories(true);
 
     if (templateData.category_id && !dialogCategories.value.find(cat => cat.id === templateData.category_id)) {
-      const categoryInfo: Category = {
+      const categoryInfo: WorkorderCategoryItem = {
         id: templateData.category_id,
-        name: templateData.category_name || `分类${templateData.category_id}`,
+        name: templateData.category?.name || `分类${templateData.category_id}`,
         description: '',
-        icon: '',
-        sort_order: 0,
-        status: 1,
-        parent_id: null
+        created_at: '',
+        updated_at: '',
+        operator_id: 0,
+        operator_name: '',
+        status: 1
       };
 
       dialogCategories.value = [categoryInfo, ...dialogCategories.value.filter(c => c.id !== categoryInfo.id)];
@@ -1432,10 +1363,18 @@ const loadProcessForEdit = async (templateData: WorkorderTemplateItem): Promise<
     await loadDialogProcesses(true);
 
     if (templateData.process_id && !dialogProcesses.value.find(process => process.id === templateData.process_id)) {
-      const processInfo = {
+      const processInfo: WorkorderProcessItem = {
         id: templateData.process_id,
-        name: templateData.process_name || `流程${templateData.process_id}`,
-        description: ''
+        name: templateData.process?.name || `流程${templateData.process_id}`,
+        description: '',
+        created_at: '',
+        updated_at: '',
+        operator_id: 0,
+        operator_name: '',
+        status: 1,
+        is_default: 2,
+        definition: {},
+        form_design_id: 0
       };
       dialogProcesses.value = [processInfo, ...dialogProcesses.value.filter(p => p.id !== processInfo.id)];
     }
@@ -1449,10 +1388,20 @@ const loadFormForEdit = async (templateData: WorkorderTemplateItem): Promise<voi
     await loadDialogForms(true);
 
     if (templateData.form_design_id && !dialogForms.value.find(form => form.id === templateData.form_design_id)) {
-      const formInfo = {
+      const formInfo: WorkorderFormDesignItem = {
         id: templateData.form_design_id,
-        name: templateData.form_design_name || `表单${templateData.form_design_id}`,
-        description: ''
+        name: templateData.form_design?.name || `表单${templateData.form_design_id}`,
+        description: '',
+        created_at: '',
+        updated_at: '',
+        operator_id: 0,
+        operator_name: '',
+        status: 1,
+        is_template: 1,
+        category_id: 0,
+        schema: {
+          fields: []
+        }
       };
       dialogForms.value = [formInfo, ...dialogForms.value.filter(f => f.id !== formInfo.id)];
     }
@@ -1547,11 +1496,7 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.status-draft {
-  background-color: #faad14;
-}
-
-.status-published {
+.status-enabled {
   background-color: #52c41a;
 }
 

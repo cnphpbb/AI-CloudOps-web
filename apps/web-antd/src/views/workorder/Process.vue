@@ -167,7 +167,6 @@
                       <a-menu-item key="archive" v-if="record.status === ProcessStatus.Published">归档</a-menu-item>
                       <a-menu-item key="activate" v-if="record.status === ProcessStatus.Archived">激活</a-menu-item>
                       <a-menu-item key="setDefault" v-if="!record.is_default">设为默认</a-menu-item>
-                      <a-menu-item key="clone">克隆</a-menu-item>
                       <a-menu-divider />
                       <a-menu-item key="delete" danger>删除</a-menu-item>
                     </a-menu>
@@ -419,7 +418,7 @@ const processDialog = reactive({
     category_id: undefined,
     status: ProcessStatus.Draft,
     tags: [],
-    is_default: 0,
+    is_default: 2,
     definition: {
       steps: [],
       connections: []
@@ -564,7 +563,7 @@ const handleCreateProcess = (): void => {
     category_id: undefined,
     status: ProcessStatus.Draft,
     tags: [],
-    is_default: 0,
+    is_default: 2,
     definition: {
       steps: [],
       connections: []
@@ -589,7 +588,7 @@ const handleEditProcess = async (row: WorkorderProcessItem): Promise<void> => {
         category_id: res.category_id,
         status: res.status,
         tags: res.tags || [],
-        is_default: res.is_default,
+        is_default: res.is_default as 1 | 2,
         definition: res.definition
       };
 
@@ -636,9 +635,6 @@ const handleCommand = async (command: string, row: WorkorderProcessItem): Promis
     case 'setDefault':
       await setDefaultProcess(row);
       break;
-    case 'clone':
-      await cloneProcess(row);
-      break;
     case 'delete':
       confirmDelete(row);
       break;
@@ -656,7 +652,7 @@ const publishProcess = async (process: WorkorderProcessItem): Promise<void> => {
       category_id: process.category_id,
       status: ProcessStatus.Published,
       tags: process.tags,
-      is_default: process.is_default,
+      is_default: process.is_default as 1 | 2,
       definition: process.definition
     };
 
@@ -681,7 +677,7 @@ const archiveProcess = async (process: WorkorderProcessItem): Promise<void> => {
       category_id: process.category_id,
       status: ProcessStatus.Archived,
       tags: process.tags,
-      is_default: process.is_default,
+      is_default: process.is_default as 1 | 2,
       definition: process.definition
     };
 
@@ -706,7 +702,7 @@ const activateProcess = async (process: WorkorderProcessItem): Promise<void> => 
       category_id: process.category_id,
       status: ProcessStatus.Draft,
       tags: process.tags,
-      is_default: process.is_default,
+      is_default: process.is_default as 1 | 2,
       definition: process.definition
     };
 
@@ -731,7 +727,7 @@ const setDefaultProcess = async (process: WorkorderProcessItem): Promise<void> =
       category_id: process.category_id,
       status: process.status,
       tags: process.tags,
-      is_default: 1,
+      is_default: 1 as 1 | 2,
       definition: process.definition
     };
 
@@ -742,27 +738,6 @@ const setDefaultProcess = async (process: WorkorderProcessItem): Promise<void> =
     message.error(`设置默认流程失败: ${error.message || '未知错误'}`);
   } finally {
     loading.value = false;
-  }
-};
-
-const cloneProcess = async (process: WorkorderProcessItem): Promise<void> => {
-  try {
-    const params: CreateWorkorderProcessReq = {
-      name: `${process.name} 的副本`,
-      description: process.description,
-      form_design_id: process.form_design_id,
-      category_id: process.category_id,
-      status: ProcessStatus.Draft,
-      tags: process.tags,
-      is_default: 0,
-      definition: process.definition
-    };
-
-    await createWorkorderProcess(params);
-    message.success(`流程已克隆为 "${params.name}"`);
-    loadProcesses();
-  } catch (error: any) {
-    message.error(`克隆流程失败: ${error.message || '未知错误'}`);
   }
 };
 
