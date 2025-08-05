@@ -112,3 +112,57 @@ export interface RejectWorkorderInstanceReq {
   id: number; // 工单ID
   comment: string; // 拒绝理由
 }
+
+export async function createWorkorderInstance(
+  data: CreateWorkorderInstanceReq,
+) {
+  return requestClient.post('/workorder/instance/create', data);
+}
+
+export async function updateWorkorderInstance(
+  data: UpdateWorkorderInstanceReq,
+) {
+  return requestClient.put(`/workorder/instance/update/${data.id}`, data);
+}
+
+export async function deleteWorkorderInstance(
+  data: DeleteWorkorderInstanceReq,
+) {
+  return requestClient.delete(`/workorder/instance/delete/${data.id}`);
+}
+
+export async function listWorkorderInstance(
+  params: ListWorkorderInstanceReq,
+) {
+  return requestClient.get('/workorder/instance/list', { params });
+}
+
+export async function detailWorkorderInstance(
+  data: DetailWorkorderInstanceReq,
+) {
+  return requestClient.get(`/workorder/instance/detail/${data.id}`);
+}
+
+export async function submitWorkorderInstance(
+  data: SubmitWorkorderInstanceReq,
+) {
+  return requestClient.post(`/workorder/instance/submit/${data.id}`);
+}
+
+export async function assignWorkorderInstance(
+  data: AssignWorkorderInstanceReq,
+) {
+  return requestClient.post(`/workorder/instance/assign/${data.id}`, data);
+}
+
+export async function approveWorkorderInstance(
+  data: ApproveWorkorderInstanceReq,
+) {
+  return requestClient.post(`/workorder/instance/approve/${data.id}`, data);
+}
+
+export async function rejectWorkorderInstance(
+  data: RejectWorkorderInstanceReq,
+) {
+  return requestClient.post(`/workorder/instance/reject/${data.id}`, data);
+}

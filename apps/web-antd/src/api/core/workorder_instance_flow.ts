@@ -26,16 +26,6 @@ export interface WorkorderInstanceFlowItem {
   is_system_action?: number; // 是否为系统自动操作：1-是，2-否
 }
 
-// 创建工单流转记录请求
-export interface CreateWorkorderInstanceFlowReq {
-  instance_id: number; // 工单实例ID
-  action: string; // 流转动作
-  from_status: number; // 变更前状态
-  to_status: number; // 变更后状态
-  comment?: string; // 审批意见或处理说明
-  is_system_action?: number; // 是否为系统自动操作
-}
-
 // 工单流转记录列表请求
 export interface ListWorkorderInstanceFlowReq {
   page: number; // 页码
@@ -49,4 +39,16 @@ export interface ListWorkorderInstanceFlowReq {
 // 获取工单流转记录详情请求
 export interface DetailWorkorderInstanceFlowReq {
   id: number; // 流转记录ID
+}
+
+export async function listWorkorderInstanceFlow(
+  params: ListWorkorderInstanceFlowReq,
+) {
+  return requestClient.get('/workorder/instance/flow/list', { params });
+}
+
+export async function detailWorkorderInstanceFlow(
+  data: DetailWorkorderInstanceFlowReq,
+) {
+  return requestClient.get(`/workorder/instance/flow/detail/${data.id}`);
 }

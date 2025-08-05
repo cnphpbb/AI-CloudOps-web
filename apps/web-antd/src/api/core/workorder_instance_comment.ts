@@ -58,3 +58,43 @@ export interface ListWorkorderInstanceCommentReq {
   type?: string; // 评论类型
   status?: number; // 状态
 }
+
+export interface GetInstanceCommentsTreeReq {
+  id: number; 
+}
+
+export async function createWorkorderInstanceComment(
+  data: CreateWorkorderInstanceCommentReq,
+) {
+  return requestClient.post('/workorder/instance/comment/create', data);
+}
+
+export async function updateWorkorderInstanceComment(
+  data: UpdateWorkorderInstanceCommentReq,
+) {
+  return requestClient.put(`/workorder/instance/comment/update/${data.id}`, data);
+}
+
+export async function deleteWorkorderInstanceComment(
+  data: DeleteWorkorderInstanceCommentReq,
+) {
+  return requestClient.delete(`/workorder/instance/comment/delete/${data.id}`);
+}
+
+export async function detailWorkorderInstanceComment(
+  data: DetailWorkorderInstanceCommentReq,
+) {
+  return requestClient.get(`/workorder/instance/comment/detail/${data.id}`);
+}
+
+export async function listWorkorderInstanceComment(
+  params: ListWorkorderInstanceCommentReq,
+) {
+  return requestClient.get('/workorder/instance/comment/list', { params });
+}
+
+export async function getInstanceCommentsTree(
+  params: GetInstanceCommentsTreeReq,
+) {
+  return requestClient.get(`/workorder/instance/comment/tree/${params.id}`);
+}

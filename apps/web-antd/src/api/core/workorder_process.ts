@@ -96,3 +96,33 @@ export interface ListWorkorderProcessReq {
   status?: number; // 状态
   is_default?: number; // 是否为默认流程
 }
+
+export async function createWorkorderProcess(
+  data: CreateWorkorderProcessReq,
+) {
+  return requestClient.post('/workorder/process/create', data);
+}
+
+export async function updateWorkorderProcess(
+  data: UpdateWorkorderProcessReq,
+) {
+  return requestClient.put(`/workorder/process/update/${data.id}`, data);
+}
+
+export async function deleteWorkorderProcess(
+  data: DeleteWorkorderProcessReq,
+) {
+  return requestClient.delete(`/workorder/process/delete/${data.id}`);
+}
+
+export async function listWorkorderProcess(
+  params: ListWorkorderProcessReq,
+) {
+  return requestClient.get('/workorder/process/list', { params });
+}
+
+export async function detailWorkorderProcess(
+  data: DetailWorkorderProcessReq,
+) {
+  return requestClient.get(`/workorder/process/detail/${data.id}`);
+}

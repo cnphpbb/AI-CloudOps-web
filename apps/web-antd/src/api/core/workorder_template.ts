@@ -73,3 +73,33 @@ export interface ListWorkorderTemplateReq {
   form_design_id?: number; // 关联的表单设计ID
   status?: number; // 状态：1-启用，2-禁用
 }
+
+export async function createWorkorderTemplate(
+  data: CreateWorkorderTemplateReq,
+) {
+  return requestClient.post('/workorder/template/create', data);
+}
+
+export async function updateWorkorderTemplate(
+  data: UpdateWorkorderTemplateReq,
+) {
+  return requestClient.put(`/workorder/template/update/${data.id}`, data);
+}
+
+export async function deleteWorkorderTemplate(
+  data: DeleteWorkorderTemplateReq,
+) {
+  return requestClient.delete(`/workorder/template/delete/${data.id}`);
+}
+
+export async function listWorkorderTemplate(
+  params: ListWorkorderTemplateReq,
+) {
+  return requestClient.get('/workorder/template/list', { params });
+}
+
+export async function detailWorkorderTemplate(
+  data: DetailWorkorderTemplateReq,
+) {
+  return requestClient.get(`/workorder/template/detail/${data.id}`);
+}

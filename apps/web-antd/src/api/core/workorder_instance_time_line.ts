@@ -68,3 +68,33 @@ export interface ListWorkorderInstanceTimelineReq {
   start_date?: string; // 开始时间
   end_date?: string; // 结束时间
 }
+
+export async function createWorkorderInstanceTimeline(
+  data: CreateWorkorderInstanceTimelineReq,
+) {
+  return requestClient.post('/workorder/instance/timeline/create', data);
+}
+
+export async function updateWorkorderInstanceTimeline(
+  data: UpdateWorkorderInstanceTimelineReq,
+) {
+  return requestClient.put(`/workorder/instance/timeline/update/${data.id}`, data);
+}
+
+export async function deleteWorkorderInstanceTimeline(
+  data: DeleteWorkorderInstanceTimelineReq,
+) {
+  return requestClient.delete(`/workorder/instance/timeline/delete/${data.id}`);
+}
+
+export async function listWorkorderInstanceTimeline(
+  params: ListWorkorderInstanceTimelineReq,
+) {
+  return requestClient.get('/workorder/instance/timeline/list', { params });
+}
+
+export async function detailWorkorderInstanceTimeline(
+  data: DetailWorkorderInstanceTimelineReq,
+) {
+  return requestClient.get(`/workorder/instance/timeline/detail/${data.id}`);
+}
