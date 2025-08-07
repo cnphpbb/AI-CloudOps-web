@@ -123,7 +123,7 @@
                 </a-button>
                 <a-dropdown>
                   <template #overlay>
-                    <a-menu @click="({ key }: { key: string }) => handleMenuAction(key, record)">
+                    <a-menu @click="({ key }) => handleMenuAction(key, record)">
                       <a-menu-item key="toggleStatus">
                         <template v-if="record.status === CategoryStatus.Enabled">
                           <StopOutlined />

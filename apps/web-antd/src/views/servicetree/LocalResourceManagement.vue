@@ -20,52 +20,18 @@
     <a-card class="filter-card">
       <a-form layout="vertical" :model="filterForm" class="filter-form">
         <div class="filter-grid">
-          <a-form-item label="操作系统" class="filter-item">
-            <a-select
-              v-model:value="filterForm.osType"
-              placeholder="选择系统"
-              allow-clear
-            >
-              <a-select-option value="linux">Linux</a-select-option>
-              <a-select-option value="windows">Windows</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="服务树" class="filter-item">
-            <a-tree-select
-              v-model:value="filterForm.treeNodeId"
-              placeholder="选择服务树节点"
-              allow-clear
-              :tree-data="treeData"
-              :field-names="{ children: 'children', label: 'name', value: 'id' }"
-            />
-          </a-form-item>
-          <a-form-item label="主机名/IP" class="filter-item">
-            <a-input
-              v-model:value="filterForm.keyword"
-              placeholder="输入主机名或IP地址"
-              allow-clear
-            />
-          </a-form-item>
           <a-form-item label="连接状态" class="filter-item">
             <a-select
               v-model:value="filterForm.status"
               placeholder="选择状态"
               allow-clear
             >
-              <a-select-option value="RUNNING">在线</a-select-option>
-              <a-select-option value="STOPPED">离线</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="环境" class="filter-item">
-            <a-select
-              v-model:value="filterForm.environment"
-              placeholder="选择环境"
-              allow-clear
-            >
-              <a-select-option value="local">本地</a-select-option>
-              <a-select-option value="dev">开发</a-select-option>
-              <a-select-option value="test">测试</a-select-option>
-              <a-select-option value="prod">生产</a-select-option>
+              <a-select-option :value="ResourceStatus.RUNNING">运行中</a-select-option>
+              <a-select-option :value="ResourceStatus.STOPPED">已停止</a-select-option>
+              <a-select-option :value="ResourceStatus.STARTING">启动中</a-select-option>
+              <a-select-option :value="ResourceStatus.STOPPING">停止中</a-select-option>
+              <a-select-option :value="ResourceStatus.RESTARTING">重启中</a-select-option>
+              <a-select-option :value="ResourceStatus.ERROR">错误</a-select-option>
             </a-select>
           </a-form-item>
           <a-form-item label="操作" class="filter-item filter-actions">
@@ -108,15 +74,25 @@
             </a-tag>
           </template>
           <template v-if="column.key === 'auth_mode'">
-            <a-tag :color="record.auth_mode === 'password' ? 'orange' : 'purple'">
+            <a-tag :color="record.auth_mode === AuthMode.PASSWORD ? 'orange' : 'purple'">
               {{ getAuthModeText(record.auth_mode) }}
             </a-tag>
           </template>
-          <template v-if="column.key === 'tree_node_id'">
-            <div v-if="record.tree_node_id">
-              <span>{{ getTreeNodeName(record.tree_node_id) }}</span>
-              <a-button type="link" danger size="small" @click="handleUnbind(record)">
-                解绑
+          <template v-if="column.key === 'tree_nodes'">
+            <div v-if="record.tree_node && record.tree_node.length > 0">
+              <a-tag 
+                v-for="node in record.tree_node.slice(0, 2)" 
+                :key="node.id" 
+                color="green"
+                style="margin-bottom: 4px;"
+              >
+                {{ node.name }}
+              </a-tag>
+              <a-tag v-if="record.tree_node.length > 2" color="default">
+                +{{ record.tree_node.length - 2 }}
+              </a-tag>
+              <a-button type="link" danger size="small" @click="showUnbindModal(record)">
+                管理绑定
               </a-button>
             </div>
             <span v-else class="text-gray-400">-</span>
@@ -124,12 +100,15 @@
           <template v-if="column.key === 'tags'">
             <template v-if="record.tags && record.tags.length > 0">
               <a-tag 
-                v-for="tag in record.tags" 
+                v-for="tag in record.tags.slice(0, 3)" 
                 :key="tag" 
                 color="blue"
                 style="margin-bottom: 4px;"
               >
                 {{ tag }}
+              </a-tag>
+              <a-tag v-if="record.tags.length > 3" color="default">
+                +{{ record.tags.length - 3 }}
               </a-tag>
             </template>
             <span v-else class="text-gray-400">-</span>
@@ -245,13 +224,13 @@
 
         <a-form-item label="认证方式" name="auth_mode">
           <a-radio-group v-model:value="formData.auth_mode" @change="handleAuthModeChange">
-            <a-radio value="password">密码认证</a-radio>
-            <a-radio value="key">密钥认证</a-radio>
+            <a-radio :value="AuthMode.PASSWORD">密码认证</a-radio>
+            <a-radio :value="AuthMode.KEY">密钥认证</a-radio>
           </a-radio-group>
         </a-form-item>
 
         <a-form-item 
-          v-if="formData.auth_mode === 'password'" 
+          v-if="formData.auth_mode === AuthMode.PASSWORD" 
           label="登录密码" 
           name="password"
         >
@@ -263,7 +242,7 @@
         </a-form-item>
 
         <a-form-item 
-          v-if="formData.auth_mode === 'key'" 
+          v-if="formData.auth_mode === AuthMode.KEY" 
           label="私钥内容" 
           name="key"
         >
@@ -272,17 +251,6 @@
             placeholder="请粘贴SSH私钥内容"
             :rows="6"
             style="font-family: 'Courier New', monospace;"
-          />
-        </a-form-item>
-
-        <a-form-item label="服务树节点" name="treeNodeId">
-          <a-tree-select
-            v-model:value="formData.treeNodeId"
-            placeholder="选择服务树节点"
-            allow-clear
-            :tree-data="treeData"
-            :field-names="{ children: 'children', label: 'name', value: 'id' }"
-            style="width: 100%"
           />
         </a-form-item>
 
@@ -354,13 +322,36 @@
       <a-form layout="vertical">
         <a-form-item label="选择要绑定的服务树节点" required>
           <a-tree-select
-            v-model:value="selectedTreeNodeId"
+            v-model:value="selectedTreeNodeIds"
             style="width: 100%"
             placeholder="请选择服务树节点"
             allow-clear
+            multiple
             :tree-data="treeData"
             :field-names="{ children: 'children', label: 'name', value: 'id' }"
           />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 管理绑定对话框 -->
+    <a-modal
+      v-model:open="unbindModalVisible"
+      title="管理服务树绑定"
+      @ok="handleUnbind"
+      :confirm-loading="unbindLoading"
+      :destroy-on-close="true"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="当前绑定的节点">
+          <div v-if="currentResource?.tree_node && currentResource.tree_node.length > 0">
+            <a-checkbox-group v-model:value="selectedUnbindNodeIds">
+              <div v-for="node in currentResource.tree_node" :key="node.id" style="margin-bottom: 8px;">
+                <a-checkbox :value="node.id">{{ node.name }}</a-checkbox>
+              </div>
+            </a-checkbox-group>
+          </div>
+          <a-empty v-else description="暂无绑定的节点" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -376,20 +367,23 @@
       <a-skeleton :loading="detailLoading" active>
         <template v-if="currentDetail">
           <a-descriptions bordered :column="1">
+            <a-descriptions-item label="ID">
+              {{ currentDetail.id }}
+            </a-descriptions-item>
             <a-descriptions-item label="名称">
               {{ currentDetail.name }}
             </a-descriptions-item>
             <a-descriptions-item label="环境">
-              {{ currentDetail.environment }}
-            </a-descriptions-item>
-            <a-descriptions-item label="用户名">
-              {{ currentDetail.username }}
+              {{ currentDetail.environment || '-' }}
             </a-descriptions-item>
             <a-descriptions-item label="IP地址">
               {{ currentDetail.ip_addr }}
             </a-descriptions-item>
             <a-descriptions-item label="SSH端口">
               {{ currentDetail.port }}
+            </a-descriptions-item>
+            <a-descriptions-item label="用户名">
+              {{ currentDetail.username || '-' }}
             </a-descriptions-item>
             <a-descriptions-item label="操作系统">
               <a-tag :color="currentDetail.os_type === 'linux' ? 'blue' : 'green'">
@@ -398,11 +392,14 @@
                 {{ currentDetail.os_type === 'linux' ? 'Linux' : 'Windows' }}
               </a-tag>
             </a-descriptions-item>
+            <a-descriptions-item label="系统名称">
+              {{ currentDetail.os_name || '-' }}
+            </a-descriptions-item>
             <a-descriptions-item label="镜像名称">
-              {{ currentDetail.image_name || currentDetail.os_name || '-' }}
+              {{ currentDetail.image_name || '-' }}
             </a-descriptions-item>
             <a-descriptions-item label="认证方式">
-              <a-tag :color="currentDetail.auth_mode === 'password' ? 'orange' : 'purple'">
+              <a-tag :color="currentDetail.auth_mode === AuthMode.PASSWORD ? 'orange' : 'purple'">
                 {{ getAuthModeText(currentDetail.auth_mode) }}
               </a-tag>
             </a-descriptions-item>
@@ -412,14 +409,23 @@
                 :text="getStatusText(currentDetail.status)"
               />
             </a-descriptions-item>
+            <a-descriptions-item label="CPU">
+              {{ currentDetail.cpu || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="内存">
+              {{ currentDetail.memory || '-' }}
+            </a-descriptions-item>
+            <a-descriptions-item label="磁盘">
+              {{ currentDetail.disk || '-' }}
+            </a-descriptions-item>
             <a-descriptions-item label="描述">
               {{ currentDetail.description || '-' }}
             </a-descriptions-item>
             <a-descriptions-item label="创建时间">
-              {{ formatDateTime(currentDetail.createdAt) }}
+              {{ formatDateTime(currentDetail.created_at) }}
             </a-descriptions-item>
             <a-descriptions-item label="更新时间">
-              {{ formatDateTime(currentDetail.updatedAt) }}
+              {{ formatDateTime(currentDetail.updated_at) }}
             </a-descriptions-item>
           </a-descriptions>
   
@@ -436,6 +442,22 @@
             </template>
             <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无标签" />
           </div>
+
+          <a-divider orientation="left">绑定的服务树节点</a-divider>
+          <div class="tree-node-list">
+            <template v-if="currentDetail.tree_node && currentDetail.tree_node.length > 0">
+              <a-tag 
+                v-for="node in currentDetail.tree_node" 
+                :key="node.id" 
+                color="green"
+                style="margin-bottom: 8px;"
+              >
+                {{ node.name }}
+              </a-tag>
+            </template>
+            <a-empty v-else :image="Empty.PRESENTED_IMAGE_SIMPLE" description="暂无绑定节点" />
+          </div>
+          
           <div class="drawer-actions">
             <a-button-group>
               <a-button type="primary" @click="handleTestSingleConnection(currentDetail)">
@@ -474,6 +496,7 @@ import {
 } from '@ant-design/icons-vue';
 import { useWindowSize } from '@vueuse/core';
 
+// 导入新的API和类型定义
 import {
   getTreeLocalList,
   getTreeLocalDetail,
@@ -482,36 +505,20 @@ import {
   deleteTreeLocal,
   bindTreeLocal,
   unbindTreeLocal,
+  connectTerminal,
+  AuthMode,
+  ResourceStatus,
   type TreeLocalResource,
-  type GetTreeLocalListParams,
-  type CreateTreeLocalParams,
-  type UpdateTreeLocalParams,
-  type BindLocalResourceParams,
-  type UnbindLocalResourceParams,
-  type Status,
-  type AuthMode,
+  type GetTreeLocalResourceListReq,
+  type CreateTreeLocalResourceReq,
+  type UpdateTreeLocalResourceReq,
+  type BindTreeLocalResourceReq,
+  type UnBindTreeLocalResourceReq,
+  type TreeNode,
 } from '#/api/core/tree_local';
-import { getTreeList, type TreeNode } from '#/api/core/tree_node';
+import { getTreeList } from '#/api/core/tree_node';
+import { getUserList, type GetUserListReq } from '#/api/core/user';
 
-interface LocalResourceView extends TreeLocalResource {
-  tree_node_id?: number;
-}
-
-/**
- * @description 表单数据模型，用于创建和编辑
- */
-type FormData = Partial<CreateTreeLocalParams & { id?: number; treeNodeId?: number }>;
-
-/**
- * @description 筛选表单模型
- */
-interface FilterForm {
-  osType?: string;
-  keyword: string;
-  status?: Status;
-  environment?: string;
-  treeNodeId?: number;
-}
 
 const loading = ref(false);
 const detailLoading = ref(false);
@@ -522,15 +529,18 @@ const detailVisible = ref(false);
 const isEdit = ref(false);
 const bindModalVisible = ref(false);
 const bindLoading = ref(false);
+const unbindModalVisible = ref(false);
+const unbindLoading = ref(false);
 
 const router = useRouter();
 
 const formRef = ref();
 const newTag = ref('');
-const selectedTreeNodeId = ref<number | undefined>(undefined);
-const currentResource = ref<LocalResourceView | null>(null);
-const localResources = ref<LocalResourceView[]>([]);
-const currentDetail = ref<LocalResourceView | null>(null);
+const selectedTreeNodeIds = ref<number[]>([]);
+const selectedUnbindNodeIds = ref<number[]>([]);
+const currentResource = ref<TreeLocalResource | null>(null);
+const localResources = ref<TreeLocalResource[]>([]);
+const currentDetail = ref<TreeLocalResource | null>(null);
 const treeData = ref<TreeNode[]>([]);
 
 const pagination = reactive({
@@ -542,17 +552,14 @@ const pagination = reactive({
   showTotal: (total: number) => `共 ${total} 条记录`,
 });
 
-const filterForm = reactive<FilterForm>({
-  osType: undefined,
-  treeNodeId: undefined,
-  keyword: '',
+const filterForm = reactive<GetTreeLocalResourceListReq>({
+  page: 1,
+  size: 10,
   status: undefined,
-  environment: undefined,
 });
 
-const createInitialFormData = (): FormData => ({
+const createInitialFormData = (): CreateTreeLocalResourceReq & { id?: number } => ({
   name: '',
-  treeNodeId: undefined,
   environment: 'local',
   description: '',
   tags: [],
@@ -563,11 +570,11 @@ const createInitialFormData = (): FormData => ({
   os_type: 'linux',
   os_name: '',
   image_name: '',
-  auth_mode: 'password',
+  auth_mode: AuthMode.PASSWORD,
   key: '',
 });
 
-const formData = reactive<FormData>(createInitialFormData());
+const formData = reactive<CreateTreeLocalResourceReq & { id?: number }>(createInitialFormData());
 
 const paginationConfig = computed(() => ({
   ...pagination,
@@ -597,18 +604,16 @@ const formRules = computed(() => ({
     { min: 1, max: 50, message: '用户名长度在1-50个字符之间', trigger: 'blur' },
   ],
   os_type: [{ required: true, message: '请选择操作系统类型', trigger: 'change' }],
-  os_name: [{ required: true, message: '请输入操作系统名称', trigger: 'blur' }],
-  image_name: [{ required: true, message: '请输入镜像名称', trigger: 'blur' }],
   auth_mode: [{ required: true, message: '请选择认证方式', trigger: 'change' }],
   password:
-    formData.auth_mode === 'password'
+    formData.auth_mode === AuthMode.PASSWORD
       ? [
           { required: true, message: '请输入登录密码', trigger: 'blur' },
           { min: 6, message: '密码长度至少6位', trigger: 'blur' },
         ]
       : [],
   key:
-    formData.auth_mode === 'key'
+    formData.auth_mode === AuthMode.KEY
       ? [
           { required: true, message: '请输入SSH私钥', trigger: 'blur' },
           { validator: validatePrivateKey, trigger: 'blur' },
@@ -634,7 +639,7 @@ const columns = [
   { title: '环境', dataIndex: 'environment', key: 'environment', width: 100 },
   { title: '认证方式', dataIndex: 'auth_mode', key: 'auth_mode', width: 100 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '服务树节点', dataIndex: 'tree_node_id', key: 'tree_node_id', width: 180 },
+  { title: '服务树节点', dataIndex: 'tree_nodes', key: 'tree_nodes', width: 200 },
   { title: '标签', dataIndex: 'tags', key: 'tags', width: 200, ellipsis: true },
   { title: '操作', key: 'action', fixed: 'right' as const, width: 120 },
 ];
@@ -648,57 +653,38 @@ const formatDateTime = (dateTime?: string): string => {
   }
 };
 
-const getStatusBadge = (status?: Status): string => {
-  const statusMap: Record<Status, string> = {
-    RUNNING: 'success',
-    STOPPED: 'error',
-    STARTING: 'processing',
-    STOPPING: 'warning',
-    RESTARTING: 'processing',
-    DELETING: 'warning',
-    ERROR: 'error',
+const getStatusBadge = (status: ResourceStatus): string => {
+  const statusMap: Record<ResourceStatus, string> = {
+    [ResourceStatus.RUNNING]: 'success',
+    [ResourceStatus.STOPPED]: 'error',
+    [ResourceStatus.STARTING]: 'processing',
+    [ResourceStatus.STOPPING]: 'warning',
+    [ResourceStatus.RESTARTING]: 'processing',
+    [ResourceStatus.DELETING]: 'warning',
+    [ResourceStatus.ERROR]: 'error',
   };
-  return statusMap[status || 'STOPPED'] || 'default';
+  return statusMap[status] || 'default';
 };
 
-const getStatusText = (status?: Status): string => {
-  const statusMap: Record<Status, string> = {
-    RUNNING: '在线',
-    STOPPED: '离线',
-    STARTING: '启动中',
-    STOPPING: '停止中',
-    RESTARTING: '重启中',
-    DELETING: '删除中',
-    ERROR: '错误',
+const getStatusText = (status: ResourceStatus): string => {
+  const statusMap: Record<ResourceStatus, string> = {
+    [ResourceStatus.RUNNING]: '运行中',
+    [ResourceStatus.STOPPED]: '已停止',
+    [ResourceStatus.STARTING]: '启动中',
+    [ResourceStatus.STOPPING]: '停止中',
+    [ResourceStatus.RESTARTING]: '重启中',
+    [ResourceStatus.DELETING]: '删除中',
+    [ResourceStatus.ERROR]: '错误',
   };
-  return statusMap[status || 'STOPPED'] || '未知';
+  return statusMap[status] || '未知';
 };
 
-const getAuthModeText = (authMode?: AuthMode): string => {
+const getAuthModeText = (authMode: AuthMode): string => {
   const authModeMap: Record<AuthMode, string> = {
-    'password': '密码认证',
-    'key': '密钥认证'
+    [AuthMode.PASSWORD]: '密码认证',
+    [AuthMode.KEY]: '密钥认证',
   };
-  return authModeMap[authMode || 'password'] || '未知';
-};
-
-const getTreeNodeName = (treeNodeId?: number): string => {
-  if (!treeNodeId) return '-';
-
-  const findNode = (nodes: TreeNode[]): string => {
-    for (const node of nodes) {
-      if (node.id === treeNodeId) {
-        return node.name;
-      }
-      if (node.children && node.children.length > 0) {
-        const result = findNode(node.children);
-        if (result) return result;
-      }
-    }
-    return '';
-  };
-
-  return findNode(treeData.value) || '-';
+  return authModeMap[authMode] || '未知';
 };
 
 const simulateConnectionTest = async (_name: string): Promise<boolean> => {
@@ -708,14 +694,14 @@ const simulateConnectionTest = async (_name: string): Promise<boolean> => {
 
 // 表单验证函数
 async function validatePrivateKey(_rule: any, value: string): Promise<void> {
-  if (formData.auth_mode === 'key' && value && !value.includes('PRIVATE KEY')) {
+  if (formData.auth_mode === AuthMode.KEY && value && !value.includes('PRIVATE KEY')) {
     throw new Error('请输入有效的SSH私钥');
   }
 }
 
 const fetchTreeData = async (): Promise<void> => {
   try {
-    const response = await getTreeList({ status: 'active' });
+    const response = await getTreeList();
     treeData.value = response.items || [];
   } catch (error) {
     console.error('获取服务树数据失败:', error);
@@ -726,22 +712,14 @@ const fetchTreeData = async (): Promise<void> => {
 const fetchLocalResources = async (): Promise<void> => {
   loading.value = true;
   try {
-    const params: GetTreeLocalListParams = {
+    const params: GetTreeLocalResourceListReq = {
       page: pagination.current,
       size: pagination.pageSize,
-      search: filterForm.keyword,
     };
+    
     if (filterForm.status) {
       params.status = filterForm.status;
     }
-    if (filterForm.environment) {
-      params.environment = filterForm.environment;
-    }
-    // tree_node_id is not a valid parameter for getTreeLocalList
-    // if (filterForm.treeNodeId) {
-    //   // @ts-ignore
-    //   params.tree_node_id = filterForm.treeNodeId;
-    // }
 
     const response = await getTreeLocalList(params);
 
@@ -759,31 +737,35 @@ const fetchLocalResources = async (): Promise<void> => {
 
 const handleSearch = (): void => {
   pagination.current = 1;
+  filterForm.page = 1;
   fetchLocalResources();
 };
 
 const resetFilter = (): void => {
-  Object.assign(filterForm, {
-    osType: undefined,
-    keyword: '',
-    status: undefined,
-    environment: 'local'
-  });
+  filterForm.status = undefined;
   pagination.current = 1;
+  filterForm.page = 1;
   fetchLocalResources();
 };
 
 const handleTableChange = (pag: { current?: number; pageSize?: number }): void => {
   pagination.current = pag.current || pagination.current;
   pagination.pageSize = pag.pageSize || pagination.pageSize;
+  filterForm.page = pagination.current;
+  filterForm.size = pagination.pageSize;
   fetchLocalResources();
 };
 
-const handleConnectTerminal = (record: LocalResourceView) => {
-  if (record.id) {
+const handleConnectTerminal = async (record: TreeLocalResource) => {
+  try {
+    // 获取token并连接终端
+    const token = localStorage.getItem('token') || '';
+    await connectTerminal(record.id, token);
+    // 这里可以跳转到终端页面或打开新窗口
     router.push({ name: 'WebTerminal', params: { id: record.id } });
-  } else {
-    message.error('无效的资源ID');
+  } catch (error) {
+    message.error('连接终端失败');
+    console.error('连接终端失败:', error);
   }
 };
 
@@ -801,14 +783,14 @@ const showCreateModal = (): void => {
   modalVisible.value = true;
 };
 
-const handleEdit = (record: LocalResourceView): void => {
+const handleEdit = (record: TreeLocalResource): void => {
   isEdit.value = true;
   Object.assign(formData, {
     id: record.id,
     name: record.name,
     environment: record.environment,
     description: record.description,
-    tags: record.tags,
+    tags: record.tags || [],
     ip_addr: record.ip_addr,
     port: record.port,
     username: record.username,
@@ -818,7 +800,6 @@ const handleEdit = (record: LocalResourceView): void => {
     image_name: record.image_name,
     auth_mode: record.auth_mode,
     key: '', // 私钥不回显
-    treeNodeId: record.tree_node_id,
   });
   modalVisible.value = true;
   if (detailVisible.value) {
@@ -826,16 +807,14 @@ const handleEdit = (record: LocalResourceView): void => {
   }
 };
 
-const handleViewDetail = async (record: LocalResourceView): Promise<void> => {
+const handleViewDetail = async (record: TreeLocalResource): Promise<void> => {
   detailVisible.value = true;
   detailLoading.value = true;
   currentDetail.value = record;
 
   try {
-    if (record.id) {
-      const response = await getTreeLocalDetail(record.id);
-      currentDetail.value = response;
-    }
+    const response = await getTreeLocalDetail(record.id);
+    currentDetail.value = response;
   } catch (error) {
     console.error('获取资源详情失败:', error);
     message.error('获取资源详情失败');
@@ -883,8 +862,8 @@ const removeTag = (index: number): void => {
   }
 };
 
-const updateResourceStatus = (resourceId: number, status: Status): void => {
-  const resource = localResources.value.find((item) => item.id === resourceId);
+const updateResourceStatus = (resourceId: number, status: ResourceStatus): void => {
+  const resource = localResources.value.find((item: TreeLocalResource) => item.id === resourceId);
   if (resource) {
     resource.status = status;
   }
@@ -893,7 +872,7 @@ const updateResourceStatus = (resourceId: number, status: Status): void => {
   }
 };
 
-const handleTestSingleConnection = async (record: LocalResourceView): Promise<void> => {
+const handleTestSingleConnection = async (record: TreeLocalResource): Promise<void> => {
   const hide = message.loading(`正在测试 ${record.name} 的连接...`, 0);
   
   try {
@@ -901,14 +880,10 @@ const handleTestSingleConnection = async (record: LocalResourceView): Promise<vo
     
     if (success) {
       message.success(`${record.name} 连接测试成功`);
-      if (record.id) {
-        updateResourceStatus(record.id, 'RUNNING');
-      }
+      updateResourceStatus(record.id, ResourceStatus.RUNNING);
     } else {
       message.error(`${record.name} 连接测试失败`);
-      if (record.id) {
-        updateResourceStatus(record.id, 'STOPPED');
-      }
+      updateResourceStatus(record.id, ResourceStatus.STOPPED);
     }
   } catch (error) {
     message.error(`${record.name} 连接测试异常`);
@@ -927,13 +902,10 @@ const handleTestConnection = async (): Promise<void> => {
   const hide = message.loading('正在批量测试连接，请稍候...', 0);
   
   try {
-    const testPromises = localResources.value.map(async (resource) => {
-      if (resource.id) {
-        const success = await simulateConnectionTest(resource.name);
-        updateResourceStatus(resource.id, success ? 'RUNNING' : 'STOPPED');
-        return success;
-      }
-      return false;
+    const testPromises = localResources.value.map(async (resource: TreeLocalResource) => {
+      const success = await simulateConnectionTest(resource.name);
+      updateResourceStatus(resource.id, success ? ResourceStatus.RUNNING : ResourceStatus.STOPPED);
+      return success;
     });
     
     const results = await Promise.all(testPromises);
@@ -980,51 +952,31 @@ const handleTestAndSubmit = async (): Promise<void> => {
   }
 };
 
-const handleUnbind = async (record: LocalResourceView): Promise<void> => {
-  Modal.confirm({
-    title: '确定要解绑吗？',
-    content: `您正在将资源 ${record.name} 从服务树节点解绑。`,
-    okText: '确认解绑',
-    okType: 'danger',
-    cancelText: '取消',
-    async onOk() {
-      try {
-        if (!record.id || !record.tree_node_id) {
-          throw new Error('缺少资源ID或节点ID');
-        }
-        const params: UnbindLocalResourceParams = {
-          tree_node_ids: [record.tree_node_id],
-        };
-        await unbindTreeLocal(record.id, params);
-        message.success('解绑成功');
-        await fetchLocalResources();
-      } catch (error) {
-        message.error('解绑失败');
-        console.error('解绑失败:', error);
-      }
-    },
-  });
+const showUnbindModal = (record: TreeLocalResource): void => {
+  currentResource.value = record;
+  selectedUnbindNodeIds.value = [];
+  unbindModalVisible.value = true;
 };
 
-const showBindModal = (record: LocalResourceView): void => {
+const showBindModal = (record: TreeLocalResource): void => {
   currentResource.value = record;
-  selectedTreeNodeId.value = undefined;
+  selectedTreeNodeIds.value = [];
   bindModalVisible.value = true;
 };
 
 const handleBind = async (): Promise<void> => {
-  if (!currentResource.value || !selectedTreeNodeId.value) {
-    message.warning('请选择一个服务树节点');
+  if (!currentResource.value || selectedTreeNodeIds.value.length === 0) {
+    message.warning('请选择要绑定的服务树节点');
     return;
   }
 
   bindLoading.value = true;
   try {
-    const params: BindLocalResourceParams = {
-      tree_node_ids: [selectedTreeNodeId.value],
+    const params: BindTreeLocalResourceReq = {
+      id: currentResource.value.id,
+      tree_node_ids: selectedTreeNodeIds.value,
     };
-    console.log(params)
-    await bindTreeLocal(currentResource.value.id!, params);
+    await bindTreeLocal(currentResource.value.id, params);
     message.success('绑定成功');
     bindModalVisible.value = false;
     await fetchLocalResources();
@@ -1036,6 +988,30 @@ const handleBind = async (): Promise<void> => {
   }
 };
 
+const handleUnbind = async (): Promise<void> => {
+  if (!currentResource.value || selectedUnbindNodeIds.value.length === 0) {
+    message.warning('请选择要解绑的节点');
+    return;
+  }
+
+  unbindLoading.value = true;
+  try {
+    const params: UnBindTreeLocalResourceReq = {
+      id: currentResource.value.id,
+      tree_node_ids: selectedUnbindNodeIds.value,
+    };
+    await unbindTreeLocal(currentResource.value.id, params);
+    message.success('解绑成功');
+    unbindModalVisible.value = false;
+    await fetchLocalResources();
+  } catch (error) {
+    message.error('解绑失败');
+    console.error('解绑失败:', error);
+  } finally {
+    unbindLoading.value = false;
+  }
+};
+
 const handleSubmit = async (): Promise<void> => {
   try {
     await formRef.value?.validate();
@@ -1043,19 +1019,16 @@ const handleSubmit = async (): Promise<void> => {
     submitLoading.value = true;
 
     // 从 formData 中提取有效字段
-    const { id, treeNodeId, ...rest } = formData;
+    const { id, ...rest } = formData;
 
     if (isEdit.value) {
       if (!id) {
         throw new Error('缺少资源ID');
       }
-      await updateTreeLocal(id, rest as UpdateTreeLocalParams);
+      await updateTreeLocal(id, rest as UpdateTreeLocalResourceReq);
       message.success('服务器信息更新成功');
     } else {
-      const newResource = await createTreeLocal(rest as CreateTreeLocalParams);
-      if (treeNodeId && newResource.id) {
-        await bindTreeLocal(newResource.id, { tree_node_ids: [treeNodeId] });
-      }
+      await createTreeLocal(rest as CreateTreeLocalResourceReq);
       message.success('服务器添加成功');
     }
 
@@ -1069,7 +1042,7 @@ const handleSubmit = async (): Promise<void> => {
   }
 };
 
-const handleDelete = (record: LocalResourceView): void => {
+const handleDelete = (record: TreeLocalResource): void => {
   Modal.confirm({
     title: '确定要删除此服务器吗？',
     content: `您正在删除服务器: ${record.name} (${record.ip_addr})，该操作不可恢复。`,
@@ -1078,10 +1051,6 @@ const handleDelete = (record: LocalResourceView): void => {
     cancelText: '取消',
     async onOk() {
       try {
-        if (!record.id) {
-          throw new Error('缺少资源ID');
-        }
-        
         await deleteTreeLocal(record.id);
         message.success('服务器删除成功');
         
@@ -1089,7 +1058,7 @@ const handleDelete = (record: LocalResourceView): void => {
           detailVisible.value = false;
         }
         
-        await fetchLocalResources(); // 重新加载列表数据
+        await fetchLocalResources();
       } catch (error) {
         message.error('删除服务器失败');
         console.error('删除服务器失败:', error);
@@ -1239,7 +1208,7 @@ onMounted(async () => {
   }
 
   .detail-drawer {
-    .tag-list {
+    .tag-list, .tree-node-list {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;

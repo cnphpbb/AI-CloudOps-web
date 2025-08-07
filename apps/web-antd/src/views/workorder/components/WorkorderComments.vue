@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- 评论对话框 -->
+    <!-- 快速评论对话框 -->
     <a-modal 
       :open="commentDialog.visible" 
       title="添加评论" 
@@ -8,74 +8,246 @@
       @ok="saveComment"
       @cancel="() => { commentDialog.visible = false }" 
       :destroy-on-close="true" 
-      class="responsive-modal"
+      class="responsive-modal comment-modal"
       :confirm-loading="loading"
+      ok-text="发布评论"
+      cancel-text="取消"
     >
-      <a-form :model="commentDialog.form" layout="vertical">
-        <a-form-item label="评论内容" name="content" :rules="[{ required: true, message: '请输入评论内容' }]">
-          <a-textarea v-model:value="commentDialog.form.content" :rows="4" placeholder="请输入评论内容" />
-        </a-form-item>
-        <a-form-item>
-          <a-checkbox v-model:checked="commentDialog.form.is_system">系统评论</a-checkbox>
-        </a-form-item>
-      </a-form>
+      <div class="comment-form-wrapper">
+        <a-form :model="commentDialog.form" layout="vertical">
+          <a-form-item label="评论内容" name="content" :rules="[{ required: true, message: '请输入评论内容' }]">
+            <a-textarea 
+              v-model:value="commentDialog.form.content" 
+              :rows="5" 
+              placeholder="分享你的想法或意见..."
+              show-count
+              :max-length="500"
+              class="comment-textarea"
+            />
+          </a-form-item>
+          <div class="comment-options">
+            <a-checkbox v-model:checked="commentDialog.form.is_system" class="system-checkbox">
+              <span class="checkbox-text">
+                <IconComponent icon="system" /> 系统评论
+              </span>
+            </a-checkbox>
+            <div class="quick-actions">
+              <a-tooltip title="快速插入当前时间">
+                <a-button size="small" type="text" @click="insertCurrentTime">
+                  <IconComponent icon="time" />
+                </a-button>
+              </a-tooltip>
+              <a-tooltip title="快速插入处理建议">
+                <a-button size="small" type="text" @click="insertSuggestion">
+                  <IconComponent icon="suggestion" />
+                </a-button>
+              </a-tooltip>
+            </div>
+          </div>
+        </a-form>
+      </div>
     </a-modal>
 
     <!-- 评论查看对话框 -->
     <a-modal 
       :open="commentsViewDialog.visible" 
-      title="工单评论" 
+      title=""
       :width="previewDialogWidth" 
       :footer="null"
       @cancel="() => { commentsViewDialog.visible = false }" 
       class="comments-dialog responsive-modal"
+      centered
     >
-      <div class="comments-content">
-        <div v-if="commentsList.length === 0" class="empty-comments">
-          <a-empty description="暂无评论" />
+      <template #title>
+        <div class="comments-dialog-header">
+          <div class="header-info">
+            <IconComponent icon="comment" class="header-icon" />
+            <span class="header-title">工单评论</span>
+            <a-badge :count="commentsList.length" class="comment-count" />
+          </div>
+          <div class="header-actions">
+            <a-tooltip title="刷新评论">
+              <a-button type="text" size="small" @click="refreshComments">
+                <IconComponent icon="refresh" />
+              </a-button>
+            </a-tooltip>
+            <a-tooltip title="排序方式">
+              <a-dropdown>
+                <a-button type="text" size="small">
+                  <IconComponent icon="sort" />
+                </a-button>
+                <template #overlay>
+                  <a-menu @click="handleSortChange">
+                    <a-menu-item key="newest">最新优先</a-menu-item>
+                    <a-menu-item key="oldest">最早优先</a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </a-tooltip>
+          </div>
         </div>
-        <div v-else class="comments-list">
-          <div v-for="comment in commentsList" :key="comment.id" class="comment-item">
-            <div class="comment-header">
-              <div class="commenter-info">
-                <a-avatar 
-                  size="small" 
-                  :style="{ backgroundColor: getAvatarColor(comment.operator_name || '') }"
-                >
-                  {{ getInitials(comment.operator_name) }}
-                </a-avatar>
-                <span class="commenter-name">{{ comment.operator_name }}</span>
-                <a-tag v-if="comment.is_system === 1" color="orange" size="small">系统</a-tag>
-              </div>
-              <span class="comment-time">{{ formatFullDateTime(comment.created_at) }}</span>
-            </div>
-            <div class="comment-content">{{ comment.content }}</div>
-            <div v-if="comment.children && comment.children.length > 0" class="comment-replies">
-              <div v-for="reply in comment.children" :key="reply.id" class="reply-item">
-                <div class="reply-header">
-                  <div class="replier-info">
-                    <a-avatar 
-                      size="small" 
-                      :style="{ backgroundColor: getAvatarColor(reply.operator_name || '') }"
-                    >
-                      {{ getInitials(reply.operator_name) }}
-                    </a-avatar>
-                    <span class="replier-name">{{ reply.operator_name }}</span>
-                  </div>
-                  <span class="reply-time">{{ formatFullDateTime(reply.created_at) }}</span>
-                </div>
-                <div class="reply-content">{{ reply.content }}</div>
-              </div>
+      </template>
+      
+      <div class="comments-content">
+        <!-- 快速评论输入框 -->
+        <div class="quick-comment-section">
+          <div class="quick-comment-input">
+            <a-textarea
+              v-model:value="quickCommentText"
+              placeholder="快速添加评论..."
+              :rows="2"
+              class="quick-textarea"
+              @keydown.ctrl.enter="submitQuickComment"
+            />
+            <div class="quick-comment-actions">
+              <span class="keyboard-hint">Ctrl + Enter 快速发送</span>
+              <a-button type="primary" size="small" @click="submitQuickComment" :loading="quickCommenting">
+                <IconComponent icon="send" /> 发送
+              </a-button>
             </div>
           </div>
         </div>
+
+        <!-- 评论列表 -->
+        <div v-if="commentsList.length === 0 && !loading" class="empty-comments">
+          <a-empty description="">
+            <template #image>
+              <div class="empty-icon">
+                <IconComponent icon="empty-comment" />
+              </div>
+            </template>
+            <template #description>
+              <div class="empty-description">
+                <div class="empty-title">还没有评论</div>
+                <div class="empty-subtitle">成为第一个评论的人吧</div>
+              </div>
+            </template>
+          </a-empty>
+        </div>
+        
+        <a-spin :spinning="loading" tip="加载评论中...">
+          <div v-if="commentsList.length > 0" class="comments-list">
+            <div v-for="(comment, index) in sortedComments" :key="comment.id" class="comment-item" :class="{ 'comment-highlight': comment.id === highlightCommentId }">
+              <div class="comment-wrapper">
+                <div class="comment-avatar">
+                  <a-avatar 
+                    :size="40" 
+                    :style="{ backgroundColor: getAvatarColor(comment.operator_name || '') }"
+                    class="user-avatar"
+                  >
+                    {{ getInitials(comment.operator_name) }}
+                  </a-avatar>
+                  <div v-if="comment.is_system === 1" class="system-badge">
+                    <IconComponent icon="system" />
+                  </div>
+                </div>
+                
+                <div class="comment-body">
+                  <div class="comment-header">
+                    <div class="commenter-info">
+                      <span class="commenter-name">{{ comment.operator_name }}</span>
+                      <a-tag v-if="comment.is_system === 1" color="orange" size="small" class="system-tag">
+                        <IconComponent icon="system" /> 系统
+                      </a-tag>
+                      <span class="comment-floor">#{{ index + 1 }}</span>
+                    </div>
+                    <div class="comment-meta">
+                      <span class="comment-time">{{ formatRelativeTime(comment.created_at) }}</span>
+                      <a-dropdown trigger="click" placement="bottomRight">
+                        <a-button type="text" size="small" class="more-actions">
+                          <IconComponent icon="more" />
+                        </a-button>
+                        <template #overlay>
+                          <a-menu>
+                            <a-menu-item key="reply" @click="showReplyInput(comment.id)">
+                              <IconComponent icon="reply" /> 回复
+                            </a-menu-item>
+                            <a-menu-item key="quote" @click="quoteComment(comment)">
+                              <IconComponent icon="quote" /> 引用
+                            </a-menu-item>
+                            <a-menu-item key="copy" @click="copyComment(comment.content)">
+                              <IconComponent icon="copy" /> 复制
+                            </a-menu-item>
+                          </a-menu>
+                        </template>
+                      </a-dropdown>
+                    </div>
+                  </div>
+                  
+                  <div class="comment-content">
+                    <div class="comment-text" v-html="formatCommentContent(comment.content)"></div>
+                  </div>
+                  
+                  <div class="comment-actions">
+                    <a-button type="text" size="small" @click="showReplyInput(comment.id)" class="action-btn">
+                      <IconComponent icon="reply" /> 回复
+                    </a-button>
+                    <a-button type="text" size="small" @click="likeComment(comment.id)" class="action-btn like-btn" :class="{ 'liked': isCommentLiked(comment.id) }">
+                      <IconComponent icon="like" /> {{ getCommentLikes(comment.id) }}
+                    </a-button>
+                  </div>
+                  
+                  <!-- 回复输入框 -->
+                  <div v-if="replyInputVisible[comment.id]" class="reply-input-section">
+                    <div class="reply-input-wrapper">
+                      <a-textarea
+                        v-model:value="replyText[comment.id]"
+                        :placeholder="`回复 ${comment.operator_name}...`"
+                        :rows="3"
+                        class="reply-textarea"
+                        @keydown.ctrl.enter="submitReply(comment.id)"
+                      />
+                      <div class="reply-actions">
+                        <a-button size="small" @click="cancelReply(comment.id)">取消</a-button>
+                        <a-button type="primary" size="small" @click="submitReply(comment.id)" :loading="replySubmitting[comment.id]">
+                          回复
+                        </a-button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 回复列表 -->
+                  <div v-if="comment.children && comment.children.length > 0" class="comment-replies">
+                    <div class="replies-header">
+                      <IconComponent icon="replies" />
+                      <span>{{ comment.children.length }} 条回复</span>
+                      <a-button type="text" size="small" @click="toggleReplies(comment.id)">
+                        {{ repliesExpanded[comment.id] ? '收起' : '展开' }}
+                      </a-button>
+                    </div>
+                    
+                    <div v-show="repliesExpanded[comment.id]" class="replies-list">
+                      <div v-for="reply in comment.children" :key="reply.id" class="reply-item">
+                        <div class="reply-avatar">
+                          <a-avatar 
+                            :size="32" 
+                            :style="{ backgroundColor: getAvatarColor(reply.operator_name || '') }"
+                          >
+                            {{ getInitials(reply.operator_name) }}
+                          </a-avatar>
+                        </div>
+                        <div class="reply-body">
+                          <div class="reply-header">
+                            <span class="replier-name">{{ reply.operator_name }}</span>
+                            <span class="reply-time">{{ formatRelativeTime(reply.created_at) }}</span>
+                          </div>
+                          <div class="reply-content" v-html="formatCommentContent(reply.content)"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </a-spin>
       </div>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, defineEmits, defineExpose } from 'vue'
+import { ref, reactive, computed, defineEmits, defineExpose, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   type WorkorderInstanceCommentItem,
@@ -85,6 +257,27 @@ import {
   getInstanceCommentsTree
 } from '#/api/core/workorder_instance_comment'
 
+// 图标组件
+const IconComponent = ({ icon }: { icon: string }) => {
+  const iconMap: Record<string, string> = {
+    system: '⚙️',
+    time: '⏰',
+    suggestion: '💡',
+    comment: '💬',
+    refresh: '🔄',
+    sort: '🔀',
+    send: '📤',
+    'empty-comment': '💭',
+    more: '⋯',
+    reply: '↩️',
+    quote: '❝',
+    copy: '📋',
+    like: '👍',
+    replies: '💬'
+  }
+  return iconMap[icon] || ''
+}
+
 // 定义emits
 const emit = defineEmits<{
   commentAdded: []
@@ -93,6 +286,20 @@ const emit = defineEmits<{
 // 状态数据
 const loading = ref(false)
 const commentsList = ref<WorkorderInstanceCommentItem[]>([])
+const quickCommenting = ref(false)
+const quickCommentText = ref('')
+const highlightCommentId = ref<number | null>(null)
+const sortOrder = ref<'newest' | 'oldest'>('newest')
+
+// 回复相关状态
+const replyInputVisible = ref<Record<number, boolean>>({})
+const replyText = ref<Record<number, string>>({})
+const replySubmitting = ref<Record<number, boolean>>({})
+const repliesExpanded = ref<Record<number, boolean>>({})
+
+// 点赞相关（模拟数据，实际应该从后端获取）
+const commentLikes = ref<Record<number, number>>({})
+const userLikedComments = ref<Set<number>>(new Set())
 
 // 评论对话框
 const commentDialog = reactive({
@@ -144,6 +351,41 @@ const formatFullDateTime = (dateStr: string | undefined) => {
   })
 }
 
+const formatRelativeTime = (dateStr: string | undefined) => {
+  if (!dateStr) return ''
+  const now = new Date()
+  const date = new Date(dateStr)
+  const diff = now.getTime() - date.getTime()
+  
+  const minute = 60 * 1000
+  const hour = 60 * minute
+  const day = 24 * hour
+  const week = 7 * day
+  const month = 30 * day
+  
+  if (diff < minute) {
+    return '刚刚'
+  } else if (diff < hour) {
+    return `${Math.floor(diff / minute)}分钟前`
+  } else if (diff < day) {
+    return `${Math.floor(diff / hour)}小时前`
+  } else if (diff < week) {
+    return `${Math.floor(diff / day)}天前`
+  } else if (diff < month) {
+    return `${Math.floor(diff / week)}周前`
+  } else {
+    return formatFullDateTime(dateStr)
+  }
+}
+
+const formatCommentContent = (content: string) => {
+  // 简单的内容格式化，可以扩展支持更多格式
+  return content
+    .replace(/\n/g, '<br>')
+    .replace(/@(\w+)/g, '<span class="mention">@$1</span>')
+    .replace(/#(\w+)/g, '<span class="hashtag">#$1</span>')
+}
+
 const getInitials = (name: string | undefined) => {
   if (!name) return ''
   return name
@@ -169,6 +411,16 @@ const getAvatarColor = (name: string | undefined) => {
   return colors[Math.abs(hash) % colors.length]
 }
 
+// 计算属性
+const sortedComments = computed(() => {
+  const sorted = [...commentsList.value].sort((a, b) => {
+    const dateA = new Date(a.created_at || '')
+    const dateB = new Date(b.created_at || '')
+    return sortOrder.value === 'newest' ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime()
+  })
+  return sorted
+})
+
 // 主要方法
 const showCommentDialog = (instanceId: number) => {
   commentDialog.form = {
@@ -177,6 +429,154 @@ const showCommentDialog = (instanceId: number) => {
     is_system: 0
   }
   commentDialog.visible = true
+}
+
+// 快速评论
+const submitQuickComment = async () => {
+  if (!quickCommentText.value.trim()) {
+    message.warning('请输入评论内容')
+    return
+  }
+  
+  try {
+    quickCommenting.value = true
+    await createWorkorderInstanceComment({
+      instance_id: commentsViewDialog.instanceId,
+      content: quickCommentText.value,
+      is_system: 0
+    })
+    
+    quickCommentText.value = ''
+    message.success('评论发布成功')
+    await refreshComments()
+    emit('commentAdded')
+  } catch (error: any) {
+    message.error(`发布评论失败: ${error.message || '未知错误'}`)
+  } finally {
+    quickCommenting.value = false
+  }
+}
+
+// 快速操作
+const insertCurrentTime = () => {
+  const currentTime = new Date().toLocaleString('zh-CN')
+  commentDialog.form.content += `\n处理时间: ${currentTime}\n`
+}
+
+const insertSuggestion = () => {
+  commentDialog.form.content += '\n建议: '
+}
+
+// 回复相关方法
+const showReplyInput = (commentId: number) => {
+  replyInputVisible.value[commentId] = true
+  replyText.value[commentId] = ''
+  nextTick(() => {
+    // 聚焦到回复输入框
+  })
+}
+
+const cancelReply = (commentId: number) => {
+  replyInputVisible.value[commentId] = false
+  replyText.value[commentId] = ''
+}
+
+const submitReply = async (commentId: number) => {
+  if (!replyText.value[commentId]?.trim()) {
+    message.warning('请输入回复内容')
+    return
+  }
+  
+  try {
+    replySubmitting.value[commentId] = true
+    // 这里应该调用回复API，目前模拟
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    message.success('回复成功')
+    replyInputVisible.value[commentId] = false
+    replyText.value[commentId] = ''
+    await refreshComments()
+  } catch (error: any) {
+    message.error(`回复失败: ${error.message || '未知错误'}`)
+  } finally {
+    replySubmitting.value[commentId] = false
+  }
+}
+
+// 切换回复展开/收起
+const toggleReplies = (commentId: number) => {
+  repliesExpanded.value[commentId] = !repliesExpanded.value[commentId]
+}
+
+// 点赞功能
+const likeComment = (commentId: number) => {
+  if (userLikedComments.value.has(commentId)) {
+    userLikedComments.value.delete(commentId)
+    commentLikes.value[commentId] = (commentLikes.value[commentId] || 0) - 1
+  } else {
+    userLikedComments.value.add(commentId)
+    commentLikes.value[commentId] = (commentLikes.value[commentId] || 0) + 1
+  }
+}
+
+const isCommentLiked = (commentId: number) => {
+  return userLikedComments.value.has(commentId)
+}
+
+const getCommentLikes = (commentId: number) => {
+  return commentLikes.value[commentId] || 0
+}
+
+// 其他功能
+const quoteComment = (comment: WorkorderInstanceCommentItem) => {
+  quickCommentText.value = `> ${comment.content}\n\n`
+}
+
+const copyComment = async (content: string) => {
+  try {
+    await navigator.clipboard.writeText(content)
+    message.success('内容已复制到剪贴板')
+  } catch {
+    message.error('复制失败')
+  }
+}
+
+// 排序和刷新
+const handleSortChange = ({ key }: { key: string }) => {
+  sortOrder.value = key as 'newest' | 'oldest'
+}
+
+const refreshComments = async () => {
+  if (commentsViewDialog.instanceId) {
+    await loadComments(commentsViewDialog.instanceId)
+  }
+}
+
+// 加载评论
+const loadComments = async (instanceId: number) => {
+  try {
+    loading.value = true
+    const params: GetInstanceCommentsTreeReq = { id: instanceId }
+    const res = await getInstanceCommentsTree(params)
+    
+    if (res) {
+      commentsList.value = res
+      // 初始化回复展开状态
+      res.forEach((comment: WorkorderInstanceCommentItem) => {
+        if (comment.children && comment.children.length > 0) {
+          repliesExpanded.value[comment.id] = false
+        }
+      })
+    } else {
+      commentsList.value = []
+    }
+  } catch (error: any) {
+    console.error('Failed to load comments:', error)
+    message.error(`加载评论失败: ${error.message || '未知错误'}`)
+    commentsList.value = []
+  } finally {
+    loading.value = false
+  }
 }
 
 const saveComment = async () => {
@@ -202,23 +602,8 @@ const saveComment = async () => {
 const showCommentsView = async (instanceId: number) => {
   commentsViewDialog.instanceId = instanceId
   commentsViewDialog.visible = true
-
-  try {
-    const params: GetInstanceCommentsTreeReq = {
-      id: instanceId
-    }
-
-    const res = await getInstanceCommentsTree(params)
-    if (res) {
-      commentsList.value = res
-    } else {
-      commentsList.value = []
-    }
-  } catch (error: any) {
-    console.error('Failed to load comments:', error)
-    message.error(`加载评论失败: ${error.message || '未知错误'}`)
-    commentsList.value = []
-  }
+  quickCommentText.value = ''
+  await loadComments(instanceId)
 }
 
 // 导出方法供父组件调用
@@ -229,157 +614,465 @@ defineExpose({
 </script>
 
 <style scoped>
-/* 评论样式 */
-.comments-content {
-  max-height: 600px;
-  overflow-y: auto;
-  padding: 4px;
+/* 评论对话框样式增强 */
+.comment-modal :deep(.ant-modal-header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px 12px 0 0;
+  border: none;
 }
 
+.comment-modal :deep(.ant-modal-title) {
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.comment-modal :deep(.ant-modal-close) {
+  color: white;
+}
+
+.comment-modal :deep(.ant-modal-close:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+}
+
+.comment-form-wrapper {
+  padding: 8px 0;
+}
+
+.comment-textarea {
+  border-radius: 8px;
+  border: 2px solid #e8f0fe;
+  transition: all 0.3s ease;
+}
+
+.comment-textarea:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.comment-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding: 12px;
+  background: #f8fafb;
+  border-radius: 8px;
+  border: 1px solid #e8f0fe;
+}
+
+.system-checkbox .checkbox-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* 评论查看对话框 */
+.comments-dialog :deep(.ant-modal) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.comments-dialog :deep(.ant-modal-content) {
+  border-radius: 12px;
+}
+
+.comments-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon {
+  font-size: 20px;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.comment-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.header-actions .ant-btn {
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.header-actions .ant-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 评论内容区域 */
+.comments-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  padding: 0;
+}
+
+/* 快速评论区域 */
+.quick-comment-section {
+  padding: 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e8f0fe;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.quick-comment-input {
+  border: 2px solid #e8f0fe;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.quick-comment-input:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.quick-textarea {
+  border: none;
+  box-shadow: none;
+  resize: none;
+  padding: 16px;
+  font-size: 14px;
+}
+
+.quick-textarea:focus {
+  box-shadow: none;
+}
+
+.quick-comment-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8fafb;
+  border-top: 1px solid #e8f0fe;
+}
+
+.keyboard-hint {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* 评论列表 */
 .comments-list {
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .comment-item {
-  position: relative;
-  border: 1px solid #e1e8ed;
-  border-radius: 12px;
-  padding: 20px;
   background: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  border: 1px solid #e8f0fe;
+  overflow: hidden;
   transition: all 0.3s ease;
-  border-left: 4px solid #1890ff;
+  position: relative;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
 .comment-item:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.comment-highlight {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.comment-wrapper {
+  display: flex;
+  padding: 20px;
+  gap: 16px;
+}
+
+.comment-avatar {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.user-avatar {
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+}
+
+.system-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, #faad14, #ffc53d);
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: white;
+}
+
+.comment-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .comment-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 }
 
 .commenter-info {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.commenter-info .ant-avatar {
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
 }
 
 .commenter-name {
-  font-weight: 600;
+  font-weight: 700;
   color: #2c3e50;
-  font-size: 15px;
+  font-size: 16px;
+}
+
+.system-tag {
+  background: linear-gradient(135deg, #faad14, #ffc53d);
+  border: none;
+  color: white;
+  font-weight: 600;
+}
+
+.comment-floor {
+  background: linear-gradient(135deg, #e8f0fe, #f0f8ff);
+  color: #667eea;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #d9ecf5;
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .comment-time {
   font-size: 13px;
   color: #8c8c8c;
   background: #f8f9fa;
-  padding: 4px 8px;
-  border-radius: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid #e8f0fe;
   white-space: nowrap;
 }
 
+.more-actions {
+  color: #8c8c8c;
+  border: none;
+}
+
+.more-actions:hover {
+  background: #f0f8ff;
+  color: #667eea;
+}
+
 .comment-content {
+  margin: 16px 0;
+}
+
+.comment-text {
   line-height: 1.7;
   color: #2c3e50;
   font-size: 15px;
-  padding: 16px;
-  background: #f8fafb;
-  border-radius: 8px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
+  border-radius: 12px;
   border: 1px solid #e8f0fe;
-  margin-bottom: 16px;
   position: relative;
 }
 
-.comment-content::before {
-  content: '';
-  position: absolute;
-  left: -4px;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: linear-gradient(to bottom, #1890ff, #40a9ff);
-  border-radius: 2px;
+.comment-text :deep(.mention) {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
 }
 
+.comment-text :deep(.hashtag) {
+  color: #52c41a;
+  background: rgba(82, 196, 26, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.action-btn {
+  color: #8c8c8c;
+  border: 1px solid #e8f0fe;
+  border-radius: 8px;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+  background: #f0f8ff;
+  color: #667eea;
+  border-color: #d9ecf5;
+}
+
+.like-btn.liked {
+  color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.1);
+  border-color: #ffcccb;
+}
+
+/* 回复输入区域 */
+.reply-input-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0f8ff 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 1px solid #d9ecf5;
+}
+
+.reply-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reply-textarea {
+  border: 1px solid #d9ecf5;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.reply-textarea:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 回复列表 */
 .comment-replies {
-  margin-left: 24px;
+  margin-top: 16px;
+  padding-left: 20px;
+  border-left: 3px solid #e8f0fe;
   position: relative;
-  padding-left: 24px;
 }
 
-.comment-replies::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: linear-gradient(to bottom, #e8f4f8, #d9ecf5);
-  border-radius: 1px;
+.replies-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #8c8c8c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.replies-header .ant-btn {
+  font-size: 12px;
+  height: auto;
+  padding: 2px 8px;
+}
+
+.replies-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .reply-item {
-  margin-bottom: 16px;
+  display: flex;
+  gap: 12px;
   padding: 16px;
-  background: #f0f8ff;
-  border-radius: 10px;
-  border: 1px solid #e1f3ff;
-  position: relative;
-  transition: all 0.2s ease;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e8f0fe;
+  transition: all 0.3s ease;
 }
 
 .reply-item:hover {
-  background: #e6f4ff;
-  border-color: #bae7ff;
+  background: #f8fafb;
+  border-color: #d9ecf5;
 }
 
-.reply-item::before {
-  content: '';
-  position: absolute;
-  left: -26px;
-  top: 20px;
-  width: 20px;
-  height: 2px;
-  background: #d9ecf5;
-  border-radius: 1px;
+.reply-avatar {
+  flex-shrink: 0;
+}
+
+.reply-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .reply-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.replier-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.replier-info .ant-avatar {
-  border: 1px solid #e1f3ff;
+  margin-bottom: 8px;
 }
 
 .replier-name {
-  font-weight: 500;
+  font-weight: 600;
   color: #2c3e50;
   font-size: 14px;
 }
@@ -387,146 +1080,161 @@ defineExpose({
 .reply-time {
   font-size: 12px;
   color: #8c8c8c;
-  background: #fff;
+  background: #f8f9fa;
   padding: 2px 6px;
   border-radius: 6px;
-  border: 1px solid #e8f4f8;
 }
 
 .reply-content {
   line-height: 1.6;
   color: #495057;
   font-size: 14px;
-  padding: 12px;
-  background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #e8f4f8;
 }
 
+/* 空状态 */
 .empty-comments {
   text-align: center;
-  padding: 60px 0;
-  background: #fafbfc;
-  border-radius: 12px;
-  border: 2px dashed #e1e8ed;
+  padding: 80px 20px;
+  background: linear-gradient(135deg, #f8fafb 0%, #ffffff 100%);
 }
 
-.empty-comments :deep(.ant-empty-description) {
+.empty-icon {
+  font-size: 64px;
+  opacity: 0.5;
+  margin-bottom: 16px;
+}
+
+.empty-description {
   color: #8c8c8c;
-  font-size: 16px;
 }
 
-/* 评论对话框增强 */
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.empty-subtitle {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* 响应式对话框 */
 .responsive-modal :deep(.ant-modal) {
   max-width: calc(100vw - 16px);
   margin: 8px;
 }
 
-.responsive-modal :deep(.ant-modal-header) {
-  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-  border-radius: 8px 8px 0 0;
-}
-
-.responsive-modal :deep(.ant-modal-title) {
-  color: white;
-  font-weight: 600;
-}
-
-.responsive-modal :deep(.ant-modal-close) {
-  color: white;
-}
-
-.responsive-modal :deep(.ant-modal-close:hover) {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
 .responsive-modal :deep(.ant-modal-body) {
-  padding: 24px;
-  background: #fafbfc;
+  padding: 0;
 }
 
-.comments-dialog :deep(.ant-modal-body) {
-  background: #f8fafb;
+/* 加载动画 */
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-/* 系统评论标识 */
-.comment-item:has(.ant-tag[color="orange"]) {
-  border-left-color: #faad14;
-  background: linear-gradient(135deg, #fff7e6 0%, #ffffff 100%);
+.comment-item {
+  animation: slideInUp 0.4s ease-out;
+}
+
+.reply-item {
+  animation: slideInUp 0.3s ease-out;
 }
 
 /* 移动端适配 */
 @media (max-width: 768px) {
-  .comments-content {
-    padding: 8px;
+  .comments-dialog-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
   }
   
-  .comment-item {
+  .comment-wrapper {
     padding: 16px;
-    margin-bottom: 16px;
+    gap: 12px;
   }
-
-  .comment-header,
-  .reply-header {
+  
+  .user-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  
+  .comment-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-
-  .comment-content {
-    padding: 12px;
+  
+  .commenter-info {
+    gap: 8px;
+  }
+  
+  .comment-text {
+    padding: 16px;
     font-size: 14px;
   }
-
-  .comment-replies {
-    margin-left: 16px;
-    padding-left: 16px;
+  
+  .quick-comment-section {
+    padding: 16px;
   }
-
+  
+  .quick-textarea {
+    padding: 12px;
+  }
+  
+  .comments-list {
+    padding: 16px;
+    gap: 16px;
+  }
+  
   .reply-item {
     padding: 12px;
-    margin-bottom: 12px;
   }
-
-  .reply-item::before {
-    left: -18px;
-    width: 14px;
-  }
-
-  .commenter-name {
-    font-size: 14px;
-  }
-
-  .comment-time {
-    font-size: 12px;
-    padding: 2px 6px;
+  
+  .reply-avatar .ant-avatar {
+    width: 28px !important;
+    height: 28px !important;
   }
 }
 
 /* 超小屏幕适配 */
 @media (max-width: 480px) {
-  .comment-item {
-    padding: 12px;
-    border-radius: 8px;
+  .comment-wrapper {
+    flex-direction: column;
+    gap: 8px;
   }
-
-  .comment-content {
-    padding: 10px;
+  
+  .comment-avatar {
+    align-self: flex-start;
+  }
+  
+  .comment-text {
+    padding: 12px;
     font-size: 13px;
   }
-
-  .comment-replies {
-    margin-left: 8px;
-    padding-left: 12px;
+  
+  .reply-item {
+    flex-direction: column;
+    gap: 8px;
   }
-
-  .reply-item::before {
-    display: none;
+  
+  .quick-comment-actions {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
   }
-
-  .empty-comments {
-    padding: 40px 16px;
+  
+  .keyboard-hint {
+    text-align: center;
   }
 }
 
@@ -536,16 +1244,16 @@ defineExpose({
 }
 
 .comments-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgba(0, 0, 0, 0.05);
   border-radius: 3px;
 }
 
 .comments-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: linear-gradient(135deg, #c1c1c1, #a8a8a8);
   border-radius: 3px;
 }
 
 .comments-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: linear-gradient(135deg, #a8a8a8, #959595);
 }
 </style>
