@@ -47,7 +47,7 @@ export interface TreeLocalResource {
   os_type: string;
   os_name: string;
   image_name: string;
-  tree_node: TreeNode[];
+  tree_nodes: TreeNode[];
   created_at: string;
   updated_at: string;
 }
