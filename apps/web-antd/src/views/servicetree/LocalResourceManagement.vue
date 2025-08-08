@@ -223,6 +223,13 @@
                       <a-menu-item key="bind" @click="showBindModal(record)">
                         <deployment-unit-outlined /> 绑定服务树
                       </a-menu-item>
+                      <a-menu-item 
+                        key="unbind" 
+                        @click="showUnbindModal(record)"
+                        :disabled="!record.tree_nodes || record.tree_nodes.length === 0"
+                      >
+                        <deployment-unit-outlined /> 解绑服务树
+                      </a-menu-item>
                       <a-menu-item key="terminal" @click="handleConnectTerminal(record)">
                         <code-outlined /> 连接终端
                       </a-menu-item>
@@ -736,6 +743,12 @@ const formRules = computed(() => ({
         ]
       : [],
 }));
+
+const showUnbindModal = (record: TreeLocalResource): void => {
+  currentResource.value = record;
+  selectedUnbindNodeIds.value = record.tree_nodes?.map(node => node.id) || [];
+  unbindModalVisible.value = true;
+};
 
 // 表格列定义
 const columns = [
