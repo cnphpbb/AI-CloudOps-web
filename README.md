@@ -148,6 +148,8 @@ pnpm run build
 
 - Email: [wzijian62@gmail.com](mailto:wzijian62@gmail.com)
 - 微信：GoSimplicity（加我后可邀请进微信群交流）
+- ![image](https://github.com/user-attachments/assets/e925e26b-82ce-4ef7-8455-859320cb2633)
+
 
 ## 致谢
 
