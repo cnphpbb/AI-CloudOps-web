@@ -1,69 +1,81 @@
 import { requestClient } from '#/api/request';
 
-export interface MonitorAlertEventItem {
-  id: number;
-  created_at: number;
-  updated_at: number;
-  deleted_at: number;
+// 告警事件状态枚举
+export enum MonitorAlertEventStatus {
+  FIRING = 1,    // 告警触发
+  SILENCED = 2,  // 告警静默
+  CLAIMED = 3,   // 告警认领
+  RESOLVED = 4,  // 告警恢复
+  UPGRADED = 5,  // 告警升级
+}
+
+// 告警事件模型
+export interface MonitorAlertEvent {
+  id?: number;
   alert_name: string;
   fingerprint: string;
-  status: 'firing' | 'silenced' | 'claimed' | 'resolved';
+  status: MonitorAlertEventStatus;
   rule_id: number;
   send_group_id: number;
   event_times: number;
-  silence_id: string;
-  ren_ling_user_id: number;
+  silence_id?: string;
+  ren_ling_user_id?: number;
   labels: string[];
-  alert_rule_name: string;
-  send_group_name: string;
-  ren_ling_user?: {
-    id: number;
-    username: string;
-  };
-  labels_map: Record<string, string>;
-  annotations_map: Record<string, string>;
+  send_group?: any;
+  ren_ling_user?: any;
+  labels_map?: Record<string, string>;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface GetAlertEventsListParams {
-  page: number;
-  size: number;
+// 获取告警事件列表请求参数
+export interface GetMonitorAlertEventListReq {
+  page?: number;
+  size?: number;
   search?: string;
-  status?: 'firing' | 'silenced' | 'claimed' | 'resolved';
-  rule_id?: number;
-  send_group_id?: number;
-  start_time?: string;
-  end_time?: string;
-  alert_name?: string;
+  status?: string;
+  severity?: string;
 }
 
-export interface EventAlertSilenceParams {
+// 告警静默请求参数
+export interface EventAlertSilenceReq {
   id: number;
-  use_name?: 1 | 2;
-  time?: string;
+  user_id: number;
+  use_name?: number; // 1或2，是否启用名称静默
+  time: string;
 }
 
-export interface EventAlertClaimParams {
+// 告警认领请求参数
+export interface EventAlertClaimReq {
   id: number;
+  user_id: number;
 }
 
-export interface EventAlertUnSilenceParams {
+// 告警取消静默请求参数
+export interface EventAlertUnSilenceReq {
   id: number;
+  user_id: number;
 }
-export async function getAlertEventsListApi(data: GetAlertEventsListParams) {
+
+// 获取告警事件列表
+export async function getMonitorAlertEventListApi(data: GetMonitorAlertEventListReq) {
   return requestClient.get(`/monitor/alert_events/list`, { params: data });
 }
 
-export async function silenceAlertApi(data: EventAlertSilenceParams) {
+// 告警事件静默
+export async function eventAlertSilenceApi(data: EventAlertSilenceReq) {
   return requestClient.post(`/monitor/alert_events/silence/${data.id}`, {
     use_name: data.use_name,
     time: data.time,
   });
 }
 
-export async function claimAlertApi(data: EventAlertClaimParams) {
+  // 认领告警事件
+export async function eventAlertClaimApi(data: EventAlertClaimReq) {
   return requestClient.post(`/monitor/alert_events/claim/${data.id}`);
 }
 
-export async function cancelSilenceAlertApi(data: EventAlertUnSilenceParams) {
+// 取消告警事件静默
+export async function eventAlertUnSilenceApi(data: EventAlertUnSilenceReq) {
   return requestClient.post(`/monitor/alert_events/unsilence/${data.id}`);
 }

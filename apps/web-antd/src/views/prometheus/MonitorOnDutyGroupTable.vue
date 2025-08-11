@@ -379,7 +379,7 @@ import {
   createMonitorOnDutyGroupChangeApi,
   getMonitorOnDutyGroupChangeListApi,
   type MonitorOnDutyHistory,
-  type MonitorOnDutyUser,
+  type User,
   type MonitorOnDutyGroup,
   type CreateMonitorOnDutyGroupChangeReq,
   type GetMonitorOnDutyHistoryReq,
@@ -388,7 +388,7 @@ import {
 // 定义接口 - 修复API响应结构
 interface Day {
   date: string;
-  user: MonitorOnDutyUser | null;
+  user: User | null;
   originUser?: string;
   isCurrentMonth: boolean;
   isAdjusted: boolean;
@@ -397,7 +397,7 @@ interface Day {
 // 根据API响应修复数据结构
 interface DutyPlanDetail {
   date: string;
-  user: MonitorOnDutyUser | null;
+  user: User | null | number;
   origin_user?: string;
 }
 
@@ -531,8 +531,8 @@ const fetchDutyGroups = async (): Promise<void> => {
       console.log('设置值班组详情数据:', groupData);
       
       // 初始化用户缓存
-      if (groupData.users && Array.isArray(groupData.users)) {
-        groupData.users.forEach((user: MonitorOnDutyUser) => {
+        if (groupData.users && Array.isArray(groupData.users)) {
+        groupData.users.forEach((user: User) => {
           const userName = user.real_name || user.username || `用户${user.id}`;
           userCache.value.set(user.id, userName);
         });
@@ -656,7 +656,7 @@ const fetchDutySchedule = async (): Promise<void> => {
         const isCurrentMonth = date.isSame(currentMonth, 'month');
 
         // 处理用户信息和换班标识
-        let user: MonitorOnDutyUser | null = null;
+        let user: User | null = null;
         let originUser: string | undefined = undefined;
         let isAdjusted = false;
 

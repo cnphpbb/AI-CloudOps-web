@@ -576,6 +576,14 @@ import {
 import { getUserList, type GetUserListReq } from '#/api/core/user';
 import { getTreeLocalList, type GetTreeLocalResourceListReq, type TreeLocalResource, ResourceStatus } from '#/api/core/tree_local';
 
+// 为了兼容后端返回的节点详情结构，定义本地扩展类型
+type NodeUser = { id: number; real_name: string; email?: string };
+type TreeNodeWithRelations = TreeNode & {
+  admins?: NodeUser[];
+  members?: NodeUser[];
+  tree_local_resources?: TreeLocalResource[];
+};
+
 // 表单引用
 const formRef = ref();
 
@@ -598,10 +606,10 @@ const levelFilter = ref<number | undefined>(undefined);
 const statusFilter = ref<TreeNodeStatus | undefined>(undefined);
 
 // 树状结构相关
-const treeData = ref<TreeNode[]>([]);
+const treeData = ref<TreeNodeWithRelations[]>([]);
 const selectedKeys = ref<number[]>([]);
 const expandedKeys = ref<number[]>([]);
-const selectedNode = ref<TreeNode | null>(null);
+const selectedNode = ref<TreeNodeWithRelations | null>(null);
 
 // 防抖处理
 let searchTimeout: any = null;
@@ -698,7 +706,7 @@ const formRules = {
 };
 
 // 辅助方法
-const getNodeIconClass = (node: TreeNode): string => {
+const getNodeIconClass = (node: TreeNodeWithRelations): string => {
   return node.status === TreeNodeStatus.ACTIVE ? 'node-icon-active' : 'node-icon-inactive';
 };
 
@@ -716,7 +724,7 @@ const getInitials = (name: string): string => {
   return name.slice(0, 2).toUpperCase();
 };
 
-const formatFullDateTime = (dateString: string): string => {
+const formatFullDateTime = (dateString?: string): string => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleString('zh-CN');
 };
@@ -753,7 +761,7 @@ const filterUserOption = (input: string, option: any) => {
 };
 
 // 更新统计数据
-const updateStats = (nodes: TreeNode[]): void => {
+const updateStats = (nodes: TreeNodeWithRelations[]): void => {
   stats.total_nodes = nodes.length;
   stats.active_nodes = nodes.filter(node => node.status === TreeNodeStatus.ACTIVE).length;
   stats.inactive_nodes = nodes.filter(node => node.status === TreeNodeStatus.INACTIVE).length;
@@ -773,11 +781,11 @@ const loadTreeData = async (): Promise<void> => {
 
     const response = await getTreeList(params);
     if (response && response.items) {
-      let nodes = response.items;
+      let nodes = response.items as TreeNodeWithRelations[];
       
       // 应用搜索过滤
       if (searchQuery.value) {
-        nodes = nodes.filter((node: TreeNode) => 
+        nodes = nodes.filter((node: TreeNodeWithRelations) => 
           node.name.toLowerCase().includes(searchQuery.value.toLowerCase())
         );
       }
@@ -858,7 +866,7 @@ const handleTreeSelect = async (selectedKeys: number[]): Promise<void> => {
     detailLoading.value = true;
     try {
       const response = await getNodeDetail(nodeId!);
-      selectedNode.value = response;
+      selectedNode.value = response as TreeNodeWithRelations;
     } catch (error: any) {
       console.error('获取节点详情失败:', error);
       message.error(error.message || '获取节点详情失败');
@@ -915,7 +923,7 @@ const handleCreateNode = (): void => {
   formDialogVisible.value = true;
 };
 
-const handleEditNode = (record: TreeNode): void => {
+const handleEditNode = (record: TreeNodeWithRelations): void => {
   formDialog.isEdit = true;
   formDialog.form = {
     id: record.id,
@@ -928,7 +936,7 @@ const handleEditNode = (record: TreeNode): void => {
   formDialogVisible.value = true;
 };
 
-const handleMenuClick = async (command: string, record: TreeNode): Promise<void> => {
+const handleMenuClick = async (command: string, record: TreeNodeWithRelations): Promise<void> => {
   switch (command) {
     case 'members':
       break;
@@ -947,13 +955,13 @@ const handleMenuClick = async (command: string, record: TreeNode): Promise<void>
   }
 };
 
-const handleMoveNodeDialog = (record: TreeNode): void => {
+const handleMoveNodeDialog = (record: TreeNodeWithRelations): void => {
   moveDialog.nodeId = record.id;
   moveDialog.newParentId = record.parent_id || undefined;
   moveDialogVisible.value = true;
 };
 
-const handleCreateChildNode = (record: TreeNode): void => {
+const handleCreateChildNode = (record: TreeNodeWithRelations): void => {
   formDialog.isEdit = false;
   resetFormDialog();
   formDialog.form.parent_id = record.id;
@@ -1004,7 +1012,7 @@ const removeMember = async (userId: number, memberType: TreeNodeMemberType): Pro
   if (!selectedNode.value) return;
   
   try {
-    await removeNodeMember({
+    await removeNodeMember(selectedNode.value.id, {
       node_id: selectedNode.value.id,
       user_id: userId,
       member_type: memberType
@@ -1226,8 +1234,7 @@ onMounted(() => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%);
-  border: none;
+  /* Use Ant Design default primary button visuals */
   flex-shrink: 0;
 }
 
@@ -1268,8 +1275,8 @@ onMounted(() => {
 }
 
 .tree-card {
-  height: calc(100vh - 300px);
-  overflow: hidden;
+  max-height: 70vh;
+  overflow: auto;
 }
 
 .tree-header {
@@ -1279,7 +1286,7 @@ onMounted(() => {
 }
 
 .node-tree {
-  height: calc(100vh - 360px);
+  max-height: 62vh;
   overflow-y: auto;
 }
 
@@ -1306,8 +1313,8 @@ onMounted(() => {
 
 .detail-card,
 .empty-card {
-  height: calc(100vh - 300px);
-  overflow: hidden;
+  max-height: 70vh;
+  overflow: auto;
 }
 
 .detail-header {
@@ -1325,7 +1332,7 @@ onMounted(() => {
 
 .members-section,
 .resources-section {
-  max-height: calc(100vh - 500px);
+  max-height: 52vh;
   overflow-y: auto;
 }
 
@@ -1412,16 +1419,12 @@ onMounted(() => {
   color: #1a1a1a;
   margin-bottom: 16px;
   padding-left: 12px;
-  border-left: 4px solid #1890ff;
+  border-left: 3px solid #1677ff;
 }
 
-.tech-switch {
-  background-color: rgba(0, 0, 0, 0.25);
-}
+.tech-switch {}
 
-.tech-switch.ant-switch-checked {
-  background: linear-gradient(45deg, #1890ff, #36cfc9);
-}
+.tech-switch.ant-switch-checked {}
 
 .bind-resource-content {
   max-height: 400px;
@@ -1431,16 +1434,16 @@ onMounted(() => {
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .tree-card {
-    height: calc(100vh - 320px);
+    max-height: 65vh;
   }
   
   .detail-card,
   .empty-card {
-    height: calc(100vh - 320px);
+    max-height: 65vh;
   }
   
   .node-tree {
-    height: calc(100vh - 380px);
+    max-height: 58vh;
   }
 }
 
@@ -1452,16 +1455,16 @@ onMounted(() => {
   .tree-card,
   .detail-card,
   .empty-card {
-    height: calc(100vh - 280px);
+    max-height: 60vh;
   }
   
   .node-tree {
-    height: calc(100vh - 340px);
+    max-height: 52vh;
   }
   
   .members-section,
   .resources-section {
-    max-height: calc(100vh - 450px);
+    max-height: 50vh;
   }
 }
 
@@ -1514,15 +1517,15 @@ onMounted(() => {
   .tree-card,
   .detail-card,
   .empty-card {
-    height: auto;
-    min-height: 400px;
+    max-height: none;
+    min-height: 360px;
     margin-bottom: 16px;
   }
 
   .node-tree,
   .members-section,
   .resources-section {
-    max-height: 400px;
+    max-height: 320px;
   }
 
   .member-item,
@@ -1578,13 +1581,13 @@ onMounted(() => {
   .tree-card,
   .detail-card,
   .empty-card {
-    min-height: 350px;
+    min-height: 320px;
   }
   
   .node-tree,
   .members-section,
   .resources-section {
-    max-height: 350px;
+    max-height: 300px;
   }
   
   .member-item,

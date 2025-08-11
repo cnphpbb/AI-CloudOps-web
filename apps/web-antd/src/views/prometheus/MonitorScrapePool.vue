@@ -139,33 +139,12 @@
               </div>
             </template>
 
-            <template v-if="column.key === 'alert_manager_instances'">
+            <template v-if="column.key === 'tags'">
               <div class="tag-container">
-                <a-tag 
-                  v-for="instance in record.alert_manager_instances" 
-                  :key="instance" 
-                  class="tech-tag alert-tag"
-                >
-                  {{ instance }}
+                <a-tag v-for="tag in record.tags" :key="tag" class="tech-tag label-tag">
+                  {{ tag }}
                 </a-tag>
-                <span v-if="!record.alert_manager_instances?.length" class="empty-text">无实例</span>
-              </div>
-            </template>
-
-            <template v-if="column.key === 'external_labels'">
-              <div class="tag-container">
-                <template v-if="record.external_labels?.length">
-                  <a-tag 
-                    v-for="label in record.external_labels" 
-                    :key="label" 
-                    class="tech-tag label-tag"
-                  >
-                    <span class="label-key">{{ label.split(',')[0] }}</span>
-                    <span class="label-separator">:</span>
-                    <span class="label-value">{{ label.split(',')[1] }}</span>
-                  </a-tag>
-                </template>
-                <span v-else class="empty-text">无标签</span>
+                <span v-if="!record.tags?.length" class="empty-text">无标签</span>
               </div>
             </template>
 
@@ -306,38 +285,6 @@
               添加Prometheus实例
             </a-button>
           </a-form-item>
-
-          <!-- AlertManager实例 -->
-          <a-form-item 
-            v-for="(instance, index) in formDialog.form.alert_manager_instances" 
-            :key="instance.key"
-            :label="index === 0 ? 'AlertManager实例' : ''" 
-            :name="['alert_manager_instances', index, 'value']"
-            :rules="{ required: true, message: '请输入AlertManager实例地址' }"
-          >
-            <div class="dynamic-input-container">
-              <a-input 
-                v-model:value="instance.value" 
-                placeholder="请输入AlertManager实例地址" 
-                class="dynamic-input" 
-              />
-              <MinusCircleOutlined 
-                v-if="formDialog.form.alert_manager_instances.length > 1" 
-                class="dynamic-delete-button"
-                @click="removeAlertManagerInstance(instance)" 
-              />
-            </div>
-          </a-form-item>
-          <a-form-item>
-            <a-button 
-              type="dashed" 
-              class="add-dynamic-button" 
-              @click="addAlertManagerInstance"
-            >
-              <PlusOutlined />
-              添加AlertManager实例
-            </a-button>
-          </a-form-item>
         </div>
 
         <div class="form-section">
@@ -464,40 +411,14 @@
 
         <div class="form-section">
           <div class="section-title">标签配置</div>
-          <!-- 外部标签 -->
-          <a-form-item 
-            v-for="(label, index) in formDialog.form.external_labels" 
-            :key="label.key"
-            :label="index === 0 ? '外部标签' : ''"
-          >
-            <div class="label-input-group">
-              <a-input 
-                v-model:value="label.labelKey" 
-                placeholder="请输入标签Key" 
-                class="label-key-input" 
-              />
-              <div class="label-separator">:</div>
-              <a-input 
-                v-model:value="label.labelValue" 
-                placeholder="请输入标签Value" 
-                class="label-value-input" 
-              />
-              <MinusCircleOutlined 
-                v-if="formDialog.form.external_labels.length > 1" 
-                class="dynamic-delete-button"
-                @click="removeExternalLabel(label)" 
-              />
-            </div>
-          </a-form-item>
-          <a-form-item>
-            <a-button 
-              type="dashed" 
-              class="add-dynamic-button" 
-              @click="addExternalLabel"
-            >
-              <PlusOutlined />
-              添加外部标签
-            </a-button>
+          <a-form-item label="标签" name="tags">
+            <a-select
+              mode="tags"
+              v-model:value="formDialog.form.tags"
+              placeholder="输入并回车添加标签"
+              :token-separators="[',']"
+              style="width: 100%"
+            />
           </a-form-item>
         </div>
       </a-form>
@@ -516,7 +437,7 @@
       <div v-if="detailDialog.form" class="pool-details">
         <div class="detail-header">
           <h2>{{ detailDialog.form.name }}</h2>
-          <div class="detail-badges">
+      <div class="detail-badges">
             <a-tag :color="detailDialog.form.support_alert === 1 ? 'success' : 'default'">
               {{ detailDialog.form.support_alert === 1 ? '支持告警' : '不支持告警' }}
             </a-tag>
@@ -532,7 +453,7 @@
           <a-descriptions-item label="采集超时">{{ detailDialog.form.scrape_timeout }}秒</a-descriptions-item>
           <a-descriptions-item label="远程超时">{{ detailDialog.form.remote_timeout_seconds }}秒</a-descriptions-item>
           <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at) }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '') }}</a-descriptions-item>
           <a-descriptions-item label="远程写入地址">
             {{ detailDialog.form.remote_write_url || '未配置' }}
           </a-descriptions-item>
@@ -547,6 +468,9 @@
           </a-descriptions-item>
           <a-descriptions-item label="记录文件路径">
             {{ detailDialog.form.record_file_path || '未配置' }}
+          </a-descriptions-item>
+          <a-descriptions-item label="标签">
+            {{ detailDialog.form.tags && detailDialog.form.tags.length ? detailDialog.form.tags.join(', ') : '未配置' }}
           </a-descriptions-item>
         </a-descriptions>
 
@@ -574,21 +498,15 @@ import {
   updateMonitorScrapePoolApi,
   deleteMonitorScrapePoolApi,
   getMonitorScrapePoolDetailApi,
-  type ScrapePoolItem,
-  type GetScrapePoolListParams,
-  type createMonitorScrapePoolReq,
-  type updateMonitorScrapePoolReq
+  type MonitorScrapePool,
+  type GetMonitorScrapePoolListReq,
+  type CreateMonitorScrapePoolReq,
+  type UpdateMonitorScrapePoolReq
 } from '#/api/core/prometheus_scrape_pool';
 
 // 动态表单项接口
 interface DynamicItem {
   value: string;
-  key: number;
-}
-
-interface LabelItem {
-  labelKey: string;
-  labelValue: string;
   key: number;
 }
 
@@ -615,12 +533,11 @@ const previewDialogWidth = computed(() => {
 // 列定义
 const columns = [
   { title: '采集池名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
-  { title: 'Prometheus实例', dataIndex: 'prometheus_instances', key: 'prometheus_instances', width: 200 },
-  { title: 'AlertManager实例', dataIndex: 'alert_manager_instances', key: 'alert_manager_instances', width: 200 },
-  { title: '外部标签', dataIndex: 'external_labels', key: 'external_labels', width: 180 },
+  { title: 'Prometheus实例', dataIndex: 'prometheus_instances', key: 'prometheus_instances', width: 260 },
+  { title: '标签', dataIndex: 'tags', key: 'tags', width: 200 },
   { title: '告警支持', dataIndex: 'support_alert', key: 'support_alert', width: 100, align: 'center' as const },
   { title: '记录支持', dataIndex: 'support_record', key: 'support_record', width: 100, align: 'center' as const },
-  { title: '采集配置', dataIndex: 'scrape_config', key: 'scrape_config', width: 120 },
+  { title: '采集配置', dataIndex: 'scrape_config', key: 'scrape_config', width: 140 },
   { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
   { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 180 },
   { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
@@ -631,7 +548,7 @@ const loading = ref(false);
 const searchQuery = ref('');
 const supportAlertFilter = ref<1 | 2 | undefined>(undefined);
 const supportRecordFilter = ref<1 | 2 | undefined>(undefined);
-const scrapePoolList = ref<ScrapePoolItem[]>([]);
+const scrapePoolList = ref<MonitorScrapePool[]>([]);
 
 // 防抖处理
 let searchTimeout: any = null;
@@ -666,13 +583,12 @@ const formDialog = reactive({
     id: undefined as number | undefined,
     name: '',
     prometheus_instances: [] as DynamicItem[],
-    alert_manager_instances: [] as DynamicItem[],
     scrape_interval: 15,
     scrape_timeout: 10,
     remote_timeout_seconds: 30,
     support_alert: false,
     support_record: false,
-    external_labels: [] as LabelItem[],
+    tags: [] as string[],
     remote_write_url: '',
     remote_read_url: '',
     alert_manager_url: '',
@@ -684,7 +600,7 @@ const formDialog = reactive({
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as ScrapePoolItem | null
+  form: null as MonitorScrapePool | null
 });
 
 // 表单验证规则
@@ -705,7 +621,7 @@ const formRules = {
 };
 
 // 辅助方法
-const getPoolStatusClass = (record: ScrapePoolItem): string => {
+const getPoolStatusClass = (record: MonitorScrapePool): string => {
   if (record.support_alert === 1 && record.support_record === 1) return 'status-full';
   if (record.support_alert === 1 || record.support_record === 1) return 'status-partial';
   return 'status-none';
@@ -746,7 +662,7 @@ const updateStats = () => {
   stats.supportAlert = scrapePoolList.value.filter(item => item.support_alert === 1).length;
   stats.supportRecord = scrapePoolList.value.filter(item => item.support_record === 1).length;
   stats.activeInstances = scrapePoolList.value.reduce((total, item) => {
-    return total + (item.prometheus_instances?.length || 0) + (item.alert_manager_instances?.length || 0);
+    return total + (item.prometheus_instances?.length || 0);
   }, 0);
 };
 
@@ -754,7 +670,7 @@ const updateStats = () => {
 const loadScrapePoolList = async (): Promise<void> => {
   loading.value = true;
   try {
-    const params: GetScrapePoolListParams = {
+    const params: GetMonitorScrapePoolListReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchQuery.value || undefined,
@@ -823,7 +739,7 @@ const handleCreateScrapePool = (): void => {
   formDialogVisible.value = true;
 };
 
-const handleEditScrapePool = (record: ScrapePoolItem): void => {
+const handleEditScrapePool = (record: MonitorScrapePool): void => {
   formDialog.isEdit = true;
   formDialog.form = {
     id: record.id,
@@ -833,29 +749,21 @@ const handleEditScrapePool = (record: ScrapePoolItem): void => {
     remote_timeout_seconds: record.remote_timeout_seconds,
     support_alert: record.support_alert === 1,
     support_record: record.support_record === 1,
-    remote_write_url: record.remote_write_url,
-    remote_read_url: record.remote_read_url,
-    alert_manager_url: record.alert_manager_url,
-    rule_file_path: record.rule_file_path,
-    record_file_path: record.record_file_path,
+    remote_write_url: record.remote_write_url || '',
+    remote_read_url: record.remote_read_url || '',
+    alert_manager_url: record.alert_manager_url || '',
+    rule_file_path: record.rule_file_path || '',
+    record_file_path: record.record_file_path || '',
     prometheus_instances: record.prometheus_instances?.map(value => ({ value, key: Date.now() + Math.random() })) || [{ value: '', key: Date.now() }],
-    alert_manager_instances: record.alert_manager_instances?.map(value => ({ value, key: Date.now() + Math.random() })) || [{ value: '', key: Date.now() }],
-    external_labels: record.external_labels?.filter(label => label.trim() !== '').map(value => {
-      const parts = value.split(',');
-      return {
-        labelKey: parts[0] || '',
-        labelValue: parts[1] || '',
-        key: Date.now() + Math.random()
-      };
-    }) || [{ labelKey: '', labelValue: '', key: Date.now() }]
+    tags: record.tags ? [...record.tags] : []
   };
   formDialogVisible.value = true;
   detailDialogVisible.value = false;
 };
 
-const handleViewScrapePool = async (record: ScrapePoolItem): Promise<void> => {
+const handleViewScrapePool = async (record: MonitorScrapePool): Promise<void> => {
   try {
-    const response = await getMonitorScrapePoolDetailApi(record.id);
+    const response = await getMonitorScrapePoolDetailApi(record.id!);
     detailDialog.form = response;
     detailDialogVisible.value = true;
   } catch (error: any) {
@@ -864,7 +772,7 @@ const handleViewScrapePool = async (record: ScrapePoolItem): Promise<void> => {
   }
 };
 
-const handleMenuClick = (command: string, record: ScrapePoolItem): void => {
+const handleMenuClick = (command: string, record: MonitorScrapePool): void => {
   switch (command) {
     case 'delete':
       confirmDelete(record);
@@ -872,7 +780,7 @@ const handleMenuClick = (command: string, record: ScrapePoolItem): void => {
   }
 };
 
-const confirmDelete = (record: ScrapePoolItem): void => {
+const confirmDelete = (record: MonitorScrapePool): void => {
   Modal.confirm({
     title: '警告',
     content: `确定要删除采集池 "${record.name}" 吗？`,
@@ -881,7 +789,7 @@ const confirmDelete = (record: ScrapePoolItem): void => {
     cancelText: '取消',
     async onOk() {
       try {
-        await deleteMonitorScrapePoolApi(record.id);
+        await deleteMonitorScrapePoolApi(record.id!);
         message.success(`采集池 "${record.name}" 已删除`);
         loadScrapePoolList();
       } catch (error: any) {
@@ -904,30 +812,25 @@ const saveScrapePool = async (): Promise<void> => {
     return;
   }
 
-  if (formDialog.form.alert_manager_instances.length === 0 || !formDialog.form.alert_manager_instances[0]?.value) {
-    message.error('请至少添加一个AlertManager实例');
-    return;
-  }
-
   try {
     const formData = {
       ...formDialog.form,
       user_id: 1, // 这里应该从用户上下文获取
       prometheus_instances: formDialog.form.prometheus_instances.map(item => item.value).filter(v => v.trim() !== ''),
-      alert_manager_instances: formDialog.form.alert_manager_instances.map(item => item.value).filter(v => v.trim() !== ''),
-      external_labels: formDialog.form.external_labels
-        .filter(item => item.labelKey.trim() !== '' && item.labelValue.trim() !== '')
-        .map(item => `${item.labelKey},${item.labelValue}`),
       support_alert: formDialog.form.support_alert ? 1 : 2,
       support_record: formDialog.form.support_record ? 1 : 2,
+      tags: Array.isArray(formDialog.form.tags) ? formDialog.form.tags.filter(t => String(t).trim() !== '') : []
     };
 
     if (formDialog.isEdit && formDialog.form.id) {
-      const updateData: updateMonitorScrapePoolReq = formData as updateMonitorScrapePoolReq;
-      await updateMonitorScrapePoolApi(formDialog.form.id, updateData);
+      const updateData: UpdateMonitorScrapePoolReq = {
+        ...(formData as any),
+        id: formDialog.form.id!
+      } as UpdateMonitorScrapePoolReq;
+      await updateMonitorScrapePoolApi(updateData);
       message.success(`采集池 "${formDialog.form.name}" 已更新`);
     } else {
-      const createData: createMonitorScrapePoolReq = formData as createMonitorScrapePoolReq;
+      const createData: CreateMonitorScrapePoolReq = formData as CreateMonitorScrapePoolReq;
       await createMonitorScrapePoolApi(createData);
       message.success(`采集池 "${formDialog.form.name}" 已创建`);
     }
@@ -957,8 +860,7 @@ const resetFormDialog = (): void => {
     rule_file_path: '',
     record_file_path: '',
     prometheus_instances: [{ value: '', key: Date.now() }],
-    alert_manager_instances: [{ value: '', key: Date.now() }],
-    external_labels: [{ labelKey: '', labelValue: '', key: Date.now() }]
+    tags: []
   };
 };
 
@@ -974,35 +876,6 @@ const removePrometheusInstance = (item: DynamicItem): void => {
   const index = formDialog.form.prometheus_instances.indexOf(item);
   if (index !== -1) {
     formDialog.form.prometheus_instances.splice(index, 1);
-  }
-};
-
-const addAlertManagerInstance = (): void => {
-  formDialog.form.alert_manager_instances.push({
-    value: '',
-    key: Date.now(),
-  });
-};
-
-const removeAlertManagerInstance = (item: DynamicItem): void => {
-  const index = formDialog.form.alert_manager_instances.indexOf(item);
-  if (index !== -1) {
-    formDialog.form.alert_manager_instances.splice(index, 1);
-  }
-};
-
-const addExternalLabel = (): void => {
-  formDialog.form.external_labels.push({
-    labelKey: '',
-    labelValue: '',
-    key: Date.now(),
-  });
-};
-
-const removeExternalLabel = (item: LabelItem): void => {
-  const index = formDialog.form.external_labels.indexOf(item);
-  if (index !== -1) {
-    formDialog.form.external_labels.splice(index, 1);
   }
 };
 

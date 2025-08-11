@@ -439,15 +439,15 @@ import {
 } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
 import {
-  getAlertManagerPoolListApi,
-  createAlertManagerPoolApi,
-  updateAlertManagerPoolApi,
-  deleteAlertManagerPoolApi,
-  getAlertManagerPoolDetailApi,
+  getMonitorAlertManagerPoolListApi,
+  createMonitorAlertManagerPoolApi,
+  updateMonitorAlertManagerPoolApi,
+  deleteMonitorAlertManagerPoolApi,
+  getMonitorAlertManagerPoolApi,
   type MonitorAlertManagerPool,
   type GetAlertManagerPoolListParams,
-  type createAlertManagerPoolReq,
-  type updateAlertManagerPoolReq,
+  type CreateMonitorAlertManagerPoolReq,
+  type UpdateMonitorAlertManagerPoolReq,
 } from '#/api/core/prometheus_alert_pool';
 
 import { getUserList, type GetUserListReq } from '#/api/core/user';
@@ -611,7 +611,7 @@ const formatTime = (dateString: string): string => {
   return new Date(dateString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 };
 
-const formatFullDateTime = (dateString: string): string => {
+const formatFullDateTime = (dateString?: string): string => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleString('zh-CN');
 };
@@ -638,7 +638,7 @@ const fetchAlertManagerPools = async (): Promise<void> => {
       search: searchText.value || undefined,
     };
 
-    const response = await getAlertManagerPoolListApi(params);
+    const response = await getMonitorAlertManagerPoolListApi(params);
     if (response) {
       data.value = response.items || [];
       paginationConfig.total = response.total || 0;
@@ -687,7 +687,11 @@ const showAddModal = (): void => {
 
 const handleViewPool = async (record: MonitorAlertManagerPool): Promise<void> => {
   try {
-    const response = await getAlertManagerPoolDetailApi(record.id);
+    if (record.id == null) {
+      message.error('记录ID缺失');
+      return;
+    }
+    const response = await getMonitorAlertManagerPoolApi(record.id);
     detailDialog.form = response;
     detailDialogVisible.value = true;
   } catch (error: any) {
@@ -713,7 +717,11 @@ const confirmDelete = (record: MonitorAlertManagerPool): void => {
     cancelText: '取消',
     async onOk() {
       try {
-        await deleteAlertManagerPoolApi(record.id);
+        if (record.id == null) {
+          message.error('记录ID缺失');
+          return;
+        }
+        await deleteMonitorAlertManagerPoolApi(record.id);
         message.success(`实例池 "${record.name}" 已删除`);
         fetchAlertManagerPools();
       } catch (error: any) {
@@ -868,7 +876,7 @@ const removeEditLabel = (label: LabelItem): void => {
 const handleAdd = async (): Promise<void> => {
   try {
     await addFormRef.value?.validate();
-    const formData: createAlertManagerPoolReq = {
+    const formData: CreateMonitorAlertManagerPoolReq = {
       name: addForm.name,
       alert_manager_instances: addForm.alert_manager_instances.map(item => item.value).filter(v => v.trim() !== ''),
       resolve_timeout: addForm.resolve_timeout,
@@ -880,7 +888,7 @@ const handleAdd = async (): Promise<void> => {
         .map(item => `${item.labelKey},${item.labelValue}`),
       receiver: addForm.receiver,
     };
-    await createAlertManagerPoolApi(formData);
+    await createMonitorAlertManagerPoolApi(formData);
     message.success('新增实例池成功');
     await fetchAlertManagerPools();
     closeAddModal();
@@ -890,6 +898,10 @@ const handleAdd = async (): Promise<void> => {
 };
 
 const showEditModal = (record: MonitorAlertManagerPool): void => {
+  if (record.id == null) {
+    message.error('记录ID缺失');
+    return;
+  }
   editForm.id = record.id;
   editForm.name = record.name ?? '';
   editForm.alert_manager_instances = (record.alert_manager_instances ?? []).map((value) => ({
@@ -921,7 +933,7 @@ const showEditModal = (record: MonitorAlertManagerPool): void => {
 const handleEdit = async (): Promise<void> => {
   try {
     await editFormRef.value?.validate();
-    const formData: updateAlertManagerPoolReq = {
+  const formData: UpdateMonitorAlertManagerPoolReq = {
       id: editForm.id,
       name: editForm.name,
       alert_manager_instances: editForm.alert_manager_instances.map(item => item.value).filter(v => v.trim() !== ''),
@@ -934,7 +946,7 @@ const handleEdit = async (): Promise<void> => {
         .map(item => `${item.labelKey},${item.labelValue}`),
       receiver: editForm.receiver,
     };
-    await updateAlertManagerPoolApi(formData);
+    await updateMonitorAlertManagerPoolApi(formData);
     message.success('更新实例池成功');
     await fetchAlertManagerPools();
     closeEditModal();

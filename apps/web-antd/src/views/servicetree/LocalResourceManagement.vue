@@ -1306,7 +1306,7 @@ onMounted(async () => {
 
 <style scoped>
 .local-resource-management {
-  padding: 12px;
+  padding: 16px;
   min-height: 100vh;
 }
 
@@ -1322,17 +1322,17 @@ onMounted(async () => {
 }
 
 .btn-create {
-  background: linear-gradient(135deg, #1890ff 0%, #36cfc9 100%);
-  border: none;
+  background-color: #1677ff;
+  border-color: #1677ff;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+  box-shadow: none;
 }
 
 .btn-action {
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-  border: none;
+  background-color: #52c41a;
+  border-color: #52c41a;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(82, 196, 26, 0.3);
+  box-shadow: none;
 }
 
 .search-filters {
@@ -1357,15 +1357,15 @@ onMounted(async () => {
 }
 
 .stats-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  box-shadow: none;
   height: 100%;
-  transition: all 0.3s ease;
 }
 
 .stats-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: none;
+  box-shadow: none;
 }
 
 .table-container {
@@ -1374,7 +1374,8 @@ onMounted(async () => {
 
 .table-container :deep(.ant-card) {
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
+  box-shadow: none;
 }
 
 .server-name-cell {
@@ -1392,17 +1393,14 @@ onMounted(async () => {
 
 .status-running {
   background-color: #52c41a;
-  box-shadow: 0 0 6px rgba(82, 196, 26, 0.6);
 }
 
 .status-stopped {
   background-color: #ff4d4f;
-  box-shadow: 0 0 6px rgba(255, 77, 79, 0.6);
 }
 
 .status-error {
   background-color: #faad14;
-  box-shadow: 0 0 6px rgba(250, 173, 20, 0.6);
 }
 
 .status-unknown {
@@ -1427,26 +1425,25 @@ onMounted(async () => {
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
-  border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
 }
 
 .tech-tag:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: none;
+  box-shadow: none;
 }
 
 .node-tag {
   background-color: #f6ffed;
   color: #389e0d;
-  border-left: 3px solid #52c41a;
+  border: 1px solid #b7eb8f;
 }
 
 .tag-item {
   background-color: #e6f7ff;
   color: #0958d9;
-  border-left: 3px solid #1890ff;
+  border: 1px solid #91caff;
 }
 
 .empty-text {
@@ -1745,7 +1742,7 @@ onMounted(async () => {
 
 .table-container :deep(.ant-table-thead > tr > th) {
   white-space: nowrap;
-  background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
+  background-color: #fafafa;
 }
 
 .table-container :deep(.ant-table-tbody > tr > td) {
@@ -1753,7 +1750,7 @@ onMounted(async () => {
 }
 
 .table-container :deep(.ant-table-tbody > tr:hover > td) {
-  background-color: #f0f7ff;
+  background-color: #fafafa;
 }
 
 /* 对话框响应式优化 */
@@ -1777,12 +1774,12 @@ onMounted(async () => {
 
 /* 动画效果 */
 .stats-card, .tech-tag, .action-buttons .ant-btn {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .btn-create:hover, .btn-action:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.4);
+  transform: none;
+  box-shadow: none;
 }
 
 /* 加载状态优化 */

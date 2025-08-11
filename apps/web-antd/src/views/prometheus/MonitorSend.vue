@@ -18,7 +18,7 @@
             @change="handleSearchChange" 
             allow-clear 
           />
-          <a-select 
+            <a-select 
             v-model:value="enableFilter" 
             placeholder="启用状态" 
             class="filter-select" 
@@ -27,9 +27,9 @@
           >
             <a-select-option :value="undefined">全部</a-select-option>
             <a-select-option :value="1">启用</a-select-option>
-            <a-select-option :value="0">禁用</a-select-option>
+            <a-select-option :value="2">禁用</a-select-option>
           </a-select>
-          <a-select 
+            <a-select 
             v-model:value="upgradeFilter" 
             placeholder="升级配置" 
             class="filter-select" 
@@ -38,7 +38,7 @@
           >
             <a-select-option :value="undefined">全部</a-select-option>
             <a-select-option :value="1">需要升级</a-select-option>
-            <a-select-option :value="0">无需升级</a-select-option>
+            <a-select-option :value="2">无需升级</a-select-option>
           </a-select>
           <a-button @click="handleResetFilters" class="reset-btn">
             重置
@@ -137,18 +137,18 @@
             <template v-if="column.key === 'pool_config'">
               <div class="tag-container">
                 <a-tag 
-                  v-if="record.pool_name" 
+                  v-if="getPoolName(record.pool_id)" 
                   class="tech-tag prometheus-tag"
                 >
-                  {{ record.pool_name }}
+                  {{ getPoolName(record.pool_id) }}
                 </a-tag>
                 <a-tag 
-                  v-if="record.on_duty_group_name" 
+                  v-if="getOnDutyGroupName(record.on_duty_group_id)" 
                   class="tech-tag alert-tag"
                 >
-                  {{ record.on_duty_group_name }}
+                  {{ getOnDutyGroupName(record.on_duty_group_id) }}
                 </a-tag>
-                <span v-if="!record.pool_name && !record.on_duty_group_name" class="empty-text">无关联</span>
+                <span v-if="!getPoolName(record.pool_id) && !getOnDutyGroupName(record.on_duty_group_id)" class="empty-text">无关联</span>
               </div>
             </template>
 
@@ -514,8 +514,8 @@
           <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
           <a-descriptions-item label="发送组名称">{{ detailDialog.form.name }}</a-descriptions-item>
           <a-descriptions-item label="中文名称">{{ detailDialog.form.name_zh }}</a-descriptions-item>
-          <a-descriptions-item label="关联采集池">{{ detailDialog.form.pool_name || '未关联' }}</a-descriptions-item>
-          <a-descriptions-item label="关联值班组">{{ detailDialog.form.on_duty_group_name || '未关联' }}</a-descriptions-item>
+          <a-descriptions-item label="关联采集池">{{ getPoolName(detailDialog.form.pool_id) || '未关联' }}</a-descriptions-item>
+          <a-descriptions-item label="关联值班组">{{ getOnDutyGroupName(detailDialog.form.on_duty_group_id) || '未关联' }}</a-descriptions-item>
           <a-descriptions-item label="重复间隔">{{ detailDialog.form.repeat_interval || '30s' }}</a-descriptions-item>
           <a-descriptions-item label="升级时间">
             {{ detailDialog.form.need_upgrade === 1 ? `${detailDialog.form.upgrade_minutes || 0}分钟` : '无需升级' }}
@@ -551,12 +551,12 @@ import {
   deleteMonitorSendGroupApi,
   getMonitorSendGroupDetailApi,
   type MonitorSendGroup,
-  type GetSendGroupListParams,
-  type createSendGroupReq,
-  type updateSendGroupReq
+  type GetMonitorSendGroupListReq,
+  type CreateMonitorSendGroupReq,
+  type UpdateMonitorSendGroupReq
 } from '#/api/core/prometheus_send_group';
 import { getUserList } from '#/api/core/user';
-import { getMonitorScrapePoolListApi, type ScrapePoolItem } from '#/api/core/prometheus_scrape_pool';
+import { getMonitorScrapePoolListApi, type MonitorScrapePool } from '#/api/core/prometheus_scrape_pool';
 import { getMonitorOnDutyGroupListApi, type MonitorOnDutyGroup } from '#/api/core/prometheus_onduty';
 
 // 修复类型定义
@@ -572,9 +572,7 @@ interface UserInfo {
   name?: string;
 }
 
-interface MenuClickEvent {
-  key: string;
-}
+// interface MenuClickEvent { key: string } // 未使用
 
 // 采集池简化接口
 interface Pool {
@@ -627,8 +625,8 @@ const columns = [
 // 状态数据
 const loading = ref(false);
 const searchQuery = ref('');
-const enableFilter = ref<1 | 0 | undefined>(undefined);
-const upgradeFilter = ref<1 | 0 | undefined>(undefined);
+const enableFilter = ref<1 | 2 | undefined>(undefined);
+const upgradeFilter = ref<1 | 2 | undefined>(undefined);
 const sendGroupList = ref<MonitorSendGroup[]>([]);
 
 // 防抖处理
@@ -658,7 +656,7 @@ const formDialogVisible = ref(false);
 const detailDialogVisible = ref(false);
 
 // 选项数据
-const scrapePools = ref<ScrapePoolItem[]>([]);
+const scrapePools = ref<MonitorScrapePool[]>([]);
 const onDutyGroups = ref<MonitorOnDutyGroup[]>([]);
 const userOptions = ref<UserOption[]>([]);
 
@@ -751,6 +749,19 @@ const maskToken = (token: string): string => {
   return token.substring(0, 4) + '****' + token.substring(token.length - 4);
 };
 
+// 通过ID获取名称
+const getPoolName = (poolId?: number): string => {
+  if (!poolId) return '';
+  const pool = scrapePools.value.find(p => p.id === poolId);
+  return pool?.name || '';
+};
+
+const getOnDutyGroupName = (groupId?: number): string => {
+  if (!groupId) return '';
+  const group = onDutyGroups.value.find(g => g.id === groupId);
+  return group?.name || '';
+};
+
 const formatDate = (dateString: string): string => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleDateString('zh-CN');
@@ -818,7 +829,7 @@ const updateStats = () => {
 const loadSendGroupList = async (): Promise<void> => {
   loading.value = true;
   try {
-    const params: GetSendGroupListParams = {
+    const params: GetMonitorSendGroupListReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchQuery.value || undefined,
@@ -834,39 +845,32 @@ const loadSendGroupList = async (): Promise<void> => {
         list = list.filter((item: MonitorSendGroup) => item.need_upgrade === upgradeFilter.value);
       }
 
-      // 确保关联池名称正确显示
+      // 规范数据结构
       list = list.map((item: MonitorSendGroup) => {
-        // 如果有pool_id但没有pool_name，从scrapePools中查找
-        if (item.pool_id && !item.pool_name) {
-          const pool = scrapePools.value.find(p => p.id === item.pool_id);
-          if (pool) {
-            item.pool_name = pool.name;
-          }
-        }
-
         // 确保static_receive_users是数组
         if (!Array.isArray(item.static_receive_users)) {
-          item.static_receive_users = [];
+          item.static_receive_users = [] as any;
         }
 
         // 确保notify_methods是数组
         if (!Array.isArray(item.notify_methods)) {
-          item.notify_methods = [];
+          item.notify_methods = [] as any;
         } else {
           // 处理可能的字符串数组
-          item.notify_methods = item.notify_methods.map(method => {
-            if (typeof method === 'string') {
-              try {
-                // 尝试解析可能是JSON字符串的方法
-                if (method.startsWith('[') && method.endsWith(']')) {
-                  return JSON.parse(method);
+          item.notify_methods = item.notify_methods
+            .map((method: any) => {
+              if (typeof method === 'string') {
+                try {
+                  if (method.startsWith('[') && method.endsWith(']')) {
+                    return JSON.parse(method);
+                  }
+                } catch (e) {
+                  // ignore
                 }
-              } catch (e) {
-                // 解析失败，保持原样
               }
-            }
-            return method;
-          }).flat();
+              return method;
+            })
+            .flat();
         }
 
         return item;
@@ -891,7 +895,7 @@ const loadOptionsData = async (): Promise<void> => {
     const scrapePoolResponse = await getMonitorScrapePoolListApi({
       page: 1,
       size: 100
-    }) as ApiListResponse<ScrapePoolItem>;
+    }) as ApiListResponse<MonitorScrapePool>;
     if (scrapePoolResponse) {
       scrapePools.value = scrapePoolResponse.items || [];
     }
@@ -941,10 +945,10 @@ const loadDialogPools = async (isNewSearch = false) => {
       page: dialogPoolPage.value,
       size: 20,
       search: dialogPoolSearch.value,
-    }) as ApiListResponse<ScrapePoolItem>;
+    }) as ApiListResponse<MonitorScrapePool>;
 
     if (response && response.items && response.items.length > 0) {
-      const newPools = response.items.map((p: ScrapePoolItem) => ({ id: p.id, name: p.name }));
+      const newPools = response.items.map((p: MonitorScrapePool) => ({ id: p.id!, name: p.name }));
       dialogPools.value.push(...newPools);
       dialogPoolPage.value++;
       if (dialogPools.value.length >= (response.total || 0)) {
@@ -1158,10 +1162,10 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
     need_upgrade: record.need_upgrade === 1,
     upgrade_minutes: record.upgrade_minutes || 0,
     fei_shu_qun_robot_token: record.fei_shu_qun_robot_token || '',
-    static_receive_users: record.static_receive_users?.map(user => user.id) || [],
+    static_receive_users: (record.static_receive_users || []).map((user: any) => user.id) || [],
     notify_methods: getNotifyMethods(record),
-    first_upgrade_users: record.monitor_send_group_first_upgrade_users?.map(user => user.id) || [],
-    second_upgrade_users: record.second_upgrade_users?.map(user => user.id) || []
+    first_upgrade_users: (record.first_upgrade_users || []).map((user: any) => user.id) || [],
+    second_upgrade_users: (record.second_upgrade_users || []).map((user: any) => user.id) || []
   };
   
   // 重置并加载动态数据
@@ -1176,7 +1180,7 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
     if (!selectedPoolInList && record.pool_id) {
       const pool = scrapePools.value.find(p => p.id === record.pool_id);
       if (pool) {
-        dialogPools.value.unshift({ id: pool.id, name: pool.name });
+        dialogPools.value.unshift({ id: pool.id!, name: pool.name });
       }
     }
   });
@@ -1195,9 +1199,9 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
   loadDialogUsers(true).then(() => {
     // 确保当前选中的用户在列表中
     const selectedUserIds = [
-      ...(record.static_receive_users?.map(u => u.id) || []),
-      ...(record.monitor_send_group_first_upgrade_users?.map(u => u.id) || []),
-      ...(record.second_upgrade_users?.map(u => u.id) || [])
+      ...(record.static_receive_users?.map((u: any) => u.id) || []),
+      ...(record.first_upgrade_users?.map((u: any) => u.id) || []),
+      ...(record.second_upgrade_users?.map((u: any) => u.id) || [])
     ];
     
     // 将已选用户添加到列表
@@ -1213,14 +1217,14 @@ const handleEditSendGroup = (record: MonitorSendGroup): void => {
           let username = '';
           
           // 尝试从static_receive_users中查找
-          const staticUser = record.static_receive_users?.find(u => u.id === userId);
+          const staticUser = record.static_receive_users?.find((u: any) => u.id === userId);
           if (staticUser?.username) {
             username = staticUser.username;
           }
           
-          // 尝试从monitor_send_group_first_upgrade_users中查找
+          // 尝试从first_upgrade_users中查找
           if (!username) {
-            const firstUpgradeUser = record.monitor_send_group_first_upgrade_users?.find(u => u.id === userId);
+            const firstUpgradeUser = record.first_upgrade_users?.find((u: any) => u.id === userId);
             if (firstUpgradeUser?.username) {
               username = firstUpgradeUser.username;
             }
@@ -1303,9 +1307,9 @@ const saveSendGroup = async (): Promise<void> => {
     const formData = {
       ...formDialog.form,
       user_id: 1, // 这里应该从用户上下文获取
-      enable: formDialog.form.enable ? 1 : 0,
-      send_resolved: formDialog.form.send_resolved ? 1 : 0,
-      need_upgrade: formDialog.form.need_upgrade ? 1 : 0,
+      enable: formDialog.form.enable ? 1 : 2,
+      send_resolved: formDialog.form.send_resolved ? 1 : 2,
+      need_upgrade: formDialog.form.need_upgrade ? 1 : 2,
       // 修复：确保pool_id和on_duty_group_id不为null时才传递
       pool_id: formDialog.form.pool_id || 0,
       on_duty_group_id: formDialog.form.on_duty_group_id || 0
@@ -1334,12 +1338,22 @@ const saveSendGroup = async (): Promise<void> => {
         username: userIdToUsername.get(id) || ''
       }));
 
-      const updateData: updateSendGroupReq = {
-        ...formData,
+      const updateData: UpdateMonitorSendGroupReq = {
         id: formDialog.form.id,
-        monitor_send_group_first_upgrade_users: firstUpgradeUsers,
+        name: formData.name,
+        name_zh: formData.name_zh,
+        enable: formData.enable as 1 | 2,
+        pool_id: formData.pool_id,
+        on_duty_group_id: formData.on_duty_group_id,
+        static_receive_users: staticReceiveUsers,
+        fei_shu_qun_robot_token: formData.fei_shu_qun_robot_token,
+        repeat_interval: formData.repeat_interval,
+        send_resolved: formData.send_resolved as 1 | 2,
+        notify_methods: formData.notify_methods,
+        need_upgrade: formData.need_upgrade as 1 | 2,
+        first_upgrade_users: firstUpgradeUsers,
+        upgrade_minutes: formData.upgrade_minutes,
         second_upgrade_users: secondUpgradeUsers,
-        static_receive_users: staticReceiveUsers
       };
       await updateMonitorSendGroupApi(updateData);
       message.success(`发送组 "${formDialog.form.name_zh}" 已更新`);
@@ -1360,11 +1374,21 @@ const saveSendGroup = async (): Promise<void> => {
         username: userIdToUsername.get(id) || ''
       }));
 
-      const createData: createSendGroupReq = {
-        ...formData,
-        monitor_send_group_first_upgrade_users: firstUpgradeUsers,
+      const createData: CreateMonitorSendGroupReq = {
+        name: formData.name,
+        name_zh: formData.name_zh,
+        enable: formData.enable as 1 | 2,
+        pool_id: formData.pool_id,
+        on_duty_group_id: formData.on_duty_group_id,
+        static_receive_users: staticReceiveUsers,
+        fei_shu_qun_robot_token: formData.fei_shu_qun_robot_token,
+        repeat_interval: formData.repeat_interval,
+        send_resolved: formData.send_resolved as 1 | 2,
+        notify_methods: formData.notify_methods,
+        need_upgrade: formData.need_upgrade as 1 | 2,
+        first_upgrade_users: firstUpgradeUsers,
+        upgrade_minutes: formData.upgrade_minutes,
         second_upgrade_users: secondUpgradeUsers,
-        static_receive_users: staticReceiveUsers
       };
       await createMonitorSendGroupApi(createData);
       message.success(`发送组 "${formDialog.form.name_zh}" 已创建`);

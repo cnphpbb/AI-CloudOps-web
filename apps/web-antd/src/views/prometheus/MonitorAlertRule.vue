@@ -24,9 +24,9 @@
             @change="handleSearch"
             allow-clear
           >
-            <a-select-option value="critical">Critical</a-select-option>
-            <a-select-option value="warning">Warning</a-select-option>
-            <a-select-option value="info">Info</a-select-option>
+            <a-select-option :value="AlertRuleSeverity.Critical">Critical</a-select-option>
+            <a-select-option :value="AlertRuleSeverity.Warning">Warning</a-select-option>
+            <a-select-option :value="AlertRuleSeverity.Info">Info</a-select-option>
           </a-select>
           <a-select
             v-model:value="searchParams.enable"
@@ -133,7 +133,7 @@
             <template v-if="column.key === 'labels'">
               <div class="tag-container">
                 <template v-if="record.labels?.length && record.labels[0] !== ''">
-                  <template v-for="(label, index) in getDisplayLabels(record.labels)" :key="index">
+                  <template v-for="label in getDisplayLabels(record.labels)" :key="label">
                     <a-tag class="tech-tag label-tag">
                       <span class="label-key">{{ label.split(',')[0] }}</span>
                       <span class="label-separator">:</span>
@@ -149,8 +149,8 @@
                     <template #content>
                       <div class="all-tags-container">
                         <a-tag
-                          v-for="(label, index) in record.labels"
-                          :key="index"
+                          v-for="label in record.labels"
+                          :key="label"
                           class="tech-tag label-tag"
                         >
                           <span class="label-key">{{ label.split(',')[0] }}</span>
@@ -169,7 +169,7 @@
             <template v-if="column.key === 'annotations'">
               <div class="tag-container">
                 <template v-if="record.annotations?.length && record.annotations[0] !== ''">
-                  <template v-for="(annotation, index) in getDisplayAnnotations(record.annotations)" :key="index">
+                  <template v-for="annotation in getDisplayAnnotations(record.annotations)" :key="annotation">
                     <a-tag class="tech-tag annotation-tag">
                       <span class="label-key">{{ annotation.split(',')[0] }}</span>
                       <span class="label-separator">:</span>
@@ -185,8 +185,8 @@
                     <template #content>
                       <div class="all-tags-container">
                         <a-tag
-                          v-for="(annotation, index) in record.annotations"
-                          :key="index"
+                          v-for="annotation in record.annotations"
+                          :key="annotation"
                           class="tech-tag annotation-tag"
                         >
                           <span class="label-key">{{ annotation.split(',')[0] }}</span>
@@ -203,8 +203,8 @@
             </template>
 
             <template v-if="column.key === 'severity'">
-              <a-tag :class="['tech-tag', `severity-${record.severity}`]">
-                {{ record.severity }}
+              <a-tag :class="['tech-tag', `severity-${severityText(record.severity)}`]">
+                {{ severityLabel(record.severity) }}
               </a-tag>
             </template>
 
@@ -357,9 +357,9 @@
             <a-col :xs="24" :sm="12">
               <a-form-item label="严重性" name="severity">
                 <a-select v-model:value="addForm.severity" placeholder="请选择严重性">
-                  <a-select-option value="critical">Critical</a-select-option>
-                  <a-select-option value="warning">Warning</a-select-option>
-                  <a-select-option value="info">Info</a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Critical">Critical</a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Warning">Warning</a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Info">Info</a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
@@ -517,9 +517,9 @@
             <a-col :xs="24" :sm="12">
               <a-form-item label="严重性" name="severity">
                 <a-select v-model:value="editForm.severity" placeholder="请选择严重性">
-                  <a-select-option value="critical">Critical</a-select-option>
-                  <a-select-option value="warning">Warning</a-select-option>
-                  <a-select-option value="info">Info</a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Critical">Critical</a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Warning">Warning</a-select-option>
+                  <a-select-option :value="AlertRuleSeverity.Info">Info</a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
@@ -596,8 +596,8 @@
         <div class="detail-header">
           <h2>{{ currentRecord.name }}</h2>
           <div class="detail-badges">
-            <a-tag :class="['tech-tag', `severity-${currentRecord.severity}`]">
-              {{ currentRecord.severity }}
+            <a-tag :class="['tech-tag', `severity-${severityText(currentRecord.severity)}`]">
+              {{ severityLabel(currentRecord.severity) }}
             </a-tag>
             <a-tag :color="currentRecord.enable === 1 ? 'success' : 'default'">
               {{ currentRecord.enable === 1 ? '启用' : '禁用' }}
@@ -641,18 +641,19 @@ import { Icon } from '@iconify/vue';
 import { useDebounceFn } from '@vueuse/core';
 import {
   getMonitorAlertRuleListApi,
-  createAlertRuleApi,
-  updateAlertRuleApi,
-  deleteAlertRuleApi,
-  validateExprApi,
-  type GetAlertRuleListParams,
-  type MonitorAlertRuleItem,
-  type createAlertRuleReq,
-  type updateAlertRuleReq,
+  createMonitorAlertRuleApi,
+  updateMonitorAlertRuleApi,
+  deleteMonitorAlertRuleApi,
+  promqlExprCheckApi,
+  AlertRuleSeverity,
+  type GetMonitorAlertRuleListReq,
+  type MonitorAlertRule,
+  type CreateMonitorAlertRuleReq,
+  type UpdateMonitorAlertRuleReq,
 } from '#/api/core/prometheus_alert_rule';
 import {
-  getAlertManagerPoolListApi,
-  getAlertManagerPoolDetailApi,
+  getMonitorAlertManagerPoolListApi,
+  getMonitorAlertManagerPoolApi,
   type MonitorAlertManagerPool,
 } from '#/api/core/prometheus_alert_pool';
 import {
@@ -697,7 +698,7 @@ const createInitialForm = () => ({
   ip: '',
   port: '',
   expr: '',
-  severity: undefined as string | undefined,
+  severity: undefined as AlertRuleSeverity | undefined,
   for_time: '10s',
   labels: [{ key: Date.now(), labelKey: '', labelValue: '' }] as LabelOrAnnotationItem[],
   annotations: [{ key: Date.now(), labelKey: '', labelValue: '' }] as LabelOrAnnotationItem[],
@@ -711,17 +712,17 @@ const handleApiError = (error: any, defaultMessage: string) => {
 
 // --- 响应式状态 ---
 const loading = ref(false);
-const data = ref<MonitorAlertRuleItem[]>([]);
+const data = ref<MonitorAlertRule[]>([]);
 const scrapePools = ref<MonitorAlertManagerPool[]>([]);
 const sendGroups = ref<MonitorSendGroup[]>([]);
 const addFormRef = ref();
 const editFormRef = ref();
-const currentRecord = ref<MonitorAlertRuleItem | null>(null);
+const currentRecord = ref<MonitorAlertRule | null>(null);
 
 // --- 筛选与分页 ---
 const searchParams = reactive({
   search: '',
-  severity: undefined as string | undefined,
+  severity: undefined as AlertRuleSeverity | undefined,
   enable: undefined as number | undefined,
 });
 
@@ -738,8 +739,8 @@ const paginationConfig = reactive({
 // --- 统计数据 ---
 const stats = computed(() => ({
   total: paginationConfig.total,
-  critical: data.value.filter((item) => item.severity === 'critical').length,
-  warning: data.value.filter((item) => item.severity === 'warning').length,
+  critical: data.value.filter((item) => item.severity === AlertRuleSeverity.Critical).length,
+  warning: data.value.filter((item) => item.severity === AlertRuleSeverity.Warning).length,
   enabled: data.value.filter((item) => item.enable === ENABLE_STATUS.ENABLED).length,
 }));
 
@@ -760,7 +761,7 @@ const editForm = reactive({
   port: '',
   enableSwitch: true,
   expr: '',
-  severity: undefined as string | undefined,
+  severity: undefined as AlertRuleSeverity | undefined,
   for_time: '',
   labels: [] as LabelOrAnnotationItem[],
   annotations: [] as LabelOrAnnotationItem[],
@@ -838,7 +839,7 @@ const getDisplayAnnotations = (annotations: string[]) => {
 const fetchAlertRules = async () => {
   loading.value = true;
   try {
-    const params: GetAlertRuleListParams = {
+    const params: GetMonitorAlertRuleListReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchParams.search || undefined,
@@ -858,7 +859,7 @@ const fetchAlertRules = async () => {
 const fetchScrapePools = async (page = 1, size = 20) => {
   poolLoading.value = true;
   try {
-    const response = await getAlertManagerPoolListApi({ page, size });
+    const response = await getMonitorAlertManagerPoolListApi({ page, size });
     const items = response.items || [];
     if (page === 1) {
       scrapePools.value = items;
@@ -949,8 +950,8 @@ const handleReset = () => {
   message.success('筛选条件已重置');
 };
 
-const handleMenuClick = (key: string, record: MonitorAlertRuleItem) => {
-  if (key === 'delete') {
+const handleMenuClick = (key: string, record: MonitorAlertRule) => {
+  if (key === 'delete' && record.id != null) {
     handleDelete(record.id);
   }
 };
@@ -963,7 +964,7 @@ const handleDelete = (id: number) => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        await deleteAlertRuleApi(id);
+        await deleteMonitorAlertRuleApi(id);
         message.success('删除成功');
         fetchAlertRules();
       } catch (error: any) {
@@ -983,12 +984,12 @@ const closeAddModal = () => {
   isAddModalVisible.value = false;
 };
 
-const showEditModal = async (record: MonitorAlertRuleItem) => {
+const showEditModal = async (record: MonitorAlertRule) => {
   // --- 确保关联数据显示 ---
   // 确保关联的实例池在选项列表中，以便正确显示名称
   if (record.pool_id && !scrapePools.value.some((p) => p.id === record.pool_id)) {
     try {
-      const pool = await getAlertManagerPoolDetailApi(record.pool_id);
+      const pool = await getMonitorAlertManagerPoolApi(record.pool_id);
       if (pool) {
         // 使用 unshift 将其添加到列表开头，以便用户能立即看到
         scrapePools.value.unshift(pool);
@@ -1042,7 +1043,7 @@ const closeEditModal = () => {
   isEditModalVisible.value = false;
 };
 
-const showDetailModal = (record: MonitorAlertRuleItem) => {
+const showDetailModal = (record: MonitorAlertRule) => {
   currentRecord.value = record;
   detailModalVisible.value = true;
 };
@@ -1066,7 +1067,7 @@ const formatItemsForApi = (items: LabelOrAnnotationItem[]) => {
 const handleAdd = async () => {
   try {
     await addFormRef.value?.validate();
-    const apiData: createAlertRuleReq = {
+    const apiData: CreateMonitorAlertRuleReq = {
       ...addForm,
       ip_address: `${addForm.ip}:${addForm.port}`,
       pool_id: addForm.pool_id!,
@@ -1076,7 +1077,7 @@ const handleAdd = async () => {
       annotations: formatItemsForApi(addForm.annotations),
       grafana_link: addForm.grafana_link,
     };
-    await createAlertRuleApi(apiData);
+    await createMonitorAlertRuleApi(apiData);
     message.success('新增成功');
     closeAddModal();
     fetchAlertRules();
@@ -1088,7 +1089,7 @@ const handleAdd = async () => {
 const handleEdit = async () => {
   try {
     await editFormRef.value?.validate();
-    const apiData: updateAlertRuleReq = {
+    const apiData: UpdateMonitorAlertRuleReq = {
       ...editForm,
       ip_address: `${editForm.ip}:${editForm.port}`,
       enable: editForm.enableSwitch ? ENABLE_STATUS.ENABLED : ENABLE_STATUS.DISABLED,
@@ -1099,7 +1100,7 @@ const handleEdit = async () => {
       annotations: formatItemsForApi(editForm.annotations),
       grafana_link: editForm.grafana_link,
     };
-    await updateAlertRuleApi(apiData);
+    await updateMonitorAlertRuleApi(apiData);
     message.success('更新成功');
     closeEditModal();
     fetchAlertRules();
@@ -1114,7 +1115,7 @@ const validateExpression = async (expr: string) => {
     return;
   }
   try {
-    await validateExprApi({ promql_expr: expr });
+    await promqlExprCheckApi({ promql_expr: expr });
     message.success('表达式验证通过');
   } catch (error: any) {
     handleApiError(error, '表达式验证失败');
@@ -1144,9 +1145,22 @@ const removeEditAnnotation = (item: LabelOrAnnotationItem) => {
 };
 
 // --- 辅助函数 ---
-const getAlertStatusClass = (record: MonitorAlertRuleItem): string => {
-  if (record.enable === ENABLE_STATUS.ENABLED && record.severity === 'critical') return 'status-critical';
-  if (record.enable === ENABLE_STATUS.ENABLED && record.severity === 'warning') return 'status-warning';
+const severityText = (severity: AlertRuleSeverity | undefined): 'critical' | 'warning' | 'info' => {
+  if (severity === AlertRuleSeverity.Critical) return 'critical';
+  if (severity === AlertRuleSeverity.Warning) return 'warning';
+  return 'info';
+};
+
+const severityLabel = (severity: AlertRuleSeverity | undefined): string => {
+  const text = severityText(severity);
+  if (text === 'critical') return 'Critical';
+  if (text === 'warning') return 'Warning';
+  return 'Info';
+};
+
+const getAlertStatusClass = (record: MonitorAlertRule): string => {
+  if (record.enable === ENABLE_STATUS.ENABLED && record.severity === AlertRuleSeverity.Critical) return 'status-critical';
+  if (record.enable === ENABLE_STATUS.ENABLED && record.severity === AlertRuleSeverity.Warning) return 'status-warning';
   if (record.enable === ENABLE_STATUS.ENABLED) return 'status-enabled';
   return 'status-disabled';
 };
@@ -1181,7 +1195,7 @@ const formatTime = (dateString: string): string => {
   return new Date(dateString).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 };
 
-const formatFullDateTime = (dateString: string): string => {
+const formatFullDateTime = (dateString?: string): string => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleString('zh-CN');
 };

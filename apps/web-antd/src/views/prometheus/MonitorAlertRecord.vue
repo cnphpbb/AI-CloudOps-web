@@ -128,11 +128,7 @@
             </template>
 
             <template v-if="column.key === 'ip_address'">
-              <span>{{ record.ip_address?.split(':')[0] || '' }}</span>
-            </template>
-
-            <template v-if="column.key === 'port'">
-              <span>{{ record.ip_address?.split(':')[1] || '' }}</span>
+              <span>{{ record.ip_address || '' }}</span>
             </template>
 
             <template v-if="column.key === 'enable'">
@@ -262,25 +258,14 @@
           </a-row>
 
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :span="24">
               <a-form-item 
                 label="IP地址" 
-                name="ip"
+                name="ip_address"
               >
                 <a-input 
-                  v-model:value="addForm.ip" 
-                  placeholder="例如: localhost 或 192.168.1.100" 
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="端口" 
-                name="port"
-              >
-                <a-input 
-                  v-model:value="addForm.port" 
-                  placeholder="例如: 9090" 
+                  v-model:value="addForm.ip_address" 
+                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090" 
                 />
               </a-form-item>
             </a-col>
@@ -302,17 +287,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="持续时间" 
-                name="for_time"
-              >
-                <a-input 
-                  v-model:value="addForm.for_time" 
-                  placeholder="例如: 15s" 
-                />
-              </a-form-item>
-            </a-col>
+            
           </a-row>
 
           <a-row :gutter="16">
@@ -414,25 +389,14 @@
           </a-row>
 
           <a-row :gutter="16">
-            <a-col :xs="24" :sm="12">
+            <a-col :span="24">
               <a-form-item 
                 label="IP地址" 
-                name="ip"
+                name="ip_address"
               >
                 <a-input 
-                  v-model:value="editForm.ip" 
-                  placeholder="例如: localhost 或 192.168.1.100" 
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="端口" 
-                name="port"
-              >
-                <a-input 
-                  v-model:value="editForm.port" 
-                  placeholder="例如: 9090" 
+                  v-model:value="editForm.ip_address" 
+                  placeholder="例如: 192.168.1.100:9090 或 localhost:9090" 
                 />
               </a-form-item>
             </a-col>
@@ -454,17 +418,7 @@
                 />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item 
-                label="持续时间" 
-                name="for_time"
-              >
-                <a-input 
-                  v-model:value="editForm.for_time" 
-                  placeholder="例如: 15s" 
-                />
-              </a-form-item>
-            </a-col>
+            
           </a-row>
 
           <a-row :gutter="16">
@@ -521,15 +475,13 @@
           <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
           <a-descriptions-item label="记录名称">{{ detailDialog.form.name }}</a-descriptions-item>
           <a-descriptions-item label="关联实例池">{{ detailDialog.form.pool_name || '无关联池' }}</a-descriptions-item>
-          <a-descriptions-item label="IP地址">{{ detailDialog.form.ip_address?.split(':')[0] || '' }}</a-descriptions-item>
-          <a-descriptions-item label="端口">{{ detailDialog.form.ip_address?.split(':')[1] || '' }}</a-descriptions-item>
-          <a-descriptions-item label="持续时间">{{ detailDialog.form.for_time }}</a-descriptions-item>
+          <a-descriptions-item label="IP地址">{{ detailDialog.form.ip_address || '' }}</a-descriptions-item>
           <a-descriptions-item label="是否启用">{{ detailDialog.form.enable === 1 ? '启用' : '禁用' }}</a-descriptions-item>
           <a-descriptions-item label="表达式">
             <div class="expr-detail">{{ detailDialog.form.expr }}</div>
           </a-descriptions-item>
           <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at) }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form?.created_at || '') }}</a-descriptions-item>
         </a-descriptions>
 
         <div class="detail-footer">
@@ -551,22 +503,19 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
-import {
-  PlusOutlined,
-  DownOutlined,
-} from '@ant-design/icons-vue';
+import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import type { FormInstance } from 'ant-design-vue';
 import {
-  getRecordRulesListApi,
-  createRecordRuleApi,
-  updateRecordRuleApi,
-  deleteRecordRuleApi,
-  getRecordRuleDetailApi,
-  type AlertRecordItem,
+  getMonitorRecordRuleListApi,
+  createMonitorRecordRuleApi,
+  updateMonitorRecordRuleApi,
+  deleteMonitorRecordRuleApi,
+  getMonitorRecordRuleApi,
+  type MonitorRecordRule,
 } from '#/api/core/prometheus_alert_record';
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus_scrape_pool';
-import { validateExprApi } from '#/api/core/prometheus_alert_rule';
-import type { FormInstance } from 'ant-design-vue';
+import { promqlExprCheckApi } from '#/api/core/prometheus_alert_rule';
 
 // 定义 Pool 类型
 interface Pool {
@@ -599,10 +548,8 @@ const previewDialogWidth = computed(() => {
 const columns = [
   { title: '记录名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
   { title: '关联实例池', dataIndex: 'pool_name', key: 'pool_name', width: 180 },
-  { title: 'IP地址', dataIndex: 'ip_address', key: 'ip_address', width: 150 },
-  { title: '端口', dataIndex: 'ip_address', key: 'port', width: 80 },
+  { title: 'IP地址', dataIndex: 'ip_address', key: 'ip_address', width: 200 },
   { title: '是否启用', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
-  { title: '持续时间', dataIndex: 'for_time', key: 'for_time', width: 100 },
   { title: '表达式', dataIndex: 'expr', key: 'expr', width: 250 },
   { title: '创建人', dataIndex: 'create_user_name', key: 'creator', width: 120 },
   { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
@@ -615,7 +562,7 @@ const submitLoading = ref(false);
 const validatingExpr = ref(false);
 const searchText = ref('');
 const enabledFilter = ref<1 | 2 | undefined>(undefined);
-const data = ref<AlertRecordItem[]>([]);
+const data = ref<MonitorRecordRule[]>([]);
 const poolOptions = ref<Pool[]>([]);
 const showPoolPagination = ref(false);
 
@@ -663,13 +610,10 @@ const editFormRef = ref<FormInstance>();
 const addForm = reactive({
   name: '',
   pool_id: 0,
-  ip: '',
-  port: '',
+  ip_address: '',
   enable: 2 as 1 | 2,
-  for_time: '15s',
   expr: '',
   labels: [],
-  annotations: [],
 });
 
 // 编辑表单
@@ -677,18 +621,15 @@ const editForm = reactive({
   id: 0,
   name: '',
   pool_id: 0,
-  ip: '',
-  port: '',
+  ip_address: '',
   enable: 1 as 1 | 2,
-  for_time: '',
   expr: '',
   labels: [],
-  annotations: [],
 });
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as AlertRecordItem | null
+  form: null as MonitorRecordRule | null
 });
 
 // 表单验证规则
@@ -700,17 +641,26 @@ const formRules = {
   pool_id: [
     { required: true, message: '请选择实例池', trigger: 'change' }
   ],
-  ip: [
+  ip_address: [
     { required: true, message: '请输入IP地址', trigger: 'blur' },
-    { pattern: /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/, message: '请输入有效的IP地址，如localhost或192.168.1.100', trigger: 'blur' }
-  ],
-  port: [
-    { required: true, message: '请输入端口', trigger: 'blur' },
-    { pattern: /^[0-9]+$/, message: '端口必须为数字', trigger: 'blur' },
-    { validator: (rule: any, value: string) => {
-      const port = parseInt(value);
-      if (port < 1 || port > 65535) {
-        return Promise.reject('端口必须在1-65535之间');
+    { validator: (_rule: any, value: string) => {
+      if (!value) {
+        return Promise.reject('请输入IP地址');
+      }
+      // 支持 IP:PORT 格式，如 192.168.1.100:9090 或 localhost:9090
+      const ipPortPattern = /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])(:[0-9]+)?$/;
+      if (!ipPortPattern.test(value)) {
+        return Promise.reject('请输入有效的IP地址，如 192.168.1.100:9090 或 localhost:9090');
+      }
+      // 如果包含端口，验证端口范围
+      if (value.includes(':')) {
+        const portStr = value.split(':')[1];
+        if (portStr) {
+          const port = parseInt(portStr);
+          if (port < 1 || port > 65535) {
+            return Promise.reject('端口必须在1-65535之间');
+          }
+        }
       }
       return Promise.resolve();
     }, trigger: 'blur' }
@@ -718,13 +668,10 @@ const formRules = {
   expr: [
     { required: true, message: '请输入表达式', trigger: 'blur' }
   ],
-  for_time: [
-    { required: true, message: '请输入持续时间', trigger: 'blur' }
-  ]
 };
 
 // 辅助方法
-const getRecordStatusClass = (record: AlertRecordItem): string => {
+const getRecordStatusClass = (record: MonitorRecordRule): string => {
   return record.enable === 1 ? 'status-full' : 'status-none';
 };
 
@@ -774,14 +721,14 @@ const updateStats = () => {
 const fetchRecordRules = async (): Promise<void> => {
   loading.value = true;
   try {
-    const response = await getRecordRulesListApi({
+    const response = await getMonitorRecordRuleListApi({
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchText.value || undefined,
       enable: enabledFilter.value,
     });
-    data.value = response.items;
-    paginationConfig.total = response.total;
+    data.value = response.items || [];
+    paginationConfig.total = response.total || 0;
     updateStats();
   } catch (error: any) {
     console.error('加载记录规则列表失败:', error);
@@ -863,9 +810,9 @@ const handleReset = (): void => {
 };
 
 // 查看记录详情
-const handleViewRecord = async (record: AlertRecordItem): Promise<void> => {
+const handleViewRecord = async (record: MonitorRecordRule): Promise<void> => {
   try {
-    const response = await getRecordRuleDetailApi(record.id);
+    const response = await getMonitorRecordRuleApi(record.id!);
     detailDialog.form = response;
     detailDialogVisible.value = true;
   } catch (error: any) {
@@ -875,7 +822,7 @@ const handleViewRecord = async (record: AlertRecordItem): Promise<void> => {
 };
 
 // 菜单点击处理
-const handleMenuClick = (command: string, record: AlertRecordItem): void => {
+const handleMenuClick = (command: string, record: MonitorRecordRule): void => {
   switch (command) {
     case 'enable':
       handleEnableRecord(record);
@@ -890,11 +837,18 @@ const handleMenuClick = (command: string, record: AlertRecordItem): void => {
 };
 
 // 启用记录
-const handleEnableRecord = async (record: AlertRecordItem): Promise<void> => {
+const handleEnableRecord = async (record: MonitorRecordRule): Promise<void> => {
   try {
-    const payload = { ...record };
-    payload.enable = 1;
-    await updateRecordRuleApi(payload);
+    const payload = {
+      id: record.id!,
+      name: record.name,
+      pool_id: record.pool_id,
+      ip_address: record.ip_address,
+      enable: 1 as 1 | 2,
+      expr: record.expr,
+      labels: record.labels,
+    };
+    await updateMonitorRecordRuleApi(payload);
     message.success(`记录规则 "${record.name}" 已启用`);
     fetchRecordRules();
     if (detailDialogVisible.value) {
@@ -907,11 +861,18 @@ const handleEnableRecord = async (record: AlertRecordItem): Promise<void> => {
 };
 
 // 禁用记录
-const handleDisableRecord = async (record: AlertRecordItem): Promise<void> => {
+const handleDisableRecord = async (record: MonitorRecordRule): Promise<void> => {
   try {
-    const payload = { ...record };
-    payload.enable = 2;
-    await updateRecordRuleApi(payload);
+    const payload = {
+      id: record.id!,
+      name: record.name,
+      pool_id: record.pool_id,
+      ip_address: record.ip_address,
+      enable: 2 as 1 | 2,
+      expr: record.expr,
+      labels: record.labels,
+    };
+    await updateMonitorRecordRuleApi(payload);
     message.success(`记录规则 "${record.name}" 已禁用`);
     fetchRecordRules();
   } catch (error: any) {
@@ -930,21 +891,15 @@ const closeAddModal = (): void => {
   isAddModalVisible.value = false;
 };
 
-const showEditModal = (record: AlertRecordItem): void => {
-  // 将 ip_address 拆分为 ip 和 port
-  const [ip, port] = record.ip_address?.split(':') || ['', ''];
-  
+const showEditModal = (record: MonitorRecordRule): void => {
   Object.assign(editForm, {
     id: record.id,
     name: record.name,
     pool_id: record.pool_id,
-    ip: ip,
-    port: port,
+    ip_address: record.ip_address,
     enable: record.enable,
-    for_time: record.for_time,
     expr: record.expr,
     labels: record.labels,
-    annotations: record.annotations,
   });
   isEditModalVisible.value = true;
   detailDialogVisible.value = false;
@@ -962,13 +917,10 @@ const closeDetailDialog = (): void => {
 const resetAddForm = (): void => {
   addForm.name = '';
   addForm.pool_id = 0;
-  addForm.ip = '';
-  addForm.port = '';
+  addForm.ip_address = '';
   addForm.enable = 2 as 1 | 2;
-  addForm.for_time = '15s';
   addForm.expr = '';
   addForm.labels = [];
-  addForm.annotations = [];
 };
 
 // 提交新增记录
@@ -980,15 +932,13 @@ const handleAdd = async (): Promise<void> => {
     const payload = {
       name: addForm.name,
       pool_id: addForm.pool_id,
-      ip_address: `${addForm.ip}:${addForm.port}`,
+      ip_address: addForm.ip_address,
       enable: Number(addForm.enable) as 1 | 2,
-      for_time: addForm.for_time,
       expr: addForm.expr,
       labels: addForm.labels,
-      annotations: addForm.annotations,
     };
 
-    await createRecordRuleApi(payload);
+    await createMonitorRecordRuleApi(payload);
     message.success('新增记录成功');
     fetchRecordRules();
     closeAddModal();
@@ -1010,15 +960,13 @@ const handleUpdate = async (): Promise<void> => {
       id: editForm.id,
       name: editForm.name,
       pool_id: editForm.pool_id,
-      ip_address: `${editForm.ip}:${editForm.port}`,
+      ip_address: editForm.ip_address,
       enable: Number(editForm.enable) as 1 | 2,
-      for_time: editForm.for_time,
       expr: editForm.expr,
       labels: editForm.labels,
-      annotations: editForm.annotations,
     };
 
-    await updateRecordRuleApi(payload);
+    await updateMonitorRecordRuleApi(payload);
     message.success('更新记录规则成功');
     fetchRecordRules();
     closeEditModal();
@@ -1031,7 +979,7 @@ const handleUpdate = async (): Promise<void> => {
 };
 
 // 处理删除记录规则
-const handleDelete = (record: AlertRecordItem) => {
+const handleDelete = (record: MonitorRecordRule) => {
   Modal.confirm({
     title: '警告',
     content: `确定要删除记录规则 "${record.name}" 吗？`,
@@ -1040,7 +988,7 @@ const handleDelete = (record: AlertRecordItem) => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        await deleteRecordRuleApi(record.id);
+        await deleteMonitorRecordRuleApi(record.id!);
         message.success('记录规则已删除');
         fetchRecordRules();
       } catch (error: any) {
@@ -1060,7 +1008,7 @@ const validateAddExpression = async () => {
     }
     validatingExpr.value = true;
     const payload = { promql_expr: addForm.expr };
-    await validateExprApi(payload);
+    await promqlExprCheckApi(payload);
     message.success('表达式验证成功');
   } catch (error: any) {
     message.error(error.message || '表达式验证失败，请稍后重试');
@@ -1079,7 +1027,7 @@ const validateEditExpression = async () => {
     }
     validatingExpr.value = true;
     const payload = { promql_expr: editForm.expr };
-    await validateExprApi(payload);
+    await promqlExprCheckApi(payload);
     message.success('表达式验证成功');
   } catch (error: any) {
     message.error(error.message || '表达式验证失败，请稍后重试');

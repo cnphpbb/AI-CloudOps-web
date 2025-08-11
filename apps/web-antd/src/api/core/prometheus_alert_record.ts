@@ -1,22 +1,23 @@
 import { requestClient } from '#/api/request';
 
-export interface AlertRecordItem {
-  id: number;
+// 记录规则模型
+export interface MonitorRecordRule {
+  id?: number;
   name: string;
+  user_id: number;
   pool_id: number;
-  pool_name: string;
   ip_address: string;
-  port: number;
-  enable: 1 | 2;
-  for_time: string;
+  enable: number;
   expr: string;
   labels: string[];
-  annotations: string[];
-  created_at: string;
   create_user_name: string;
+  pool_name?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface GetRecordRulesListParams {
+// 获取记录规则列表请求参数
+export interface GetMonitorRecordRuleListReq {
   page?: number;
   size?: number;
   search?: string;
@@ -24,47 +25,63 @@ export interface GetRecordRulesListParams {
   enable?: number;
 }
 
-export interface createAlertManagerRecordReq {
+// 创建记录规则请求
+export interface CreateMonitorRecordRuleReq {
   name: string;
   pool_id: number;
   ip_address?: string;
-  port?: number;
-  enable?: 1 | 2;
-  for_time?: string;
+  enable?: number;
   expr: string;
   labels?: string[];
-  annotations?: string[];
 }
 
-export interface updateAlertManagerRecordReq {
+// 更新记录规则请求
+export interface UpdateMonitorRecordRuleReq {
   id: number;
   name: string;
   pool_id: number;
   ip_address?: string;
-  port?: number;
-  enable?: 1 | 2;
-  for_time?: string;
+  enable?: number;
   expr: string;
   labels?: string[];
-  annotations?: string[];
 }
 
-export async function getRecordRulesListApi(data: GetRecordRulesListParams) {
+// 删除记录规则请求参数
+export interface DeleteMonitorRecordRuleReq {
+  id: number;
+}
+
+// PromQL表达式检查请求
+export interface PromqlRecordRuleExprCheckReq {
+  promql_expr: string;
+}
+
+// 获取记录规则详情请求参数
+export interface GetMonitorRecordRuleReq {
+  id: number;
+}
+
+// 启用/禁用记录规则请求参数
+export interface EnableSwitchMonitorRecordRuleReq {
+  id: number;
+}
+
+export async function getMonitorRecordRuleListApi(data: GetMonitorRecordRuleListReq) {
   return requestClient.get('/monitor/record_rules/list', { params: data });
 }
 
-export async function createRecordRuleApi(data: createAlertManagerRecordReq) {
+export async function createMonitorRecordRuleApi(data: CreateMonitorRecordRuleReq) {
   return requestClient.post('/monitor/record_rules/create', data);
 }
 
-export async function updateRecordRuleApi(data: updateAlertManagerRecordReq) {
+export async function updateMonitorRecordRuleApi(data: UpdateMonitorRecordRuleReq) {
   return requestClient.put(`/monitor/record_rules/update/${data.id}`, data);
 }
 
-export async function deleteRecordRuleApi(id: number) {
+export async function deleteMonitorRecordRuleApi(id: number) {
   return requestClient.delete(`/monitor/record_rules/delete/${id}`);
 }
 
-export async function getRecordRuleDetailApi(id: number) {
+export async function getMonitorRecordRuleApi(id: number) {
   return requestClient.get(`/monitor/record_rules/detail/${id}`);
 }

@@ -93,7 +93,7 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'name'">
               <div class="group-name-cell">
-                <div :class="['group-badge', record.enable ? 'status-active' : 'status-inactive']"></div>
+                <div :class="['group-badge', record.enable === 1 ? 'status-active' : 'status-inactive']"></div>
                 <span class="group-name-text">{{ record.name }}</span>
               </div>
             </template>
@@ -315,7 +315,7 @@
                   style="width: 100%"
                 >
                   <a-select-option :value="1">启用</a-select-option>
-                  <a-select-option :value="0">禁用</a-select-option>
+                  <a-select-option :value="2">禁用</a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>

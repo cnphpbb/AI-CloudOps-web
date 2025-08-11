@@ -1,36 +1,33 @@
 import { requestClient } from '#/api/request';
 
-// 值班组用户
-export interface MonitorOnDutyUser {
+// 用户信息接口
+export interface User {
   id: number;
-  real_name: string;
   username: string;
-  fei_shu_user_id?: string;
+  real_name?: string;
+  email?: string;
+  phone?: string;
 }
 
-// 值班组
+// 值班组配置接口
 export interface MonitorOnDutyGroup {
   id: number;
-  created_at: string;
-  updated_at: string;
-  deleted_at: number;
   name: string;
   user_id: number;
   shift_days: number;
   yesterday_normal_duty_user_id: number;
   create_user_name: string;
-  users: MonitorOnDutyUser[];
+  users: User[];
   enable: 1 | 2;
   description: string;
-  today_duty_user?: MonitorOnDutyUser;
-}
-
-// 换班记录
-export interface MonitorOnDutyChange {
-  id: number;
+  today_duty_user?: User;
   created_at: string;
   updated_at: string;
-  deleted_at: number;
+}
+
+// 值班换班记录接口
+export interface MonitorOnDutyChange {
+  id: number;
   on_duty_group_id: number;
   user_id: number;
   date: string;
@@ -38,29 +35,29 @@ export interface MonitorOnDutyChange {
   on_duty_user_id: number;
   create_user_name: string;
   reason: string;
-}
-
-// 历史记录
-export interface MonitorOnDutyHistory {
-  id: number;
   created_at: string;
   updated_at: string;
-  deleted_at: number;
-  on_duty_group_id: number;
-  date_string: string;
-  create_user_name: string;
-  on_duty_user_id: number;
-  origin_user_id: number;
 }
 
-// 单日值班信息
+// 值班历史记录接口
+export interface MonitorOnDutyHistory {
+  id: number;
+  on_duty_group_id: number;
+  date_string: string;
+  on_duty_user_id: number;
+  origin_user_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// 单日值班信息接口
 export interface MonitorOnDutyOne {
   date: string;
-  user: MonitorOnDutyUser | null;
+  user?: User;
   origin_user: string;
 }
 
-// 获取值班组列表参数
+// 获取值班组列表请求参数
 export interface GetMonitorOnDutyGroupListReq {
   page: number;
   size: number;
@@ -68,7 +65,7 @@ export interface GetMonitorOnDutyGroupListReq {
   enable?: 1 | 2;
 }
 
-// 创建值班组参数
+// 创建值班组请求参数
 export interface CreateMonitorOnDutyGroupReq {
   name: string;
   user_ids: number[];
@@ -76,7 +73,7 @@ export interface CreateMonitorOnDutyGroupReq {
   description?: string;
 }
 
-// 创建换班记录参数
+// 创建值班组换班记录请求参数
 export interface CreateMonitorOnDutyGroupChangeReq {
   on_duty_group_id: number;
   date: string;
@@ -85,18 +82,7 @@ export interface CreateMonitorOnDutyGroupChangeReq {
   reason?: string;
 }
 
-// 创建值班计划参数
-export interface CreateMonitorOnDutyPlanReq {
-  on_duty_group_id: number;
-  date: string;
-  on_duty_user_id: number;
-  is_adjusted?: boolean;
-  original_user_id?: number;
-  create_user_id: number;
-  remark?: string;
-}
-
-// 更新值班组参数
+// 更新值班组信息请求参数
 export interface UpdateMonitorOnDutyGroupReq {
   id: number;
   name: string;
@@ -106,38 +92,41 @@ export interface UpdateMonitorOnDutyGroupReq {
   enable?: 1 | 2;
 }
 
-// 删除值班组参数
+// 删除值班组请求参数
 export interface DeleteMonitorOnDutyGroupReq {
   id: number;
 }
 
-// 获取值班组详情参数
+// 获取指定值班组信息请求参数
 export interface GetMonitorOnDutyGroupReq {
   id: number;
 }
 
-// 获取未来值班计划参数
+// 获取值班组未来计划请求参数
 export interface GetMonitorOnDutyGroupFuturePlanReq {
   id: number;
   start_time: string;
   end_time: string;
 }
 
-// 获取值班历史参数
+// 获取值班历史记录请求参数
 export interface GetMonitorOnDutyHistoryReq {
+  page: number;
+  size: number;
+  search?: string;
   on_duty_group_id: number;
   start_date?: string;
   end_date?: string;
-  search?: string;
-  page?: number;
-  size?: number;
 }
 
+// 获取值班组换班记录列表请求参数
 export interface GetMonitorOnDutyGroupChangeListReq {
+  page: number;
+  size: number;
+  search?: string;
   on_duty_group_id: number;
-  page?: number;
-  size?: number;
 }
+
 
 // 获取值班组列表
 export async function getMonitorOnDutyGroupListApi(data: GetMonitorOnDutyGroupListReq) {
