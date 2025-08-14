@@ -543,11 +543,11 @@ import {
 
 import {
   getMonitorScrapePoolListApi,
-  type ScrapePoolItem
+  type MonitorScrapePool
 } from '#/api/core/prometheus_scrape_pool';
 
 // 实例池接口
-type PoolOption = Pick<ScrapePoolItem, 'id' | 'name'>;
+type PoolOption = Pick<MonitorScrapePool, 'id' | 'name'>;
 
 // 分页接口
 interface PaginationConfig {
@@ -740,9 +740,13 @@ const formatTime = (input: number | string): string => {
   });
 };
 
-const formatFullDateTime = (timestamp: string): string => {
-  if (!timestamp) return '';
-  return new Date(timestamp).toLocaleString('zh-CN');
+const formatFullDateTime = (input: string | number): string => {
+  if (!input) return '';
+  const date = typeof input === 'number'
+    ? new Date(input * 1000)
+    : new Date(input);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleString('zh-CN');
 };
 
 // 更新统计数据
@@ -761,15 +765,19 @@ const fetchConfigs = async (): Promise<void> => {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchText.value || undefined,
-      pool_id: searchPoolId.value,
       config_type: searchConfigType.value,
       status: searchStatus.value
     };
 
     const response = await getMonitorConfigListApi(params);
     if (response) {
-      data.value = response.items || [];
-      paginationConfig.total = response.total || 0;
+      let items: MonitorConfigItem[] = response.items || [];
+      // 客户端按实例池过滤（后端参数未定义）
+      if (searchPoolId.value !== undefined) {
+        items = items.filter((item: MonitorConfigItem) => item.pool_id === searchPoolId.value);
+      }
+      data.value = items;
+      paginationConfig.total = (response.total ?? items.length) as number;
       updateStats();
     }
   } catch (error: any) {
@@ -783,7 +791,7 @@ const fetchConfigs = async (): Promise<void> => {
 // 加载实例池数据
 const loadPoolOptions = async (): Promise<void> => {
   try {
-    let allPools: ScrapePoolItem[] = [];
+    let allPools: MonitorScrapePool[] = [];
     let currentPage = 1;
     const pageSize = 10;
     let hasMore = true;
@@ -805,10 +813,12 @@ const loadPoolOptions = async (): Promise<void> => {
       }
     }
 
-    poolOptions.value = allPools.map((item: ScrapePoolItem) => ({
-      id: item.id,
-      name: item.name
-    }));
+    poolOptions.value = allPools
+      .filter((item: MonitorScrapePool) => item.id !== undefined)
+      .map((item: MonitorScrapePool) => ({
+        id: item.id!,
+        name: item.name
+      }));
   } catch (error: any) {
     console.error('加载实例池列表失败:', error);
     poolOptions.value = [];

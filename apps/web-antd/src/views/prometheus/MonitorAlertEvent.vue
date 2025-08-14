@@ -107,10 +107,10 @@
 
             <template v-if="column.key === 'send_group_name'">
               <div class="group-info">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(record.send_group_name || '') }">
-                  {{ getInitials(record.send_group_name) }}
+                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor((record.send_group?.name as string) || '') }">
+                  {{ getInitials((record.send_group?.name as string) || '') }}
                 </a-avatar>
-                <span class="group-name">{{ record.send_group_name || '未分组' }}</span>
+                <span class="group-name">{{ (record.send_group?.name as string) || `ID: ${record.send_group_id}` }}</span>
               </div>
             </template>
 
@@ -181,13 +181,12 @@
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="发送组ID">{{ detailDialog.form.send_group_id || '未分配' }}</a-descriptions-item>
-          <a-descriptions-item label="发送组名称">{{ detailDialog.form.send_group_name || '未分配' }}</a-descriptions-item>
+          <a-descriptions-item label="发送组名称">{{ (detailDialog.form.send_group?.name as string) || '未分配' }}</a-descriptions-item>
           <a-descriptions-item label="触发次数">{{ detailDialog.form.event_times }}次</a-descriptions-item>
           <a-descriptions-item label="静默ID">{{ detailDialog.form.silence_id || '无' }}</a-descriptions-item>
           <a-descriptions-item label="认领用户ID">{{ detailDialog.form.ren_ling_user_id || '未认领' }}</a-descriptions-item>
-          <a-descriptions-item label="规则名称">{{ detailDialog.form.alert_rule_name || '未知' }}</a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at.toString())
-          }}</a-descriptions-item>
+          <a-descriptions-item label="规则名称">{{ detailDialog.form.alert_name || '未知' }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form?.created_at || '') }}</a-descriptions-item>
           <a-descriptions-item label="标签组">
             <div class="tag-container">
               <a-tag v-for="label in (detailDialog.form.labels || [])" :key="label" class="tech-tag label-tag">
@@ -213,16 +212,18 @@ import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { DownOutlined } from '@ant-design/icons-vue';
 import { Icon } from '@iconify/vue';
+import { useUserStore } from '@vben/stores';
 import {
-  getAlertEventsListApi,
-  silenceAlertApi,
-  claimAlertApi,
-  cancelSilenceAlertApi,
-  type MonitorAlertEventItem,
-  type GetAlertEventsListParams,
-  type EventAlertSilenceParams,
-  type EventAlertClaimParams,
-  type EventAlertUnSilenceParams
+  getMonitorAlertEventListApi,
+  eventAlertSilenceApi,
+  eventAlertClaimApi,
+  eventAlertUnSilenceApi,
+  type MonitorAlertEvent,
+  type GetMonitorAlertEventListReq,
+  type EventAlertSilenceReq,
+  type EventAlertClaimReq,
+  type EventAlertUnSilenceReq,
+  MonitorAlertEventStatus,
 } from '#/api/core/prometheus_alert_event';
 
 // 响应式对话框宽度
@@ -246,7 +247,7 @@ const columns = [
   { title: '静默ID', dataIndex: 'silence_id', key: 'silence_id', width: 120 },
   { title: '认领用户', dataIndex: 'ren_ling_user_id', key: 'ren_ling_user_id', width: 120 },
   { title: '标签组', dataIndex: 'labels', key: 'labels', width: 200 },
-  { title: '发送组', dataIndex: 'send_group_name', key: 'send_group_name', width: 120 },
+  { title: '发送组', dataIndex: 'send_group_id', key: 'send_group_name', width: 120 },
   { title: '规则名称', dataIndex: 'alert_rule_name', key: 'alert_rule_name', width: 150 },
   { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
   { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
@@ -257,7 +258,7 @@ const loading = ref(false);
 const searchText = ref('');
 const statusFilter = ref<string | undefined>(undefined);
 const eventTimesFilter = ref<number | undefined>(undefined);
-const data = ref<MonitorAlertEventItem[]>([]);
+const data = ref<MonitorAlertEvent[]>([]);
 
 // 防抖处理
 let searchTimeout: any = null;
@@ -287,36 +288,39 @@ const detailDialogVisible = ref(false);
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as MonitorAlertEventItem | null
+  form: null as MonitorAlertEvent | null
 });
 
 // 辅助方法
-const getAlertStatusClass = (record: MonitorAlertEventItem): string => {
+const getAlertStatusClass = (record: MonitorAlertEvent): string => {
   switch (record.status) {
-    case 'firing': return 'status-firing';
-    case 'silenced': return 'status-silenced';
-    case 'claimed': return 'status-claimed';
-    case 'resolved': return 'status-resolved';
+    case MonitorAlertEventStatus.FIRING: return 'status-firing';
+    case MonitorAlertEventStatus.SILENCED: return 'status-silenced';
+    case MonitorAlertEventStatus.CLAIMED: return 'status-claimed';
+    case MonitorAlertEventStatus.RESOLVED: return 'status-resolved';
+    case MonitorAlertEventStatus.UPGRADED: return 'status-claimed';
     default: return 'status-unknown';
   }
 };
 
-const getStatusColor = (status: string): string => {
+const getStatusColor = (status: MonitorAlertEventStatus): string => {
   switch (status) {
-    case 'firing': return 'error';
-    case 'silenced': return 'warning';
-    case 'claimed': return 'processing';
-    case 'resolved': return 'success';
+    case MonitorAlertEventStatus.FIRING: return 'error';
+    case MonitorAlertEventStatus.SILENCED: return 'warning';
+    case MonitorAlertEventStatus.CLAIMED: return 'processing';
+    case MonitorAlertEventStatus.RESOLVED: return 'success';
+    case MonitorAlertEventStatus.UPGRADED: return 'purple';
     default: return 'default';
   }
 };
 
-const getStatusText = (status: string): string => {
+const getStatusText = (status: MonitorAlertEventStatus): string => {
   switch (status) {
-    case 'firing': return '告警中';
-    case 'silenced': return '已屏蔽';
-    case 'claimed': return '已认领';
-    case 'resolved': return '已恢复';
+    case MonitorAlertEventStatus.FIRING: return '告警中';
+    case MonitorAlertEventStatus.SILENCED: return '已屏蔽';
+    case MonitorAlertEventStatus.CLAIMED: return '已认领';
+    case MonitorAlertEventStatus.RESOLVED: return '已恢复';
+    case MonitorAlertEventStatus.UPGRADED: return '已升级';
     default: return '未知';
   }
 };
@@ -353,23 +357,24 @@ const formatFullDateTime = (timestamp: string): string => {
 // 更新统计数据
 const updateStats = () => {
   stats.total = data.value.length;
-  stats.firing = data.value.filter(item => item.status === 'firing').length;
-  stats.silenced = data.value.filter(item => item.status === 'silenced').length;
-  stats.claimed = data.value.filter(item => item.status === 'claimed').length;
-  stats.resolved = data.value.filter(item => item.status === 'resolved').length;
+  stats.firing = data.value.filter(item => item.status === MonitorAlertEventStatus.FIRING).length;
+  stats.silenced = data.value.filter(item => item.status === MonitorAlertEventStatus.SILENCED).length;
+  stats.claimed = data.value.filter(item => item.status === MonitorAlertEventStatus.CLAIMED).length;
+  stats.resolved = data.value.filter(item => item.status === MonitorAlertEventStatus.RESOLVED).length;
 };
 
 // 数据加载
 const fetchResources = async (): Promise<void> => {
   loading.value = true;
   try {
-    const params: GetAlertEventsListParams = {
+    const params: GetMonitorAlertEventListReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchText.value || undefined,
+      status: statusFilter.value,
     };
 
-    const response = await getAlertEventsListApi(params);
+    const response = await getMonitorAlertEventListApi(params);
     if (response) {
       data.value = response.items || [];
       paginationConfig.total = response.total || 0;
@@ -424,7 +429,7 @@ const handleResetFilters = (): void => {
   message.success('过滤条件已重置');
 };
 
-const handleMenuClick = (command: string, record: MonitorAlertEventItem): void => {
+const handleMenuClick = (command: string, record: MonitorAlertEvent): void => {
   switch (command) {
     case 'unsilence':
       handleCancelSilence(record);
@@ -435,7 +440,7 @@ const handleMenuClick = (command: string, record: MonitorAlertEventItem): void =
   }
 };
 
-const showDetailDialog = (record: MonitorAlertEventItem): void => {
+const showDetailDialog = (record: MonitorAlertEvent): void => {
   detailDialog.form = record;
   detailDialogVisible.value = true;
 };
@@ -443,7 +448,7 @@ const showDetailDialog = (record: MonitorAlertEventItem): void => {
 
 
 // 处理屏蔽告警
-const handleSilence = async (record: MonitorAlertEventItem) => {
+const handleSilence = async (record: MonitorAlertEvent) => {
   Modal.confirm({
     title: '确认屏蔽',
     content: `您确定要屏蔽告警 "${record.alert_name}" 吗？`,
@@ -452,11 +457,14 @@ const handleSilence = async (record: MonitorAlertEventItem) => {
     onOk: async () => {
       try {
         loading.value = true;
-        const params: EventAlertSilenceParams = {
-          id: record.id,
+        const userStore = useUserStore();
+        const currentUserId = Number(userStore.userInfo?.userId) || 0;
+        const params: EventAlertSilenceReq = {
+          id: record.id!,
+          user_id: currentUserId,
           time: '2h',
         };
-        await silenceAlertApi(params);
+        await eventAlertSilenceApi(params);
         message.success(`屏蔽告警 "${record.alert_name}" 成功`);
         fetchResources();
         detailDialogVisible.value = false;
@@ -471,7 +479,7 @@ const handleSilence = async (record: MonitorAlertEventItem) => {
 };
 
 // 处理认领告警
-const handleClaim = async (record: MonitorAlertEventItem) => {
+const handleClaim = async (record: MonitorAlertEvent) => {
   Modal.confirm({
     title: '确认认领',
     content: `您确定要认领告警 "${record.alert_name}" 吗？`,
@@ -480,10 +488,13 @@ const handleClaim = async (record: MonitorAlertEventItem) => {
     onOk: async () => {
       try {
         loading.value = true;
-        const params: EventAlertClaimParams = {
-          id: record.id,
+        const userStore = useUserStore();
+        const currentUserId = Number(userStore.userInfo?.userId) || 0;
+        const params: EventAlertClaimReq = {
+          id: record.id!,
+          user_id: currentUserId,
         };
-        await claimAlertApi(params);
+        await eventAlertClaimApi(params);
         message.success(`认领告警 "${record.alert_name}" 成功`);
         fetchResources();
         detailDialogVisible.value = false;
@@ -498,7 +509,7 @@ const handleClaim = async (record: MonitorAlertEventItem) => {
 };
 
 // 处理取消屏蔽告警
-const handleCancelSilence = async (record: MonitorAlertEventItem) => {
+const handleCancelSilence = async (record: MonitorAlertEvent) => {
   Modal.confirm({
     title: '确认取消屏蔽',
     content: `您确定要取消屏蔽告警 "${record.alert_name}" 吗？`,
@@ -507,10 +518,13 @@ const handleCancelSilence = async (record: MonitorAlertEventItem) => {
     onOk: async () => {
       try {
         loading.value = true;
-        const params: EventAlertUnSilenceParams = {
-          id: record.id,
+        const userStore = useUserStore();
+        const currentUserId = Number(userStore.userInfo?.userId) || 0;
+        const params: EventAlertUnSilenceReq = {
+          id: record.id!,
+          user_id: currentUserId,
         };
-        await cancelSilenceAlertApi(params);
+        await eventAlertUnSilenceApi(params);
         message.success(`取消屏蔽告警 "${record.alert_name}" 成功`);
         fetchResources();
       } catch (error: any) {

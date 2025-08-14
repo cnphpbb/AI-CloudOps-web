@@ -1,6 +1,6 @@
 import { requestClient } from '#/api/request';
 
-// 配置类型常量
+// 配置类型枚举
 export enum ConfigType {
   Prometheus = 1,    // Prometheus 主配置
   AlertManager = 2,  // AlertManager 主配置
@@ -9,18 +9,15 @@ export enum ConfigType {
   WebhookFile = 5,   // webhook file
 }
 
-// 配置状态常量
+// 配置状态枚举
 export enum ConfigStatus {
-  Active = 1,    // 激活状态
-  Inactive = 2,  // 非激活状态
+  Active = 1,     // 激活状态
+  Inactive = 2,   // 非激活状态
 }
 
-// 监控配置模型
+// 监控配置数据模型
 export interface MonitorConfigItem {
   id: number;
-  created_at: string;
-  updated_at: string;
-  deleted_at: number;
   name: string;
   pool_id: number;
   instance_ip: string;
@@ -28,7 +25,9 @@ export interface MonitorConfigItem {
   config_content: string;
   config_hash: string;
   status: ConfigStatus;
-  last_generated_time: string;
+  last_generated_time: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // 获取监控配置列表请求参数
@@ -36,8 +35,6 @@ export interface GetMonitorConfigListParams {
   page: number;
   size: number;
   search?: string;
-  pool_id?: number;
-  instance_ip?: string;
   config_type?: ConfigType;
   status?: ConfigStatus;
 }
@@ -78,7 +75,6 @@ export interface UpdateMonitorConfigParams {
 export interface DeleteMonitorConfigParams {
   id: number;
 }
-
 
 // API 接口
 export async function getMonitorConfigListApi(data: GetMonitorConfigListParams) {

@@ -88,8 +88,8 @@
             </template>
 
             <template v-if="column.key === 'service_discovery_type'">
-              <a-tag :color="record.service_discovery_type === 'k8s' ? 'blue' : 'green'" class="tech-tag">
-                {{ record.service_discovery_type === 'k8s' ? 'Kubernetes' : 'HTTP' }}
+              <a-tag :color="getDiscoveryTypeColor(record.service_discovery_type)" class="tech-tag">
+                {{ getDiscoveryTypeLabel(record.service_discovery_type) }}
               </a-tag>
             </template>
 
@@ -206,8 +206,9 @@
               <a-form-item label="服务发现类型" name="service_discovery_type"
                 :rules="[{ required: true, message: '请选择服务发现类型' }]">
                 <a-select v-model:value="formDialog.form.service_discovery_type" placeholder="请选择服务发现类型">
-                  <a-select-option value="http">HTTP</a-select-option>
-                  <a-select-option value="k8s">Kubernetes</a-select-option>
+                  <a-select-option v-for="opt in serviceDiscoveryOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </a-select-option>
                 </a-select>
               </a-form-item>
             </a-col>
@@ -274,11 +275,8 @@
                   placeholder="请输入刷新间隔（秒）" />
               </a-form-item>
             </a-col>
-            <a-col :xs="24" :sm="12">
-              <a-form-item label="端口" name="port" :rules="[
-                { required: true, message: '请输入端口' },
-                { type: 'number', min: 1, max: 65535, message: '端口必须在1-65535之间' }
-              ]">
+            <a-col :xs="24" :sm="12" v-if="formDialog.form.service_discovery_type === ServiceDiscoveryType.Static">
+              <a-form-item label="端口" name="port" :rules="formRules.port">
                 <a-input-number v-model:value="formDialog.form.port" :min="1" :max="65535" class="full-width"
                   placeholder="请输入端口" />
               </a-form-item>
@@ -286,12 +284,9 @@
           </a-row>
         </div>
 
-        <div class="form-section">
+        <div v-if="formDialog.form.service_discovery_type === ServiceDiscoveryType.Static" class="form-section">
           <div class="section-title">目标地址配置</div>
-          <a-form-item label="IP地址" name="ip_address" :rules="[
-            { required: true, message: '请输入IP地址' },
-            { pattern: /^(\d{1,3}\.){3}\d{1,3}$/, message: '请输入正确的IP地址格式' }
-          ]">
+          <a-form-item label="IP地址" name="ip_address" :rules="formRules.ip_address">
             <a-input v-model:value="formDialog.form.ip_address" placeholder="请输入IP地址，如：192.168.1.100" />
             <div class="form-help-text">
               <Icon icon="ant-design:info-circle-outlined" />
@@ -300,8 +295,8 @@
           </a-form-item>
         </div>
 
-        <!-- Kubernetes配置（当选择k8s时显示） -->
-        <div v-if="formDialog.form.service_discovery_type === 'k8s'" class="form-section">
+        <!-- Kubernetes配置（当选择K8s时显示） -->
+        <div v-if="formDialog.form.service_discovery_type === ServiceDiscoveryType.K8s" class="form-section">
           <div class="section-title">Kubernetes配置</div>
           <a-row :gutter="16">
             <a-col :xs="24" :sm="12">
@@ -322,7 +317,7 @@
           </a-row>
         </div>
 
-        <!-- 安全配置 -->
+        <!-- 安全配置（HTTPS或需要认证时使用） -->
         <div class="form-section">
           <div class="section-title">安全配置</div>
           <a-row :gutter="16">
@@ -349,6 +344,36 @@
               </a-form-item>
             </a-col>
           </a-row>
+        </div>
+
+        <!-- 服务树绑定 -->
+        <div v-if="formDialog.form.service_discovery_type === ServiceDiscoveryType.Http" class="form-section">
+          <div class="section-title">服务树绑定</div>
+          <a-form-item label="服务树节点" name="tree_node_ids">
+            <a-tree-select
+              v-model:value="(formDialog.form as any).tree_node_ids"
+              style="width: 100%"
+              placeholder="请选择服务树节点"
+              allow-clear
+              multiple
+              :tree-data="treeData"
+              :field-names="{ children: 'children', label: 'name', value: 'id' }"
+            />
+          </a-form-item>
+        </div>
+
+        <!-- 标签配置 -->
+        <div class="form-section">
+          <div class="section-title">标签配置</div>
+          <a-form-item label="标签" name="tags">
+            <a-select
+              mode="tags"
+              v-model:value="(formDialog.form as any).tags"
+              placeholder="输入并回车添加标签"
+              :token-separators="[',']"
+              style="width: 100%"
+            />
+          </a-form-item>
         </div>
 
         <!-- 高级配置 -->
@@ -408,15 +433,15 @@
               <a-tag :color="detailDialog.form.enable === 1 ? 'success' : 'default'">
                 {{ detailDialog.form.enable === 1 ? '已启用' : '已禁用' }}
               </a-tag>
-              <a-tag :color="detailDialog.form.service_discovery_type === 'k8s' ? 'blue' : 'green'">
-                {{ detailDialog.form.service_discovery_type === 'k8s' ? 'Kubernetes' : 'HTTP' }}
+              <a-tag :color="getDiscoveryTypeColor(detailDialog.form.service_discovery_type)">
+                {{ getDiscoveryTypeLabel(detailDialog.form.service_discovery_type) }}
               </a-tag>
             </div>
           </div>
 
           <a-descriptions bordered :column="1" :labelStyle="{ width: '150px' }">
             <a-descriptions-item label="ID">{{ detailDialog.form.id }}</a-descriptions-item>
-            <a-descriptions-item label="服务发现类型">{{ detailDialog.form.service_discovery_type }}</a-descriptions-item>
+            <a-descriptions-item label="服务发现类型">{{ getDiscoveryTypeLabel(detailDialog.form.service_discovery_type) }}</a-descriptions-item>
             <a-descriptions-item label="协议方案">{{ detailDialog.form.scheme }}</a-descriptions-item>
             <a-descriptions-item label="监控路径">{{ detailDialog.form.metrics_path }}</a-descriptions-item>
             <a-descriptions-item label="目标地址">{{ detailDialog.form.ip_address }}:{{ detailDialog.form.port
@@ -428,10 +453,16 @@
             <a-descriptions-item label="创建人">{{ detailDialog.form.create_user_name }}</a-descriptions-item>
             <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.form.created_at || '')
               }}</a-descriptions-item>
-            <a-descriptions-item v-if="detailDialog.form.service_discovery_type === 'k8s'" label="Kubernetes角色">
+            <a-descriptions-item v-if="detailDialog.form.tags && detailDialog.form.tags.length" label="标签">
+              {{ (detailDialog.form.tags || []).join(', ') }}
+            </a-descriptions-item>
+            <a-descriptions-item v-if="detailDialog.form.tree_node_ids && detailDialog.form.tree_node_ids.length" label="服务树节点">
+              {{ mapTreeNodeIdsToNames(detailDialog.form.tree_node_ids || []).join(', ') }}
+            </a-descriptions-item>
+            <a-descriptions-item v-if="detailDialog.form.service_discovery_type === ServiceDiscoveryType.K8s" label="Kubernetes角色">
               {{ detailDialog.form.kubernetes_sd_role || '未配置' }}
             </a-descriptions-item>
-            <a-descriptions-item v-if="detailDialog.form.service_discovery_type === 'k8s'" label="KubeConfig路径">
+            <a-descriptions-item v-if="detailDialog.form.service_discovery_type === ServiceDiscoveryType.K8s" label="KubeConfig路径">
               {{ detailDialog.form.kube_config_file_path || '未配置' }}
             </a-descriptions-item>
             <a-descriptions-item v-if="detailDialog.form.tls_ca_file_path" label="TLS CA文件">
@@ -462,16 +493,18 @@ import {
 import { Icon } from '@iconify/vue';
 import {
   getMonitorScrapeJobListApi,
-  createScrapeJobApi,
-  updateScrapeJobApi,
-  deleteScrapeJobApi,
-  getScrapeJobDetailApi,
-  type MonitorScrapeJobItem,
-  type GetScrapeJobListParams,
-  type createScrapeJobReq,
-  type updateScrapeJobReq
+  createMonitorScrapeJobApi,
+  updateMonitorScrapeJobApi,
+  deleteMonitorScrapeJobApi,
+  getMonitorScrapeJobDetailApi,
+  ServiceDiscoveryType,
+  type MonitorScrapeJob,
+  type GetMonitorScrapeJobListReq,
+  type CreateMonitorScrapeJobReq,
+  type UpdateMonitorScrapeJobReq
 } from '#/api/core/prometheus_scrape_job';
 import { getMonitorScrapePoolListApi } from '#/api/core/prometheus_scrape_pool';
+import { getTreeList, type TreeNode } from '#/api/core/tree_node';
 
 // 采集池接口
 interface Pool {
@@ -503,7 +536,7 @@ const previewDialogWidth = computed(() => {
 // 列定义
 const columns = [
   { title: '任务名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
-  { title: '服务发现', dataIndex: 'service_discovery_type', key: 'service_discovery_type', width: 120 },
+  { title: '服务发现', dataIndex: 'service_discovery_type', key: 'service_discovery_type', width: 140 },
   { title: '启用状态', dataIndex: 'enable', key: 'enable', width: 100, align: 'center' as const },
   { title: '关联采集池', dataIndex: 'pool_id', key: 'pool_id', width: 120 },
   { title: '目标信息', dataIndex: 'target_info', key: 'target_info', width: 200 },
@@ -518,8 +551,16 @@ const loading = ref(false);
 const searchQuery = ref('');
 const enableFilter = ref<1 | 2 | undefined>(undefined);
 const poolFilter = ref<number | undefined>(undefined);
-const scrapeJobList = ref<MonitorScrapeJobItem[]>([]);
+const scrapeJobList = ref<MonitorScrapeJob[]>([]);
 const pools = ref<Pool[]>([]);
+const treeData = ref<TreeNode[]>([]);
+
+// 显示枚举值选择
+const serviceDiscoveryOptions = [
+  { label: 'HTTP', value: ServiceDiscoveryType.Http },
+  { label: 'Kubernetes', value: ServiceDiscoveryType.K8s },
+  { label: 'Static', value: ServiceDiscoveryType.Static },
+];
 
 // for dialog pool select
 const dialogPools = ref<Pool[]>([]);
@@ -563,7 +604,7 @@ const formDialog = reactive({
     name: '',
     enableSwitch: true,
     enable: 1 as 1 | 2,
-    service_discovery_type: 'http',
+    service_discovery_type: ServiceDiscoveryType.Http,
     metrics_path: '/metrics',
     scheme: 'http',
     scrape_interval: 15,
@@ -579,12 +620,14 @@ const formDialog = reactive({
     bearer_token: '',
     bearer_token_file: '',
     kubernetes_sd_role: '',
+    tree_node_ids: [] as number[],
+    tags: [] as string[],
   }
 });
 
 // 详情对话框数据
 const detailDialog = reactive({
-  form: null as MonitorScrapeJobItem | null,
+  form: null as MonitorScrapeJob | null,
   loading: false,
 });
 
@@ -592,8 +635,8 @@ const detailDialog = reactive({
 const yamlError = ref<string>('');
 const yamlSuccess = ref<boolean>(false);
 
-// 表单验证规则
-const formRules = {
+// 表单验证规则（动态）
+const formRules = computed(() => ({
   name: [
     { required: true, message: '请输入采集任务名称', trigger: 'blur' },
     { min: 3, max: 50, message: '长度应为3到50个字符', trigger: 'blur' }
@@ -620,16 +663,21 @@ const formRules = {
     { required: true, message: '请输入刷新间隔', trigger: 'blur' }
   ],
   port: [
-    { required: true, message: '请输入端口', trigger: 'blur' }
+    ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
+      ? [{ required: true, message: '请输入端口', trigger: 'blur' }]
+      : []),
+    { type: 'number', min: 1, max: 65535, message: '端口必须在1-65535之间', trigger: 'blur' },
   ],
   ip_address: [
-    { required: true, message: '请输入IP地址', trigger: 'blur' },
+    ...(formDialog.form.service_discovery_type === ServiceDiscoveryType.Static
+      ? [{ required: true, message: '请输入IP地址', trigger: 'blur' }]
+      : []),
     { pattern: /^(\d{1,3}\.){3}\d{1,3}$/, message: '请输入正确的IP地址格式', trigger: 'blur' }
   ]
-};
+}));
 
 // 辅助方法
-const getJobStatusClass = (record: MonitorScrapeJobItem): string => {
+const getJobStatusClass = (record: MonitorScrapeJob): string => {
   if (record.enable === 1) return 'status-enabled';
   return 'status-disabled';
 };
@@ -667,6 +715,32 @@ const getPoolName = (poolId: number): string => {
   const allKnownPools = [...pools.value, ...dialogPools.value];
   const pool = allKnownPools.find(p => p.id === poolId);
   return pool ? pool.name : '未知';
+};
+
+const getDiscoveryTypeLabel = (type: ServiceDiscoveryType): string => {
+  switch (type) {
+    case ServiceDiscoveryType.K8s:
+      return 'Kubernetes';
+    case ServiceDiscoveryType.Http:
+      return 'HTTP';
+    case ServiceDiscoveryType.Static:
+      return 'Static';
+    default:
+      return String(type);
+  }
+};
+
+const getDiscoveryTypeColor = (type: ServiceDiscoveryType): string => {
+  switch (type) {
+    case ServiceDiscoveryType.K8s:
+      return 'blue';
+    case ServiceDiscoveryType.Http:
+      return 'green';
+    case ServiceDiscoveryType.Static:
+      return 'purple';
+    default:
+      return 'default';
+  }
 };
 
 const loadDialogPools = async (isNewSearch = false) => {
@@ -724,8 +798,8 @@ const handleDialogPoolScroll = (e: any) => {
 const updateStats = () => {
   // 当前页数据统计
   const currentPageEnabled = scrapeJobList.value.filter(item => item.enable === 1).length;
-  const currentPageK8sJobs = scrapeJobList.value.filter(item => item.service_discovery_type === 'k8s').length;
-  const currentPageHttpJobs = scrapeJobList.value.filter(item => item.service_discovery_type === 'http').length;
+  const currentPageK8sJobs = scrapeJobList.value.filter(item => item.service_discovery_type === ServiceDiscoveryType.K8s).length;
+  const currentPageHttpJobs = scrapeJobList.value.filter(item => item.service_discovery_type === ServiceDiscoveryType.Http).length;
 
   // 使用后端返回的总数
   stats.total = paginationConfig.total;
@@ -750,7 +824,7 @@ const updateStats = () => {
 const loadScrapeJobList = async (): Promise<void> => {
   loading.value = true;
   try {
-    const params: GetScrapeJobListParams = {
+    const params: GetMonitorScrapeJobListReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
       search: searchQuery.value || undefined,
@@ -760,11 +834,7 @@ const loadScrapeJobList = async (): Promise<void> => {
 
     const response = await getMonitorScrapeJobListApi(params);
     if (response && response.items) {
-      console.log(response)
-      scrapeJobList.value = response.items.map((item: any) => ({
-        ...item,
-        ip_address: Array.isArray(item.ip_address) ? item.ip_address[0] || '' : (item.ip_address || '')
-      }));
+      scrapeJobList.value = response.items as MonitorScrapeJob[];
       paginationConfig.total = response.total || 0;
       updateStats();
     } else {
@@ -821,7 +891,7 @@ const loadPools = async (): Promise<void> => {
 };
 
 // 事件处理
-const handleTableChange = (pagination: any, filters: any, sorter: any): void => {
+const handleTableChange = (pagination: any, _filters: any, _sorter: any): void => {
   paginationConfig.current = pagination.current;
   paginationConfig.pageSize = pagination.pageSize;
   loadScrapeJobList();
@@ -869,13 +939,13 @@ const handleCreateScrapeJob = (): void => {
   formDialogVisible.value = true;
 };
 
-const handleEditScrapeJob = (record: MonitorScrapeJobItem): void => {
+const handleEditScrapeJob = (record: MonitorScrapeJob): void => {
   formDialog.isEdit = true;
   formDialog.form = {
     id: record.id,
     name: record.name,
     enableSwitch: record.enable === 1,
-    enable: record.enable,
+    enable: record.enable as 1 | 2,
     service_discovery_type: record.service_discovery_type,
     metrics_path: record.metrics_path,
     scheme: record.scheme,
@@ -884,9 +954,7 @@ const handleEditScrapeJob = (record: MonitorScrapeJobItem): void => {
     pool_id: record.pool_id,
     refresh_interval: record.refresh_interval,
     port: record.port,
-    ip_address: Array.isArray(record.ip_address)
-      ? (record.ip_address[0] || '')
-      : (record.ip_address || ''),
+    ip_address: record.ip_address || '',
     relabel_configs_yaml_string: record.relabel_configs_yaml_string || '',
     kube_config_file_path: record.kube_config_file_path || '',
     tls_ca_file_path: record.tls_ca_file_path || '',
@@ -894,6 +962,10 @@ const handleEditScrapeJob = (record: MonitorScrapeJobItem): void => {
     bearer_token: record.bearer_token || '',
     bearer_token_file: record.bearer_token_file || '',
     kubernetes_sd_role: record.kubernetes_sd_role || '',
+    tree_node_ids: Array.isArray(record.tree_node_ids)
+      ? record.tree_node_ids.map((id: any) => Number(id)).filter((n: any) => !Number.isNaN(n))
+      : [],
+    tags: Array.isArray(record.tags) ? [...record.tags] : [],
   };
 
   // 重置 YAML 验证状态
@@ -915,16 +987,13 @@ const handleEditScrapeJob = (record: MonitorScrapeJobItem): void => {
   detailDialogVisible.value = false;
 };
 
-const handleViewScrapeJob = async (record: MonitorScrapeJobItem): Promise<void> => {
+const handleViewScrapeJob = async (record: MonitorScrapeJob): Promise<void> => {
   detailDialogVisible.value = true;
   detailDialog.loading = true;
   detailDialog.form = null;
   try {
-    const response = await getScrapeJobDetailApi(record.id);
-    detailDialog.form = {
-      ...response,
-      ip_address: Array.isArray(response.ip_address) ? response.ip_address[0] || '' : (response.ip_address || '')
-    };
+    const response = await getMonitorScrapeJobDetailApi(record.id!);
+    detailDialog.form = response as MonitorScrapeJob;
   } catch (error: any) {
     message.error(error.message || '获取任务详情失败');
     detailDialogVisible.value = false;
@@ -933,7 +1002,7 @@ const handleViewScrapeJob = async (record: MonitorScrapeJobItem): Promise<void> 
   }
 };
 
-const handleMenuClick = (command: string, record: MonitorScrapeJobItem): void => {
+const handleMenuClick = (command: string, record: MonitorScrapeJob): void => {
   switch (command) {
     case 'toggle':
       toggleJobStatus(record);
@@ -944,11 +1013,11 @@ const handleMenuClick = (command: string, record: MonitorScrapeJobItem): void =>
   }
 };
 
-const toggleJobStatus = async (record: MonitorScrapeJobItem): Promise<void> => {
+const toggleJobStatus = async (record: MonitorScrapeJob): Promise<void> => {
   try {
     const newStatus = record.enable === 1 ? 2 : 1;
-    const updateData: updateScrapeJobReq = {
-      id: record.id,
+    const updateData: UpdateMonitorScrapeJobReq = {
+      id: record.id!,
       name: record.name,
       enable: newStatus,
       service_discovery_type: record.service_discovery_type,
@@ -959,12 +1028,10 @@ const toggleJobStatus = async (record: MonitorScrapeJobItem): Promise<void> => {
       pool_id: record.pool_id,
       refresh_interval: record.refresh_interval,
       port: record.port,
-      ip_address: Array.isArray(record.ip_address)
-        ? (record.ip_address[0] || '')
-        : (record.ip_address || ''),
+      ip_address: record.ip_address || '',
     };
 
-    await updateScrapeJobApi(updateData);
+    await updateMonitorScrapeJobApi(updateData);
     message.success(`采集任务已${newStatus === 1 ? '启用' : '禁用'}`);
     loadScrapeJobList();
   } catch (error: any) {
@@ -973,7 +1040,7 @@ const toggleJobStatus = async (record: MonitorScrapeJobItem): Promise<void> => {
   }
 };
 
-const confirmDelete = (record: MonitorScrapeJobItem): void => {
+const confirmDelete = (record: MonitorScrapeJob): void => {
   Modal.confirm({
     title: '警告',
     content: `确定要删除采集任务 "${record.name}" 吗？`,
@@ -982,7 +1049,7 @@ const confirmDelete = (record: MonitorScrapeJobItem): void => {
     cancelText: '取消',
     async onOk() {
       try {
-        await deleteScrapeJobApi(record.id);
+        await deleteMonitorScrapeJobApi(record.id!);
         message.success(`采集任务 "${record.name}" 已删除`);
 
         // 如果当前页只有一条数据且不是第一页，则删除后返回上一页
@@ -1011,25 +1078,31 @@ const saveScrapeJob = async (): Promise<void> => {
     return;
   }
 
-  if (!formDialog.form.ip_address || formDialog.form.ip_address.trim() === '') {
-    message.error('请输入IP地址');
-    return;
+  if (formDialog.form.service_discovery_type === ServiceDiscoveryType.Static) {
+    if (!formDialog.form.ip_address || formDialog.form.ip_address.trim() === '') {
+      message.error('请输入IP地址');
+      return;
+    }
   }
 
   try {
     const formData = {
       ...formDialog.form,
       enable: formDialog.form.enableSwitch ? 1 : 2,
+      tree_node_ids: Array.isArray((formDialog.form as any).tree_node_ids)
+        ? (formDialog.form as any).tree_node_ids.map((id: number) => String(id))
+        : [],
+      tags: Array.isArray((formDialog.form as any).tags) ? (formDialog.form as any).tags : [],
       user_id: 1, // 这里应该从用户上下文获取
     };
 
     if (formDialog.isEdit && formDialog.form.id) {
-      const updateData: updateScrapeJobReq = formData as updateScrapeJobReq;
-      await updateScrapeJobApi(updateData);
+      const updateData: UpdateMonitorScrapeJobReq = formData as UpdateMonitorScrapeJobReq;
+      await updateMonitorScrapeJobApi(updateData);
       message.success(`采集任务 "${formDialog.form.name}" 已更新`);
     } else {
-      const createData: createScrapeJobReq = formData as createScrapeJobReq;
-      await createScrapeJobApi(createData);
+      const createData: CreateMonitorScrapeJobReq = formData as CreateMonitorScrapeJobReq;
+      await createMonitorScrapeJobApi(createData);
       message.success(`采集任务 "${formDialog.form.name}" 已创建`);
       // 创建后返回第一页
       paginationConfig.current = 1;
@@ -1049,8 +1122,8 @@ const resetFormDialog = (): void => {
     id: undefined,
     name: '',
     enableSwitch: true,
-    enable: 1,
-    service_discovery_type: 'http',
+    enable: 1 as 1 | 2,
+    service_discovery_type: ServiceDiscoveryType.Http,
     metrics_path: '/metrics',
     scheme: 'http',
     scrape_interval: 15,
@@ -1066,6 +1139,8 @@ const resetFormDialog = (): void => {
     bearer_token: '',
     bearer_token_file: '',
     kubernetes_sd_role: '',
+    tree_node_ids: [],
+    tags: [],
   };
   // 重置 YAML 验证状态
   yamlError.value = '';
@@ -1084,7 +1159,6 @@ const validateYaml = (): void => {
   try {
     // 简单的 YAML 格式验证
     const lines = yamlContent.split('\n');
-    let indentLevel = 0;
     let isValid = true;
     let errorMessage = '';
 
@@ -1227,7 +1301,34 @@ onMounted(() => {
   // 加载数据
   loadScrapeJobList();
   loadPools();
+  loadTreeData();
 });
+
+// 加载服务树数据
+const loadTreeData = async (): Promise<void> => {
+  try {
+    const response = await getTreeList();
+    treeData.value = response.items || [];
+  } catch (error) {
+    console.error('获取服务树数据失败:', error);
+    message.error('获取服务树数据失败');
+    treeData.value = [];
+  }
+};
+
+// 将节点ID映射为名称
+const mapTreeNodeIdsToNames = (ids: (number | string)[] = []): string[] => {
+  const idToName = new Map<number, string>();
+  const dfs = (nodes: TreeNode[] = []) => {
+    for (const n of nodes) {
+      idToName.set(n.id, n.name);
+      if (n.children && n.children.length) dfs(n.children);
+    }
+  };
+  dfs(treeData.value || []);
+  const idNums = ids.map((id: any) => Number(id)).filter((n: any) => !Number.isNaN(n));
+  return idNums.map((id: number) => idToName.get(id) || String(id));
+};
 </script>
 
 <style scoped>

@@ -1,22 +1,38 @@
 import { requestClient } from '#/api/request';
 
-export type AuthMode = 'password' | 'key';
+export enum AuthMode {
+  PASSWORD = 1,
+  KEY = 2,
+}
 
-export type Status =
-  | 'RUNNING'
-  | 'STOPPED'
-  | 'STARTING'
-  | 'STOPPING'
-  | 'RESTARTING'
-  | 'DELETING'
-  | 'ERROR';
+export enum ResourceStatus {
+  RUNNING = 1,
+  STOPPED = 2,
+  STARTING = 3,
+  STOPPING = 4,
+  RESTARTING = 5,
+  DELETING = 6,
+  ERROR = 7,
+}
+
+export interface TreeNode {
+  id: number;
+  name: string;
+  parent_id: number;
+  level: number;
+  description: string;
+  create_user_id: number;
+  create_user_name: string;
+  status: number;
+  is_leaf: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface TreeLocalResource {
   id: number;
-  createdAt: string;
-  updatedAt: string;
   name: string;
-  status: Status;
+  status: ResourceStatus;
   environment: string;
   description: string;
   tags: string[];
@@ -31,17 +47,22 @@ export interface TreeLocalResource {
   os_type: string;
   os_name: string;
   image_name: string;
+  tree_nodes: TreeNode[];
+  created_at: string;
+  updated_at: string;
 }
 
-export interface GetTreeLocalListParams {
-  page: number;
-  size: number;
-  search?: string;
-  status?: string;
-  environment?: string;
+export interface GetTreeLocalResourceListReq {
+  page?: number;
+  size?: number;
+  status?: ResourceStatus;
 }
 
-export interface CreateTreeLocalParams {
+export interface GetTreeLocalResourceDetailReq {
+  id: number;
+}
+
+export interface CreateTreeLocalResourceReq {
   name: string;
   environment?: string;
   description?: string;
@@ -57,7 +78,8 @@ export interface CreateTreeLocalParams {
   auth_mode?: AuthMode;
 }
 
-export interface UpdateTreeLocalParams {
+export interface UpdateTreeLocalResourceReq {
+  id: number;
   name?: string;
   environment?: string;
   description?: string;
@@ -73,15 +95,26 @@ export interface UpdateTreeLocalParams {
   auth_mode?: AuthMode;
 }
 
-export interface BindLocalResourceParams {
+export interface DeleteTreeLocalResourceReq {
+  id: number;
+}
+
+export interface ConnectTerminalResourceReq {
+  id: number;
+  user_id?: number;
+}
+
+export interface BindTreeLocalResourceReq {
+  id: number;
   tree_node_ids: number[];
 }
 
-export interface UnbindLocalResourceParams {
+export interface UnBindTreeLocalResourceReq {
+  id: number;
   tree_node_ids: number[];
 }
 
-export async function getTreeLocalList(params: GetTreeLocalListParams) {
+export async function getTreeLocalList(params: GetTreeLocalResourceListReq) {
   return requestClient.get('/tree/local/list', { params });
 }
 
@@ -89,11 +122,11 @@ export async function getTreeLocalDetail(id: number) {
   return requestClient.get(`/tree/local/detail/${id}`);
 }
 
-export async function createTreeLocal(data: CreateTreeLocalParams) {
+export async function createTreeLocal(data: CreateTreeLocalResourceReq) {
   return requestClient.post('/tree/local/create', data);
 }
 
-export async function updateTreeLocal(id: number, data: UpdateTreeLocalParams) {
+export async function updateTreeLocal(id: number, data: UpdateTreeLocalResourceReq) {
   return requestClient.put(`/tree/local/update/${id}`, data);
 }
 
@@ -105,10 +138,10 @@ export async function connectTerminal(id: number, token: string) {
   return requestClient.get(`/tree/local/terminal/${id}?token=${token}`);
 }
 
-export async function bindTreeLocal(id: number, data: BindLocalResourceParams) {
+export async function bindTreeLocal(id: number, data: BindTreeLocalResourceReq) {
   return requestClient.post(`/tree/local/bind/${id}`, data);
 }
 
-export async function unbindTreeLocal(id: number, data: UnbindLocalResourceParams) {
+export async function unbindTreeLocal(id: number, data: UnBindTreeLocalResourceReq) {
   return requestClient.post(`/tree/local/unbind/${id}`, data);
 }

@@ -1,64 +1,138 @@
 import { requestClient } from '#/api/request';
 
-// 云服务提供商类型
-export type CloudProvider = 'ecs' | 'elb' | 'rds' | 'local';
-
-// 用户类型接口
-export interface User {
-  id: number;
-  username: string;
-  email?: string;
-  real_name: string;
-  mobile: string;
-  fei_shu_user_id: string;
-  account_type: number;
-  home_path: string;
-  enable: number;
+// 节点状态枚举
+export enum TreeNodeStatus {
+  ACTIVE = 1,
+  INACTIVE = 2,
 }
 
-// 树节点基本信息
+// 节点成员类型枚举
+export enum TreeNodeMemberType {
+  AdminRole = 1,
+  MemberRole = 2,
+}
+
+// 叶子节点标识常量
+export const IsLeafYes = 1; // 是叶子节点
+export const IsLeafNo = 2;  // 不是叶子节点
+
+// 树节点接口
 export interface TreeNode {
   id: number;
-  createdAt: string;
-  updatedAt: string;
   name: string;
-  parentId: number;
+  parent_id: number;
   level: number;
   description: string;
-  creator_id: number; // 修正：与后端字段名保持一致
-  status: string;
-  admins: User[]; // 修正：字段名与后端一致
-  members: User[]; // 修正：字段名与后端一致
-  isLeaf: boolean;
-  // 非数据库字段
-  child_count: number; // 修正：使用下划线命名
-  resource_count: number; // 修正：使用下划线命名
-  parent_name: string; // 修正：使用下划线命名
-  creator_name: string;
-  children: TreeNode[];
+  create_user_id: number;
+  create_user_name: string;
+  status: TreeNodeStatus;
+  is_leaf: number;
+  children?: TreeNode[];
+  created_at?: string;
+  updated_at?: string;
 }
 
-// 树节点资源关联表
-export interface TreeNodeResource {
+// 获取树节点列表请求参数
+export interface GetTreeNodeListReq {
+  level?: number;
+  status?: TreeNodeStatus;
+  search?: string;
+}
+
+// 获取节点详情请求参数
+export interface GetTreeNodeDetailReq {
   id: number;
-  created_at: string;
-  updated_at: string;
-  tree_node_id: number; 
-  resource_id: string; 
-  resource_type: CloudProvider; 
 }
 
-// 资源项目
-export interface ResourceItems {
-  resource_name: string;
-  resource_type: CloudProvider;
-  status: string;
-  created_at: string;
+// 获取子节点列表请求参数
+export interface GetTreeNodeChildNodesReq {
+  id: number;
 }
 
-// 树统计信息响应
+// 创建节点请求参数
+export interface CreateTreeNodeReq {
+  name: string;
+  parent_id?: number;
+  description?: string;
+  is_leaf?: number;
+  status?: TreeNodeStatus;
+}
+
+// 更新节点请求参数
+export interface UpdateTreeNodeReq {
+  id: number;
+  name: string;
+  parent_id?: number;
+  description?: string;
+  status?: TreeNodeStatus;
+  is_leaf?: number;
+}
+
+// 更新节点状态请求参数
+export interface UpdateTreeNodeStatusReq {
+  id: number;
+  status: TreeNodeStatus;
+}
+
+// 删除节点请求参数
+export interface DeleteTreeNodeReq {
+  id: number;
+}
+
+// 移动节点请求参数
+export interface MoveTreeNodeReq {
+  id: number;
+  new_parent_id: number;
+}
+
+// 获取节点成员请求参数
+export interface GetTreeNodeMembersReq {
+  id: number;
+  type?: TreeNodeMemberType;
+}
+
+// 添加节点成员请求参数
+export interface AddTreeNodeMemberReq {
+  node_id: number;
+  user_id: number;
+  member_type: TreeNodeMemberType;
+}
+
+// 移除节点成员请求参数
+export interface RemoveTreeNodeMemberReq {
+  node_id: number;
+  user_id: number;
+  member_type: TreeNodeMemberType;
+}
+
+// 绑定资源请求参数
+export interface BindTreeNodeResourceReq {
+  node_id: number;
+  resource_ids: number[];
+}
+
+// 解绑资源请求参数
+export interface UnbindTreeNodeResourceReq {
+  node_id: number;
+  resource_id: number;
+}
+
+// 检查节点权限请求参数
+export interface CheckTreeNodePermissionReq {
+  user_id: number;
+  node_id: number;
+  operation: string;
+}
+
+// 获取用户相关节点请求参数
+export interface GetUserTreeNodesReq {
+  user_id: number;
+  role?: TreeNodeMemberType;
+}
+
+// 服务树统计响应
 export interface TreeNodeStatisticsResp {
-  total_nodes: number; 
+  total_nodes: number;
   total_resources: number;
   total_admins: number;
   total_members: number;
@@ -66,163 +140,67 @@ export interface TreeNodeStatisticsResp {
   inactive_nodes: number;
 }
 
-export interface NodeResourceInfo {
-  id: number;
-  resource_id: string;
-  resource_type: string;
-  resource_name: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at?: string;
-}
-
-export interface GetTreeNodeListReq {
-  level?: number;
-  status?: 'active' | 'inactive' | 'deleted';
-}
-
-export interface GetTreeNodeDetailReq {
-  id: number;
-}
-
-export interface GetTreeNodeChildNodesReq {
-  id: number;
-}
-
-export interface CreateTreeNodeReq {
-  name: string;
-  parent_id?: number;
-  creator_id?: number;
-  description?: string;
-  is_leaf?: boolean;
-  status?: 'active' | 'inactive';
-}
-
-export interface UpdateTreeNodeReq {
-  id: number;
-  name: string;
-  parent_id?: number;
-  description?: string;
-  status?: 'active' | 'inactive';
-}
-
-export interface UpdateTreeNodeStatusReq {
-  id: number;
-  status: 'active' | 'inactive';
-}
-
-export interface DeleteTreeNodeReq {
-  id: number;
-}
-
-export interface MoveTreeNodeReq {
-  id: number;
-  new_parent_id: number;
-}
-
-export interface GetTreeNodeMembersReq {
-  id: number;
-  type?: 'admin' | 'member';
-}
-
-export interface AddTreeNodeMemberReq {
-  node_id: number;
-  user_id: number;
-  member_type: 'admin' | 'member';
-}
-
-export interface RemoveTreeNodeMemberReq {
-  node_id: number;
-  user_id: number;
-  member_type: 'admin' | 'member';
-}
-
-export interface GetTreeNodeResourcesReq {
-  id: number;
-}
-
-export interface BindTreeNodeResourceReq {
-  node_id: number;
-  resource_type?: CloudProvider;
-  resource_ids: string[];
-}
-
-export interface UnbindTreeNodeResourceReq {
-  node_id: number;
-  resource_id: string;
-  resource_type: CloudProvider;
-}
-
-export interface CheckTreeNodePermissionReq {
-  user_id: number;
-  node_id: number;
-  operation: string;
-}
-
-export interface GetUserTreeNodesReq {
-  user_id: number;
-  role?: 'admin' | 'member';
-}
-
+// 获取树节点列表
 export async function getTreeList(params?: GetTreeNodeListReq) {
   return requestClient.get('/tree/node/list', { params });
 }
 
+// 获取节点详情
 export async function getNodeDetail(id: number) {
   return requestClient.get(`/tree/node/detail/${id}`);
 }
 
+// 获取子节点列表
 export async function getChildNodes(id: number) {
   return requestClient.get(`/tree/node/children/${id}`);
 }
 
+// 获取服务树统计信息
 export async function getTreeStatistics() {
   return requestClient.get('/tree/node/statistics');
 }
 
+// 创建节点
 export async function createNode(data: CreateTreeNodeReq) {
   return requestClient.post('/tree/node/create', data);
 }
 
+// 更新节点
 export async function updateNode(id: number, data: UpdateTreeNodeReq) {
   return requestClient.put(`/tree/node/update/${id}`, data);
 }
 
+// 删除节点
 export async function deleteNode(id: number) {
   return requestClient.delete(`/tree/node/delete/${id}`);
 }
 
+// 移动节点
 export async function moveNode(id: number, data: MoveTreeNodeReq) {
   return requestClient.put(`/tree/node/move/${id}`, data);
 }
 
-export async function updateNodeStatus(id: number, data: UpdateTreeNodeStatusReq) {
-  return requestClient.put(`/tree/node/status/${id}`, data);
+// 获取节点成员
+export async function getNodeMembers(id: number, type?: TreeNodeMemberType) {
+  return requestClient.get(`/tree/node/members/${id}`, { params: { type } });
 }
 
-export async function getNodeMembers(id: number, params?: GetTreeNodeMembersReq) {
-  return requestClient.get(`/tree/node/members/${id}`, { params });
-}
-
+// 添加节点成员
 export async function addNodeMember(data: AddTreeNodeMemberReq) {
   return requestClient.post('/tree/node/member/add', data);
 }
 
-export async function removeNodeMember(data: RemoveTreeNodeMemberReq) {
-  return requestClient.delete(`/tree/node/member/remove/${data.node_id}`, {
-    data: data,
-  });
+// 移除节点成员
+export async function removeNodeMember(id: number, data: RemoveTreeNodeMemberReq) {
+  return requestClient.delete(`/tree/node/member/remove/${id}`, { data });
 }
 
-export async function getNodeResources(id: number) {
-  return requestClient.get(`/tree/node/resources/${id}`);
-}
-
+// 绑定资源
 export async function bindResource(data: BindTreeNodeResourceReq) {
   return requestClient.post('/tree/node/resource/bind', data);
 }
 
+// 解绑资源
 export async function unbindResource(data: UnbindTreeNodeResourceReq) {
-  return requestClient.delete('/tree/node/resource/unbind', { data });
+  return requestClient.post('/tree/node/resource/unbind', data);
 }
