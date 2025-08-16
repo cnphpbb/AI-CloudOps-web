@@ -1,0 +1,1161 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Autofix API",
+    "description": "自动修复相关API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/autofix/diagnose": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "诊断Kubernetes问题",
+        "description": "诊断指定命名空间中的Kubernetes问题，返回问题列表",
+        "operationId": "diagnose_api_v1_autofix_diagnose_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoAutofixDiagnoseReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Diagnose Api V1 Autofix Diagnose Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/fix": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "修复Kubernetes问题",
+        "description": "修复指定部署的Kubernetes问题",
+        "operationId": "fix_api_v1_autofix_fix_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoAutofixFixReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Fix Api V1 Autofix Fix Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/workflow": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "执行修复工作流",
+        "description": "启动自动修复工作流，处理复杂的Kubernetes问题",
+        "operationId": "workflow_api_v1_autofix_workflow_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoAutofixWorkflowReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Workflow Api V1 Autofix Workflow Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/create": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "创建自动修复任务",
+        "description": "创建新的自动修复任务，对指定的Kubernetes部署进行诊断和修复",
+        "operationId": "create_autofix_api_v1_autofix_create_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoAutofixCreateReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Autofix Api V1 Autofix Create Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/history/list": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "获取修复历史列表",
+        "description": "获取自动修复历史记录列表，支持分页、搜索和过滤",
+        "operationId": "list_fix_history_api_v1_autofix_history_list_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "页码（从1开始）",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "页码（从1开始）"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "每页大小",
+              "default": 20,
+              "title": "Size"
+            },
+            "description": "每页大小"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "搜索关键词",
+              "title": "Search"
+            },
+            "description": "搜索关键词"
+          },
+          {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "命名空间过滤",
+              "title": "Namespace"
+            },
+            "description": "命名空间过滤"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "状态过滤(success/failed)",
+              "title": "Status"
+            },
+            "description": "状态过滤(success/failed)"
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "起始时间(ISO8601)",
+              "title": "Start"
+            },
+            "description": "起始时间(ISO8601)"
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "结束时间(ISO8601)",
+              "title": "End"
+            },
+            "description": "结束时间(ISO8601)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Fix History Api V1 Autofix History List Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/records/detail/{record_id}": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "获取修复记录详情",
+        "description": "根据记录ID获取指定自动修复记录的详细信息",
+        "operationId": "get_autofix_record_api_v1_autofix_records_detail__record_id__get",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Record Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Autofix Record Api V1 Autofix Records Detail  Record Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/records/delete/{record_id}": {
+      "delete": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "删除修复记录",
+        "description": "软删除指定的自动修复记录",
+        "operationId": "delete_autofix_record_api_v1_autofix_records_delete__record_id__delete",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Record Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Autofix Record Api V1 Autofix Records Delete  Record Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/health/detail": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "自动修复服务健康检查",
+        "description": "检查自动修复服务各组件的健康状态",
+        "operationId": "autofix_health_api_v1_autofix_health_detail_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Autofix Health Api V1 Autofix Health Detail Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/notify/create": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "发送通知",
+        "description": "发送自动修复相关的通知消息",
+        "operationId": "send_notify_api_v1_autofix_notify_create_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoAutofixNotifyReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Send Notify Api V1 Autofix Notify Create Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/records/list": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "获取修复记录列表",
+        "description": "获取自动修复记录列表，支持分页和条件过滤",
+        "operationId": "list_autofix_records_api_v1_autofix_records_list_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 20,
+              "title": "Size"
+            }
+          },
+          {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Namespace"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Autofix Records Api V1 Autofix Records List Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/records/create": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "创建修复记录",
+        "description": "创建新的自动修复记录",
+        "operationId": "create_autofix_record_api_v1_autofix_records_create_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoFixRecordCreateReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Autofix Record Api V1 Autofix Records Create Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/records/detail/db/{record_id}": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "获取修复记录详情(数据库)",
+        "description": "从数据库直接获取指定ID的自动修复记录详情",
+        "operationId": "get_autofix_record_db_api_v1_autofix_records_detail_db__record_id__get",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Record Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/records/update/{record_id}": {
+      "put": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "更新修复记录",
+        "description": "更新指定ID的自动修复记录信息",
+        "operationId": "update_autofix_record_api_v1_autofix_records_update__record_id__put",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Record Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoFixRecordUpdateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/autofix/records/delete/db/{record_id}": {
+      "delete": {
+        "tags": [
+          "api_v1",
+          "autofix"
+        ],
+        "summary": "删除修复记录(数据库)",
+        "description": "从数据库中软删除指定ID的自动修复记录",
+        "operationId": "delete_autofix_record_db_api_v1_autofix_records_delete_db__record_id__delete",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Record Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AutoAutofixCreateReq": {
+        "properties": {
+          "deployment": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Deployment",
+            "description": "目标部署名称"
+          },
+          "namespace": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Namespace",
+            "description": "命名空间",
+            "default": "default"
+          },
+          "event": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Event",
+            "description": "触发事件/问题描述"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "description": "是否强制执行修复",
+            "default": false
+          },
+          "auto_restart": {
+            "type": "boolean",
+            "title": "Auto Restart",
+            "description": "修复后是否自动重启",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "deployment",
+          "event"
+        ],
+        "title": "AutoAutofixCreateReq"
+      },
+      "AutoAutofixDiagnoseReq": {
+        "properties": {
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace",
+            "default": "default"
+          },
+          "deployment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployment"
+          }
+        },
+        "type": "object",
+        "title": "AutoAutofixDiagnoseReq"
+      },
+      "AutoAutofixFixReq": {
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "title": "Namespace",
+            "default": "default"
+          },
+          "deployment": {
+            "type": "string",
+            "title": "Deployment"
+          },
+          "issues": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issues"
+          },
+          "auto_approve": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Approve"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deployment"
+        ],
+        "title": "AutoAutofixFixReq"
+      },
+      "AutoAutofixNotifyReq": {
+        "properties": {
+          "webhook_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Url"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "title": "AutoAutofixNotifyReq"
+      },
+      "AutoAutofixWorkflowReq": {
+        "properties": {
+          "workflow_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Type"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace",
+            "default": "default"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          }
+        },
+        "type": "object",
+        "title": "AutoAutofixWorkflowReq"
+      },
+      "AutoFixRecordCreateReq": {
+        "properties": {
+          "deployment": {
+            "type": "string",
+            "title": "Deployment"
+          },
+          "namespace": {
+            "type": "string",
+            "title": "Namespace",
+            "default": "default"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "default": "success"
+          },
+          "actions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actions"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deployment"
+        ],
+        "title": "AutoFixRecordCreateReq"
+      },
+      "AutoFixRecordUpdateReq": {
+        "properties": {
+          "deployment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployment"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "actions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actions"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "title": "AutoFixRecordUpdateReq"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

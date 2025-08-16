@@ -1,0 +1,987 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Multi-Agent API",
+    "description": "多智能体相关API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/multi-agent/metrics/detail": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "获取多智能体指标详情",
+        "description": "获取多智能体协作系统的运行指标，包括工作流统计、成功率等关键性能数据",
+        "operationId": "multi_agent_metrics_api_v1_multi_agent_metrics_detail_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Multi Agent Metrics Api V1 Multi Agent Metrics Detail Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/repairs/create": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "创建单个部署修复任务",
+        "description": "为指定命名空间下的单个Kubernetes部署创建智能修复任务，通过多智能体协作进行故障诊断和自动修复",
+        "operationId": "create_deployment_repair_api_v1_multi_agent_repairs_create_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoMultiAgentRepairReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Deployment Repair Api V1 Multi Agent Repairs Create Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/repairs/create-all": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "创建批量部署修复任务",
+        "description": "为指定命名空间下的所有Kubernetes部署创建批量修复任务，通过多智能体协作批量处理故障修复",
+        "operationId": "create_all_repairs_api_v1_multi_agent_repairs_create_all_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoMultiAgentRepairAllReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create All Repairs Api V1 Multi Agent Repairs Create All Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/analysis/create": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "创建集群健康分析任务",
+        "description": "对指定Kubernetes集群进行全面的健康状态分析，检测潜在问题并提供优化建议",
+        "operationId": "create_cluster_analysis_api_v1_multi_agent_analysis_create_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoMultiAgentClusterReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Cluster Analysis Api V1 Multi Agent Analysis Create Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/coordinator/status/detail": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "获取协调器状态详情",
+        "description": "获取多智能体协调器的详细运行状态，包括各组件健康状况和连接状态",
+        "operationId": "get_coordinator_status_api_v1_multi_agent_coordinator_status_detail_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Coordinator Status Api V1 Multi Agent Coordinator Status Detail Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/agents/list": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "获取智能体列表",
+        "description": "获取系统中所有可用智能体的列表信息，支持分页查询和关键词搜索",
+        "operationId": "list_agents_api_v1_multi_agent_agents_list_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "页码（从1开始）",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "页码（从1开始）"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "每页大小",
+              "default": 20,
+              "title": "Size"
+            },
+            "description": "每页大小"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "搜索关键词",
+              "title": "Search"
+            },
+            "description": "搜索关键词"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Agents Api V1 Multi Agent Agents List Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/health/detail": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "多智能体服务健康检查",
+        "description": "检查多智能体系统的整体健康状态，包括协调器和各个智能体组件的运行状况",
+        "operationId": "multi_agent_health_api_v1_multi_agent_health_detail_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Multi Agent Health Api V1 Multi Agent Health Detail Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/status/detail": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "获取多智能体系统状态",
+        "description": "获取多智能体系统的当前运行状态和活跃智能体信息",
+        "operationId": "multi_agent_status_api_v1_multi_agent_status_detail_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Multi Agent Status Api V1 Multi Agent Status Detail Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/execute": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "执行多智能体任务",
+        "description": "执行指定的多智能体协作任务，包括任务分发、执行监控和结果汇总",
+        "operationId": "multi_agent_execute_api_v1_multi_agent_execute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoMultiAgentExecuteReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Multi Agent Execute Api V1 Multi Agent Execute Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/coordination/detail": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "获取智能体协调详情",
+        "description": "获取多智能体协调机制的详细信息，包括任务分配、执行进度和资源利用率",
+        "operationId": "multi_agent_coordination_api_v1_multi_agent_coordination_detail_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Multi Agent Coordination Api V1 Multi Agent Coordination Detail Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/workflows/list": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "获取工作流记录列表",
+        "description": "获取多智能体工作流执行记录列表，支持按命名空间、状态筛选和分页查询",
+        "operationId": "list_workflow_records_api_v1_multi_agent_workflows_list_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 20,
+              "title": "Size"
+            }
+          },
+          {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Namespace"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Workflow Records Api V1 Multi Agent Workflows List Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/workflows/create": {
+      "post": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "创建工作流记录",
+        "description": "创建新的多智能体工作流执行记录，记录工作流的基本信息和执行状态",
+        "operationId": "create_workflow_record_api_v1_multi_agent_workflows_create_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowRecordCreateReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/workflows/detail/{record_id}": {
+      "get": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "获取工作流记录详情",
+        "description": "根据记录ID获取指定工作流记录的详细信息，包括执行状态、目标资源等",
+        "operationId": "get_workflow_record_api_v1_multi_agent_workflows_detail__record_id__get",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Record Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/workflows/update/{record_id}": {
+      "put": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "更新工作流记录",
+        "description": "更新指定ID的工作流记录信息，包括状态、目标资源和详细信息等",
+        "operationId": "update_workflow_record_api_v1_multi_agent_workflows_update__record_id__put",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Record Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowRecordUpdateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/multi-agent/workflows/delete/{record_id}": {
+      "delete": {
+        "tags": [
+          "api_v1",
+          "multi_agent"
+        ],
+        "summary": "删除工作流记录",
+        "description": "软删除指定ID的工作流记录，记录将被标记为已删除但不会从数据库中物理移除",
+        "operationId": "delete_workflow_record_api_v1_multi_agent_workflows_delete__record_id__delete",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Record Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AutoMultiAgentClusterReq": {
+        "properties": {
+          "cluster_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster Name",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "title": "AutoMultiAgentClusterReq"
+      },
+      "AutoMultiAgentExecuteReq": {
+        "properties": {
+          "task_type": {
+            "type": "string",
+            "title": "Task Type"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "parameters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parameters"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_type"
+        ],
+        "title": "AutoMultiAgentExecuteReq"
+      },
+      "AutoMultiAgentRepairAllReq": {
+        "properties": {
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "title": "AutoMultiAgentRepairAllReq"
+      },
+      "AutoMultiAgentRepairReq": {
+        "properties": {
+          "deployment": {
+            "type": "string",
+            "title": "Deployment"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace",
+            "default": "default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deployment"
+        ],
+        "title": "AutoMultiAgentRepairReq"
+      },
+      "WorkflowRecordCreateReq": {
+        "properties": {
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow_id",
+          "status"
+        ],
+        "title": "WorkflowRecordCreateReq"
+      },
+      "WorkflowRecordUpdateReq": {
+        "properties": {
+          "workflow_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "namespace": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namespace"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "title": "WorkflowRecordUpdateReq"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
