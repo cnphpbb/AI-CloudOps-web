@@ -1,11 +1,21 @@
 <template>
   <div>
-    <h1>协调器状态</h1>
-    <p>多智能体协调器状态监控页面</p>
+    <a-card :bordered="false" title="协调器状态" :loading="loading">
+      <pre style="white-space: pre-wrap">{{ pretty(detail) }}</pre>
+    </a-card>
   </div>
 </template>
 
 <script setup lang="ts">
-// 协调器状态页面
-// 对应API: /api/v1/multi-agent/coordinator/status/detail (GET) - 获取多智能体协调器的详细运行状态，包括各组件健康状况和连接状态
+import { onMounted, ref } from 'vue';
+import { getCoordinatorStatusDetailApi } from '#/api';
+
+const loading = ref(false);
+const detail = ref<Record<string, any>>({});
+
+function pretty(v: any) { try { return JSON.stringify(v ?? {}, null, 2); } catch { return String(v ?? ''); } }
+
+async function fetchData() { loading.value = true; try { detail.value = await getCoordinatorStatusDetailApi(); } finally { loading.value = false; } }
+
+onMounted(fetchData);
 </script>

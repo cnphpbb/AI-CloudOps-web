@@ -593,11 +593,7 @@ const onCategorySizeChange = (_current: number, size: number) => {
   loadCategories();
 };
 
-/**
- * 自定义下拉框渲染（用于触发弹窗）
- */
 const dropdownRender = () => {
-  // 这个函数不会被调用，因为我们通过 dropdown-visible-change 事件来处理
   return null;
 };
 
