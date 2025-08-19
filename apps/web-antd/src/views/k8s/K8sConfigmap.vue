@@ -1,29 +1,77 @@
 <template>
-  <div class="configmap-manager">
-    <!-- 仪表板标题 -->
-    <div class="dashboard-header">
-      <h2 class="dashboard-title">ConfigMap 资源管理器</h2>
-      <div class="dashboard-stats">
-        <div class="stat-item">
-          <div class="stat-value">{{ filteredConfigMaps.length }}</div>
-          <div class="stat-label">配置</div>
+  <div class="configmap-management-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="title-section">
+          <div class="page-title">
+            <ProfileOutlined class="title-icon" />
+            <h1>ConfigMap 资源管理</h1>
+          </div>
+          <p class="page-subtitle">管理和监控您的 Kubernetes 配置资源</p>
         </div>
-        <div class="stat-item">
-          <div class="stat-value">{{ selectedNamespace }}</div>
-          <div class="stat-label">命名空间</div>
+        <div class="header-actions">
+          <a-button type="primary" size="large" @click="refreshData" :loading="loading">
+            <template #icon><ReloadOutlined /></template>
+            刷新数据
+          </a-button>
         </div>
       </div>
     </div>
 
-    <!-- 查询和操作工具栏 -->
-    <div class="control-panel">
-      <div class="search-filters">
+    <!-- 数据概览卡片 -->
+    <div class="overview-cards">
+      <div class="overview-card total-configmaps">
+        <div class="card-icon">
+          <ProfileOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ filteredConfigMaps.length }}</div>
+          <div class="card-label">配置总数</div>
+        </div>
+      </div>
+      
+      <div class="overview-card selected-cluster">
+        <div class="card-icon">
+          <ClusterOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ selectedCluster ? clusters.find(c => c.id === selectedCluster)?.name || '-' : '-' }}</div>
+          <div class="card-label">当前集群</div>
+        </div>
+      </div>
+      
+      <div class="overview-card selected-namespace">
+        <div class="card-icon">
+          <PartitionOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ selectedNamespace || '-' }}</div>
+          <div class="card-label">命名空间</div>
+        </div>
+      </div>
+      
+      <div class="overview-card config-items">
+        <div class="card-icon">
+          <AppstoreOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ totalConfigItems }}</div>
+          <div class="card-label">配置项总数</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-left">
         <a-select
           v-model:value="selectedCluster"
           placeholder="选择集群"
-          class="control-item cluster-selector"
+          class="cluster-selector"
           :loading="clustersLoading"
           @change="handleClusterChange"
+          allow-clear
         >
           <template #suffixIcon><ClusterOutlined /></template>
           <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
@@ -37,9 +85,10 @@
         <a-select
           v-model:value="selectedNamespace"
           placeholder="选择命名空间"
-          class="control-item namespace-selector"
+          class="namespace-selector"
           :loading="namespacesLoading"
           @change="handleNamespaceChange"
+          allow-clear
         >
           <template #suffixIcon><PartitionOutlined /></template>
           <a-select-option v-for="ns in namespaces" :key="ns" :value="ns">
@@ -53,236 +102,274 @@
         <a-input-search
           v-model:value="searchText"
           placeholder="搜索 ConfigMap 名称"
-          class="control-item search-input"
+          class="search-input"
           @search="onSearch"
           allow-clear
-        >
-          <template #prefix><SearchOutlined /></template>
-        </a-input-search>
+        />
       </div>
       
-      <div class="action-buttons">
-        <a-tooltip title="刷新数据">
-          <a-button type="primary" class="refresh-btn" @click="refreshData" :loading="loading">
-            <template #icon><ReloadOutlined /></template>
-          </a-button>
-        </a-tooltip>
+      <div class="toolbar-right">
+        <div class="view-toggle">
+          <a-radio-group v-model:value="viewMode" button-style="solid" size="small">
+            <a-radio-button value="table">
+              <TableOutlined />
+            </a-radio-button>
+            <a-radio-button value="card">
+              <AppstoreOutlined />
+            </a-radio-button>
+          </a-radio-group>
+        </div>
+        
+        <a-button @click="refreshData" :loading="loading">
+          <template #icon><ReloadOutlined /></template>
+        </a-button>
         
         <a-button 
           type="primary" 
           danger 
-          class="delete-btn" 
           @click="handleBatchDelete" 
           :disabled="!selectedRows.length"
+          v-if="selectedRows.length > 0"
         >
           <template #icon><DeleteOutlined /></template>
-          批量删除 {{ selectedRows.length ? `(${selectedRows.length})` : '' }}
+          删除 ({{ selectedRows.length }})
         </a-button>
       </div>
     </div>
 
-    <!-- ConfigMap 卡片/表格切换视图 -->
-    <div class="view-toggle">
-      <a-radio-group v-model:value="viewMode" button-style="solid">
-        <a-radio-button value="table">
-          <TableOutlined />
-          表格视图
-        </a-radio-button>
-        <a-radio-button value="card">
-          <AppstoreOutlined />
-          卡片视图
-        </a-radio-button>
-      </a-radio-group>
-    </div>
-
-    <!-- 表格视图 -->
-    <a-table
-      v-if="viewMode === 'table'"
-      :columns="columns"
-      :data-source="filteredConfigMaps"
-      :row-selection="rowSelection"
-      :loading="loading"
-      row-key="uid"
-      :pagination="{ 
-        pageSize: 10, 
-        showSizeChanger: true, 
-        showQuickJumper: true,
-        showTotal: (total: number) => `共 ${total} 条数据`
-      }"
-      class="configmaps-table"
-    >
-      <!-- ConfigMap名称列 -->
-      <template #name="{ text, record }">
-        <div class="configmap-name">
-          <ProfileOutlined />
-          <span>{{ text }}</span>
+    <!-- 数据展示区域 -->
+    <div class="data-display">
+      <div class="display-header" v-if="filteredConfigMaps.length > 0">
+        <div class="result-info">
+          <span class="result-count">共 {{ filteredConfigMaps.length }} 个配置</span>
+          <div class="env-tags" v-if="selectedCluster && selectedNamespace">
+            <a-tag color="blue">
+              {{ clusters.find(c => c.id === selectedCluster)?.name || '未知集群' }}
+            </a-tag>
+            <a-tag color="green">
+              {{ selectedNamespace }}
+            </a-tag>
+          </div>
         </div>
-      </template>
-      
-      <!-- 数据条目列 -->
-      <template #dataCount="{ record }">
-        <a-badge 
-          :count="Object.keys(record.data || {}).length" 
-          :number-style="{ backgroundColor: '#1890ff' }"
-        />
-      </template>
+      </div>
 
-      <!-- 配置项预览列 -->
-      <template #dataPreview="{ record }">
-        <div class="data-preview">
-          <a-tag 
-            v-for="(item, index) in Object.entries(record.data || {}).slice(0, 3)" 
-            :key="index" 
-            color="blue"
-            class="data-key-tag"
-          >
-            {{ item[0] }}
-          </a-tag>
-          <a-tag v-if="Object.keys(record.data || {}).length > 3" color="default">
-            +{{ Object.keys(record.data || {}).length - 3 }}
-          </a-tag>
-          <span v-if="!record.data || Object.keys(record.data).length === 0" class="empty-data">
-            无数据项
-          </span>
-        </div>
-      </template>
+      <!-- 表格视图 -->
+      <a-table
+        v-if="viewMode === 'table'"
+        :columns="columns"
+        :data-source="filteredConfigMaps"
+        :row-selection="rowSelection"
+        :loading="loading"
+        row-key="uid"
+        :pagination="{ 
+          pageSize: 12, 
+          showSizeChanger: true, 
+          showQuickJumper: true,
+          showTotal: (total: number) => `共 ${total} 条数据`,
+          pageSizeOptions: ['12', '24', '48', '96']
+        }"
+        class="configmap-table"
+      >
+        <!-- ConfigMap名称列 -->
+        <template #name="{ text }">
+          <div class="configmap-name">
+            <ProfileOutlined />
+            <span>{{ text }}</span>
+          </div>
+        </template>
+        
+        <!-- 数据条目列 -->
+        <template #dataCount="{ record }">
+          <a-badge 
+            :count="Object.keys(record.data || {}).length" 
+            :number-style="{ backgroundColor: '#1890ff' }"
+          />
+        </template>
 
-      <!-- 创建时间列 -->
-      <template #creationTimestamp="{ text }">
-        <div class="timestamp">
-          <ClockCircleOutlined />
-          <span>{{ formatDate(text) }}</span>
-          <a-tooltip :title="getRelativeTime(text)">
-            <span class="relative-time">{{ getRelativeTime(text) }}</span>
-          </a-tooltip>
-        </div>
-      </template>
-
-      <!-- 操作列 -->
-      <template #action="{ record }">
-        <div class="action-column">
-          <a-tooltip title="查看 YAML">
-            <a-button type="primary" ghost shape="circle" @click="viewConfigMapYaml(record)">
-              <template #icon><CodeOutlined /></template>
-            </a-button>
-          </a-tooltip>
-          
-          <a-tooltip title="查看配置详情">
-            <a-button type="primary" ghost shape="circle" @click="viewConfigDetail(record)">
-              <template #icon><EyeOutlined /></template>
-            </a-button>
-          </a-tooltip>
-          
-          <a-tooltip title="删除配置">
-            <a-popconfirm
-              title="确定要删除该 ConfigMap 吗?"
-              description="此操作不可撤销"
-              @confirm="handleDelete(record)"
-              ok-text="确定"
-              cancel-text="取消"
+        <!-- 配置项预览列 -->
+        <template #dataPreview="{ record }">
+          <div class="data-preview">
+            <a-tag 
+              v-for="(item, index) in Object.entries(record.data || {}).slice(0, 3)" 
+              :key="index" 
+              color="blue"
+              class="data-key-tag"
             >
-              <a-button type="primary" danger ghost shape="circle">
-                <template #icon><DeleteOutlined /></template>
-              </a-button>
-            </a-popconfirm>
-          </a-tooltip>
-        </div>
-      </template>
-    </a-table>
+              {{ item[0] }}
+            </a-tag>
+            <a-tag v-if="Object.keys(record.data || {}).length > 3" color="default">
+              +{{ Object.keys(record.data || {}).length - 3 }}
+            </a-tag>
+            <span v-if="!record.data || Object.keys(record.data).length === 0" class="empty-data">
+              无数据项
+            </span>
+          </div>
+        </template>
 
-    <!-- 卡片视图 -->
-    <div v-else class="card-view">
-      <a-spin :spinning="loading">
-        <a-empty v-if="filteredConfigMaps.length === 0" description="暂无配置数据" />
-        <div v-else class="configmap-cards">
-          <a-checkbox-group v-model:value="selectedCardIds" class="card-checkbox-group">
-            <div v-for="configmap in filteredConfigMaps" :key="configmap.metadata.uid" class="configmap-card">
-              <div class="card-header">
-                <a-checkbox :value="configmap.metadata.uid" class="card-checkbox" />
-                <div class="configmap-title">
-                  <ProfileOutlined class="configmap-icon" />
-                  <h3>{{ configmap.metadata.name }}</h3>
+        <!-- 创建时间列 -->
+        <template #creationTimestamp="{ text }">
+          <div class="timestamp">
+            <ClockCircleOutlined />
+            <a-tooltip :title="formatDateTime(text)">
+              {{ formatDate(text) }}
+            </a-tooltip>
+          </div>
+        </template>
+
+        <!-- 操作列 -->
+        <template #action="{ record }">
+          <div class="action-column">
+            <a-tooltip title="查看 YAML">
+              <a-button type="primary" ghost shape="circle" @click="viewConfigMapYaml(record)">
+                <template #icon><CodeOutlined /></template>
+              </a-button>
+            </a-tooltip>
+            
+            <a-tooltip title="查看配置详情">
+              <a-button type="primary" ghost shape="circle" @click="viewConfigDetail(record)">
+                <template #icon><EyeOutlined /></template>
+              </a-button>
+            </a-tooltip>
+            
+            <a-tooltip title="删除配置">
+              <a-popconfirm
+                title="确定要删除该 ConfigMap 吗?"
+                description="此操作不可撤销"
+                @confirm="handleDelete(record)"
+                ok-text="确定"
+                cancel-text="取消"
+              >
+                <a-button type="primary" danger ghost shape="circle">
+                  <template #icon><DeleteOutlined /></template>
+                </a-button>
+              </a-popconfirm>
+            </a-tooltip>
+          </div>
+        </template>
+
+        <!-- 空状态 -->
+        <template #emptyText>
+          <div class="empty-state">
+            <ProfileOutlined style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
+            <p>暂无配置数据</p>
+            <a-button type="primary" @click="refreshData">刷新数据</a-button>
+          </div>
+        </template>
+      </a-table>
+
+      <!-- 卡片视图 -->
+      <div v-else class="card-view">
+        <a-spin :spinning="loading">
+          <a-empty v-if="filteredConfigMaps.length === 0" description="暂无配置数据">
+            <template #image>
+              <ProfileOutlined style="font-size: 64px; color: #d9d9d9;" />
+            </template>
+            <template #description>
+              <span style="color: #999;">暂无配置数据</span>
+            </template>
+            <a-button type="primary" @click="refreshData">刷新数据</a-button>
+          </a-empty>
+          <div v-else class="configmap-cards">
+            <a-checkbox-group v-model:value="selectedCardIds" class="card-checkbox-group">
+              <div v-for="configmap in filteredConfigMaps" :key="configmap.metadata.uid" class="configmap-card">
+                <div class="card-header">
+                  <a-checkbox :value="configmap.metadata.uid" class="card-checkbox" />
+                  <div class="service-title configmap-title">
+                    <ProfileOutlined class="service-icon" />
+                    <h3>{{ configmap.metadata.name }}</h3>
+                  </div>
+                  <a-tag color="blue" class="card-type-tag">
+                    <span class="status-dot"></span>
+                    ConfigMap
+                  </a-tag>
                 </div>
-                <a-badge 
-                  :count="Object.keys(configmap.data || {}).length" 
-                  :number-style="{ backgroundColor: '#1890ff' }"
-                  class="data-count-badge"
-                />
-              </div>
-              
-              <div class="card-content">
-                <div class="card-detail">
-                  <span class="detail-label">命名空间:</span>
-                  <span class="detail-value">{{ configmap.metadata.namespace }}</span>
-                </div>
-                <div class="card-detail">
-                  <span class="detail-label">创建时间:</span>
-                  <span class="detail-value">{{ formatDate(configmap.metadata.creationTimestamp) }}</span>
-                </div>
-                <div class="card-detail">
-                  <span class="detail-label">配置项:</span>
-                  <div class="data-keys">
-                    <a-tag 
-                      v-for="(_, key, index) in configmap.data" 
-                      :key="index" 
-                      color="blue"
-                      class="data-key-tag"
-                      v-show="index < 5"
-                    >
-                      {{ key }}
-                    </a-tag>
-                    <a-tag v-if="Object.keys(configmap.data || {}).length > 5" color="default">
-                      +{{ Object.keys(configmap.data || {}).length - 5 }}
-                    </a-tag>
-                    <span v-if="!configmap.data || Object.keys(configmap.data).length === 0" class="empty-data">
-                      无数据项
+                
+                <div class="card-content">
+                  <div class="card-detail namespace-detail">
+                    <span class="detail-label">命名空间:</span>
+                    <span class="detail-value">
+                      {{ configmap.metadata.namespace || '-' }}
+                    </span>
+                  </div>
+                  <div class="card-detail datacount-detail">
+                    <span class="detail-label">配置项数量:</span>
+                    <span class="detail-value">
+                      <a-badge 
+                        :count="Object.keys(configmap.data || {}).length" 
+                        :number-style="{ backgroundColor: '#1890ff' }"
+                      />
+                    </span>
+                  </div>
+                  <div class="card-detail keys-detail">
+                    <span class="detail-label">配置项:</span>
+                    <div class="detail-value">
+                      <div class="data-keys">
+                        <a-tag 
+                          v-for="(_, key, index) in configmap.data" 
+                          :key="index" 
+                          color="blue"
+                          class="data-key-tag"
+                          v-show="index < 5"
+                        >
+                          {{ key }}
+                        </a-tag>
+                        <a-tag v-if="Object.keys(configmap.data || {}).length > 5" color="default">
+                          +{{ Object.keys(configmap.data || {}).length - 5 }}
+                        </a-tag>
+                        <span v-if="!configmap.data || Object.keys(configmap.data).length === 0" class="empty-data">
+                          无数据项
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-detail created-detail">
+                    <span class="detail-label">创建时间:</span>
+                    <span class="detail-value">
+                      <ClockCircleOutlined />
+                      {{ formatDate(configmap.metadata.creationTimestamp) }}
                     </span>
                   </div>
                 </div>
-              </div>
-              
-              <div class="card-footer">
-                <a-button type="primary" ghost size="small" @click="viewConfigMapYaml(configmap)">
-                  <template #icon><CodeOutlined /></template>
-                  YAML
-                </a-button>
-                <a-button type="primary" ghost size="small" @click="viewConfigDetail(configmap)">
-                  <template #icon><EyeOutlined /></template>
-                  查看配置
-                </a-button>
-                <a-popconfirm
-                  title="确定要删除该 ConfigMap 吗?"
-                  @confirm="handleDelete(configmap)"
-                  ok-text="确定"
-                  cancel-text="取消"
-                >
-                  <a-button type="primary" danger ghost size="small">
-                    <template #icon><DeleteOutlined /></template>
-                    删除
+                
+                <div class="card-footer card-action-footer">
+                  <a-button type="primary" ghost size="small" @click="viewConfigMapYaml(configmap)">
+                    <template #icon><CodeOutlined /></template>
+                    YAML
                   </a-button>
-                </a-popconfirm>
+                  <a-button type="primary" ghost size="small" @click="viewConfigDetail(configmap)">
+                    <template #icon><EyeOutlined /></template>
+                    查看配置
+                  </a-button>
+                  <a-popconfirm
+                    title="确定要删除该 ConfigMap 吗?"
+                    @confirm="handleDelete(configmap)"
+                    ok-text="确定"
+                    cancel-text="取消"
+                  >
+                    <a-button type="primary" danger ghost size="small">
+                      <template #icon><DeleteOutlined /></template>
+                      删除
+                    </a-button>
+                  </a-popconfirm>
+                </div>
               </div>
-            </div>
-          </a-checkbox-group>
-        </div>
-      </a-spin>
+            </a-checkbox-group>
+          </div>
+        </a-spin>
+      </div>
     </div>
 
     <!-- 查看 ConfigMap YAML 模态框 -->
     <a-modal
-      v-model:visible="viewYamlModalVisible"
+      v-model:open="viewYamlModalVisible"
       title="ConfigMap YAML 配置"
-      width="800px"
-      class="yaml-modal"
+      :width="800"
+      class="configmap-modal"
       :footer="null"
     >
-      <a-alert v-if="currentConfigMap" class="yaml-info" type="info" show-icon>
-        <template #message>
-          <span>{{ currentConfigMap.metadata.name }} ({{ currentConfigMap.metadata.namespace }})</span>
-        </template>
-        <template #description>
-          <div>配置项数量: {{ Object.keys(currentConfigMap.data || {}).length }} | 创建于: {{ formatDate(currentConfigMap.metadata.creationTimestamp) }}</div>
-        </template>
+      <a-alert v-if="currentConfigMap" class="modal-alert" type="info" show-icon>
+        <template #message>{{ currentConfigMap.metadata.name }} ({{ currentConfigMap.metadata.namespace }})</template>
+        <template #description>配置项数量: {{ Object.keys(currentConfigMap.data || {}).length }} | 创建于: {{ formatDateTime(currentConfigMap.metadata.creationTimestamp) }}</template>
       </a-alert>
       <div class="yaml-actions">
         <a-button type="primary" size="small" @click="copyYaml">
@@ -295,19 +382,15 @@
 
     <!-- 查看配置详情模态框 -->
     <a-modal
-      v-model:visible="configDetailModalVisible"
+      v-model:open="configDetailModalVisible"
       title="ConfigMap 配置详情"
-      width="800px"
-      class="config-detail-modal"
+      :width="800"
+      class="configmap-modal"
       :footer="null"
     >
-      <a-alert v-if="currentConfigMap" class="yaml-info" type="info" show-icon>
-        <template #message>
-          <span>{{ currentConfigMap.metadata.name }} ({{ currentConfigMap.metadata.namespace }})</span>
-        </template>
-        <template #description>
-          <div>配置项数量: {{ Object.keys(currentConfigMap.data || {}).length }} | 创建于: {{ formatDate(currentConfigMap.metadata.creationTimestamp) }}</div>
-        </template>
+      <a-alert v-if="currentConfigMap" class="modal-alert" type="info" show-icon>
+        <template #message>{{ currentConfigMap.metadata.name }} ({{ currentConfigMap.metadata.namespace }})</template>
+        <template #description>配置项数量: {{ Object.keys(currentConfigMap.data || {}).length }} | 创建于: {{ formatDateTime(currentConfigMap.metadata.creationTimestamp) }}</template>
       </a-alert>
       
       <a-tabs v-if="currentConfigMap && currentConfigMap.data">
@@ -388,6 +471,13 @@ const viewMode = ref<'table' | 'card'>('table');
 const currentConfigMap = ref<ConfigMap | null>(null);
 const selectedCardIds = ref<string[]>([]);
 
+// 计算属性：配置项总数
+const totalConfigItems = computed(() => {
+  return configMaps.value.reduce((total, cm) => {
+    return total + Object.keys(cm.data || {}).length;
+  }, 0);
+});
+
 // 根据卡片选择更新 selectedRows
 watch(selectedCardIds, (newValue) => {
   selectedRows.value = configMaps.value.filter(configmap => 
@@ -423,7 +513,7 @@ const columns = [
   {
     title: '配置项预览',
     key: 'dataPreview',
-    width: '20%',
+    width: '25%',
     slots: { customRender: 'dataPreview' },
   },
   {
@@ -453,33 +543,23 @@ const filteredConfigMaps = computed(() => {
   );
 });
 
-// 格式化日期
-const formatDate = (dateString: string) => {
+// 日期格式化
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '-';
   const date = new Date(dateString);
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
-// 获取相对时间
-const getRelativeTime = (dateString: string) => {
-  const now = new Date();
-  const past = new Date(dateString);
-  const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) return `${diffInSeconds}秒前`;
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}分钟前`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}小时前`;
-  return `${Math.floor(diffInSeconds / 86400)}天前`;
+// 日期时间格式化
+const formatDateTime = (dateString: string): string => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
 };
 
 // 表格选择配置
 const rowSelection = {
-  onChange: (selectedRowKeys: string[], selectedRowsData: ConfigMap[]) => {
+  onChange: (_selectedRowKeys: string[], selectedRowsData: ConfigMap[]) => {
     selectedRows.value = selectedRowsData;
     selectedCardIds.value = selectedRowsData.map(row => row.metadata.uid);
   },
@@ -650,26 +730,329 @@ onMounted(() => {
 </script>
 
 <style>
-/* 基础样式继承自 Service 组件 */
-/* 仅添加/修改与 ConfigMap 相关的特定样式 */
+/* 现代化大气设计系统 */
+:root {
+  --primary-color: #1677ff;
+  --primary-hover: #4096ff;
+  --primary-active: #0958d9;
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+  --error-color: #ff4d4f;
+  --text-primary: #000000d9;
+  --text-secondary: #00000073;
+  --text-tertiary: #00000040;
+  --text-quaternary: #00000026;
+  --border-color: #d9d9d9;
+  --border-color-split: #f0f0f0;
+  --background-color: #f5f5f5;
+  --component-background: #ffffff;
+  --layout-header-background: #001529;
+  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-3: 0 9px 28px rgba(0, 0, 0, 0.12);
+  --border-radius-base: 8px;
+  --border-radius-sm: 6px;
+  --border-radius-lg: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-xxl: 24px;
+  --line-height-base: 1.5714;
+  --transition-duration: 0.3s;
+  --transition-function: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
 
-.configmap-manager {
-  background-color: #f0f2f5;
-  border-radius: 8px;
+/* ==================== 布局容器 ==================== */
+.configmap-management-container {
+  min-height: 100vh;
+  background: var(--background-color);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ==================== 页面头部 ==================== */
+.page-header {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+.header-content {
+  padding: 32px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.title-section {
+  flex: 1;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.title-icon {
+  font-size: 28px;
+  color: var(--primary-color);
+  margin-right: 16px;
+}
+
+.page-title h1 {
+  font-size: var(--font-size-xxl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: var(--line-height-base);
+}
+
+.header-actions {
+  flex-shrink: 0;
+}
+
+/* ==================== 概览卡片 ==================== */
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.overview-card {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  padding: 24px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-duration) var(--transition-function);
+  border: 1px solid var(--border-color-split);
+}
+
+.overview-card:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.total-configmaps .card-icon {
+  background: rgba(22, 119, 255, 0.1);
+  color: var(--primary-color);
+}
+
+.selected-cluster .card-icon {
+  background: rgba(82, 196, 26, 0.1);
+  color: var(--success-color);
+}
+
+.selected-namespace .card-icon {
+  background: rgba(250, 173, 20, 0.1);
+  color: var(--warning-color);
+}
+
+.config-items .card-icon {
+  background: rgba(114, 46, 209, 0.1);
+  color: #722ed1;
+}
+
+.card-info {
+  flex: 1;
+}
+
+.card-number {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-label {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: var(--line-height-base);
+}
+
+/* ==================== 工具栏 ==================== */
+.toolbar {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  border: 1px solid var(--border-color-split);
+}
+
+.toolbar-left {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex: 1;
+}
+
+.cluster-selector, .namespace-selector {
+  width: 200px;
+}
+
+.cluster-selector :deep(.ant-select-selector),
+.namespace-selector :deep(.ant-select-selector) {
+  border-radius: var(--border-radius-sm);
+  height: 40px;
+}
+
+.search-input {
+  width: 280px;
+}
+
+.search-input :deep(.ant-input) {
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-base);
+  height: 40px;
+}
+
+.toolbar-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.view-toggle :deep(.ant-radio-group) {
+  border-radius: var(--border-radius-sm);
+}
+
+.view-toggle :deep(.ant-radio-button-wrapper) {
+  height: 32px;
+  line-height: 30px;
+  padding: 0 12px;
+  border-radius: var(--border-radius-sm);
+}
+
+.view-toggle :deep(.ant-radio-button-wrapper:first-child) {
+  border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
+}
+
+.view-toggle :deep(.ant-radio-button-wrapper:last-child) {
+  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+}
+
+.cluster-option, .namespace-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ==================== 数据展示区域 ==================== */
+.data-display {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  box-shadow: var(--shadow-1);
+  border: 1px solid var(--border-color-split);
+  overflow: hidden;
+}
+
+.display-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color-split);
+  background: var(--component-background);
+}
+
+.result-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.result-count {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.env-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.env-tags :deep(.ant-tag) {
+  border-radius: var(--border-radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* ==================== 表格样式 ==================== */
+.configmap-table {
+  border: none;
+}
+
+.configmap-table :deep(.ant-table-container) {
+  border-radius: 0;
+}
+
+.configmap-table :deep(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  font-weight: 600;
+  padding: 16px 16px;
+  border-bottom: 1px solid var(--border-color-split);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+}
+
+.configmap-table :deep(.ant-table-tbody > tr) {
+  transition: background-color var(--transition-duration) var(--transition-function);
+}
+
+.configmap-table :deep(.ant-table-tbody > tr:hover) {
+  background-color: #fafafa;
+}
+
+.configmap-table :deep(.ant-table-tbody > tr > td) {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color-split);
+  vertical-align: middle;
+  font-size: var(--font-size-base);
 }
 
 .configmap-name {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-weight: 500;
 }
 
-.configmap-icon {
-  color: var(--primary-color);
-  font-size: 20px;
+.configmap-name span {
+  color: var(--text-primary);
 }
 
 .data-preview {
@@ -690,66 +1073,220 @@ onMounted(() => {
 }
 
 .empty-data {
-  color: #999;
+  color: var(--text-tertiary);
   font-style: italic;
   font-size: 12px;
 }
 
-.data-count-badge {
-  position: absolute;
-  top: 12px;
-  right: 50px;
-}
-
-.configmaps-table {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-/* 卡片视图相关样式 */
-.configmap-cards {
+.timestamp {
   display: flex;
-  flex-wrap: wrap;
-  gap: 30px;
-  padding: 10px;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+}
+
+.action-column {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.action-column :deep(.ant-btn) {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-duration) var(--transition-function);
+}
+
+.action-column :deep(.ant-btn:hover) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+/* ==================== 卡片视图 ==================== */
+.card-view {
+  padding: 24px;
+}
+
+.configmap-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 24px;
+}
+
+.card-checkbox-group {
+  display: contents;
 }
 
 .configmap-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s, box-shadow 0.3s;
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  box-shadow: var(--shadow-1);
+  transition: all var(--transition-duration) var(--transition-function);
   overflow: hidden;
+  border: 1px solid var(--border-color-split);
   position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 350px;
-  border: 1px solid #eaeaea;
-  margin-bottom: 20px;
 }
 
 .configmap-card:hover {
+  box-shadow: var(--shadow-2);
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+  padding: 24px 24px 16px;
+  background: var(--component-background);
+  position: relative;
 }
 
 .configmap-title {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-right: 45px;
+  margin-right: 60px;
+}
+
+.configmap-title h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.service-icon {
+  font-size: 20px;
+  color: var(--primary-color);
+}
+
+.card-type-tag {
+  position: absolute;
+  top: 20px;
+  right: 48px;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.card-checkbox {
+  position: absolute;
+  top: 20px;
+  right: 16px;
+}
+
+.card-content {
+  padding: 0 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-detail {
+  display: flex;
+  align-items: flex-start;
+  line-height: var(--line-height-base);
+}
+
+.detail-label {
+  color: var(--text-secondary);
+  min-width: 100px;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+}
+
+.detail-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  flex: 1;
+  font-weight: 500;
 }
 
 .data-keys {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
-/* 配置详情模态框样式 */
+.card-action-footer {
+  padding: 16px 24px 20px;
+  background: #fafafa;
+  border-top: 1px solid var(--border-color-split);
+  display: flex;
+  gap: 12px;
+}
+
+.card-action-footer .ant-btn {
+  flex: 1;
+  height: 36px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  transition: all var(--transition-duration) var(--transition-function);
+  font-size: var(--font-size-base);
+}
+
+.card-action-footer .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+/* ==================== 模态框样式 ==================== */
+.configmap-modal :deep(.ant-modal-content) {
+  border-radius: var(--border-radius-base);
+  overflow: hidden;
+  box-shadow: var(--shadow-3);
+}
+
+.configmap-modal :deep(.ant-modal-header) {
+  background: var(--component-background);
+  border-bottom: 1px solid var(--border-color-split);
+  padding: 20px 24px;
+}
+
+.configmap-modal :deep(.ant-modal-title) {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-alert {
+  margin-bottom: 20px;
+  border-radius: var(--border-radius-sm);
+}
+
+.yaml-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.yaml-editor {
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color-split);
+  overflow: auto;
+  max-height: 500px;
+  margin: 0;
+  white-space: pre;
+}
+
 .config-detail-content {
   padding: 10px 0;
 }
@@ -766,8 +1303,8 @@ onMounted(() => {
   line-height: 1.5;
   padding: 16px;
   background-color: #fafafa;
-  border-radius: 4px;
-  border: 1px solid #f0f0f0;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color-split);
   overflow: auto;
   max-height: 400px;
   margin: 0;
@@ -775,334 +1312,146 @@ onMounted(() => {
   word-break: break-all;
 }
 
-/* 以下样式继承自 Service 组件 */
-:root {
-  --primary-color: #1890ff;
-  --success-color: #52c41a;
-  --warning-color: #faad14;
-  --error-color: #f5222d;
-  --font-size-base: 14px;
-  --border-radius-base: 4px;
-  --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  --transition-duration: 0.3s;
-}
-
-/* 仪表板标题样式 */
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.dashboard-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #262626;
-  margin: 0;
-  display: flex;
-  align-items: center;
-}
-
-.dashboard-stats {
-  display: flex;
-  gap: 20px;
-}
-
-.stat-item {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border-radius: 8px;
-  padding: 10px 18px;
-  color: white;
-  min-width: 120px;
-  text-align: center;
-  box-shadow: 0 3px 8px rgba(24, 144, 255, 0.2);
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.stat-label {
-  font-size: 12px;
-  opacity: 0.9;
-  margin-top: 4px;
-}
-
-/* 控制面板样式 */
-.control-panel {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-.search-filters {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  align-items: center;
-  flex: 1;
-}
-
-.control-item {
-  min-width: 200px;
-}
-
-.search-input {
-  flex-grow: 1;
-  max-width: 300px;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  margin-left: 20px;
-}
-
-.refresh-btn {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border: none;
-  height: 36px;
-  width: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.delete-btn {
-  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
-  border: none;
-  height: 36px;
-  padding: 0 16px;
-  font-weight: 500;
-}
-
-.cluster-option, .namespace-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* 视图切换按钮 */
-.view-toggle {
-  margin-bottom: 20px;
-  text-align: right;
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper) {
-  padding: 0 16px;
-  height: 36px;
-  line-height: 34px;
-  display: inline-flex;
-  align-items: center;
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper svg) {
-  margin-right: 6px;
-}
-
-/* 时间戳样式 */
-.timestamp {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #595959;
-}
-
-.relative-time {
-  font-size: 12px;
-  color: #8c8c8c;
-  margin-left: 4px;
-}
-
-/* 操作列样式 */
-.action-column {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.action-column :deep(.ant-btn) {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-}
-
-/* 卡片视图样式 */
-.card-view {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-/* 卡片容器布局 */
-.card-checkbox-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 30px;
-  padding: 10px;
-}
-
-/* 卡片样式 */
-.card-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
-  background-color: #fafafa;
-  position: relative;
-}
-
-.card-checkbox {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-}
-
-.card-content {
-  padding: 20px;
-  flex-grow: 1;
+/* ==================== 空状态 ==================== */
+.empty-state {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  background: #fff;
-}
-
-.card-detail {
-  display: flex;
-  align-items: baseline;
-  line-height: 1.5;
-}
-
-.detail-label {
-  color: #666;
-  min-width: 100px;
-  font-size: 14px;
-}
-
-.detail-value {
-  display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #333;
-  flex: 1;
+  padding: 60px 0;
+  color: var(--text-secondary);
 }
 
-.card-footer {
-  padding: 16px 20px;
-  background-color: #f5f7fa;
-  border-top: 1px solid #eeeeee;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
+.empty-state p {
+  margin: 16px 0 24px;
+  font-size: var(--font-size-base);
 }
 
-.card-footer .ant-btn {
-  flex: 1;
-  border-radius: 4px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.card-footer .ant-btn svg {
-  margin-right: 8px;
-}
-
-/* YAML模态框样式 */
-.yaml-modal :deep(.ant-modal-content) {
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.yaml-info {
-  margin-bottom: 16px;
-}
-
-.yaml-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
-}
-
-.yaml-editor {
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  padding: 16px;
-  background-color: #fafafa;
-  border-radius: 4px;
-  border: 1px solid #f0f0f0;
-  overflow: auto;
-  max-height: 500px;
-  margin: 0;
-}
-
-/* 响应式调整 */
+/* ==================== 响应式设计 ==================== */
 @media (max-width: 1400px) {
-  .card-checkbox-group {
-    justify-content: space-around;
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
   }
   
-  .configmap-card {
-    width: 320px;
+  .configmap-cards {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .configmap-management-container {
+    padding: 16px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    padding: 24px 32px;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .toolbar-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .cluster-selector, .namespace-selector, .search-input {
+    width: 100%;
+  }
+  
+  .toolbar-right {
+    justify-content: space-between;
   }
 }
 
 @media (max-width: 768px) {
-  .dashboard-header {
-    flex-direction: column;
-    align-items: flex-start;
+  .configmap-management-container {
+    padding: 12px;
+  }
+  
+  .header-content {
+    padding: 20px 24px;
+  }
+  
+  .page-title h1 {
+    font-size: var(--font-size-xl);
+  }
+  
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .overview-card {
+    padding: 16px;
+  }
+  
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    margin-right: 12px;
+  }
+  
+  .card-number {
+    font-size: var(--font-size-lg);
+  }
+  
+  .configmap-cards {
+    grid-template-columns: 1fr;
     gap: 16px;
-  }
-  
-  .control-panel {
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  .search-filters {
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .control-item {
-    width: 100%;
-    min-width: auto;
-  }
-  
-  .action-buttons {
-    width: 100%;
-    justify-content: flex-end;
-    margin-left: 0;
-  }
-  
-  .card-checkbox-group {
-    flex-direction: column;
-    align-items: center;
   }
   
   .configmap-card {
-    width: 100%;
-    max-width: 450px;
+    margin-bottom: 0;
   }
   
-  .card-footer {
-    flex-wrap: wrap;
+  .card-action-footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .overview-card {
+    padding: 12px;
+  }
+  
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    margin-right: 8px;
+  }
+  
+  .toolbar-right {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .configmap-table :deep(.ant-table-tbody > tr > td) {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+  
+  .action-column {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .action-column :deep(.ant-btn) {
+    width: 28px;
+    height: 28px;
   }
 }
 </style>

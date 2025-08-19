@@ -1,271 +1,276 @@
 <template>
-  <div class="service-manager yaml-task-manager">
-    <!-- 仪表板标题 -->
-    <div class="dashboard-header">
-      <h2 class="dashboard-title">
-        <FileProtectOutlined class="dashboard-icon" />
-        Kubernetes YAML 任务管理器
-      </h2>
-      <div class="dashboard-stats">
-        <div class="stat-item">
-          <div class="stat-value">{{ tasks.length }}</div>
-          <div class="stat-label">任务总数</div>
+  <div class="yaml-task-management-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="title-section">
+          <div class="page-title">
+            <FileProtectOutlined class="title-icon" />
+            <h1>YAML 任务管理</h1>
+          </div>
+          <p class="page-subtitle">管理和执行您的 Kubernetes YAML 部署任务</p>
         </div>
-        <div class="stat-item">
-          <div class="stat-value">{{ templates.length }}</div>
-          <div class="stat-label">可用模板</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">{{ clusters.length }}</div>
-          <div class="stat-label">集群连接</div>
+        <div class="header-actions">
+          <a-button type="primary" size="large" @click="showCreateModal">
+            <template #icon><PlusOutlined /></template>
+            新建任务
+          </a-button>
         </div>
       </div>
     </div>
 
-    <!-- 查询和操作工具栏 -->
-    <div class="control-panel">
-      <div class="search-filters">
+    <!-- 数据概览卡片 -->
+    <div class="overview-cards">
+      <div class="overview-card total-tasks">
+        <div class="card-icon">
+          <FileProtectOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ tasks.length }}</div>
+          <div class="card-label">任务总数</div>
+        </div>
+      </div>
+      
+      <div class="overview-card total-templates">
+        <div class="card-icon">
+          <FileOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ templates.length }}</div>
+          <div class="card-label">可用模板</div>
+        </div>
+      </div>
+      
+      <div class="overview-card total-clusters">
+        <div class="card-icon">
+          <CloudServerOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ clusters.length }}</div>
+          <div class="card-label">集群连接</div>
+        </div>
+      </div>
+      
+      <div class="overview-card recent-activity">
+        <div class="card-icon">
+          <ClockCircleOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ recentTasksCount }}</div>
+          <div class="card-label">近期任务</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-left">
         <a-input-search
           v-model:value="searchText"
           placeholder="搜索任务名称"
-          class="control-item search-input"
+          class="search-input"
           @search="onSearch"
           allow-clear
-        >
-          <template #prefix><SearchOutlined /></template>
-        </a-input-search>
+        />
       </div>
       
-      <div class="action-buttons">
-        <a-tooltip title="刷新数据">
-          <a-button type="primary" class="refresh-btn" @click="getTasks" :loading="loading">
-            <template #icon><ReloadOutlined /></template>
-          </a-button>
-        </a-tooltip>
+      <div class="toolbar-right">
+        <div class="view-toggle">
+          <a-radio-group v-model:value="viewMode" button-style="solid" size="small">
+            <a-radio-button value="table">
+              <UnorderedListOutlined />
+            </a-radio-button>
+            <a-radio-button value="card">
+              <AppstoreOutlined />
+            </a-radio-button>
+          </a-radio-group>
+        </div>
         
-        <a-button 
-          type="primary" 
-          class="create-btn" 
-          @click="showCreateModal"
-        >
+        <a-button @click="getTasks" :loading="loading">
+          <template #icon><ReloadOutlined /></template>
+        </a-button>
+        
+        <a-button type="primary" @click="showCreateModal">
           <template #icon><PlusOutlined /></template>
           新建任务
         </a-button>
       </div>
     </div>
 
-    <!-- 状态摘要卡片 -->
-    <div class="status-summary">
-      <div class="summary-card total-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <FileProtectOutlined class="metric-icon" />
-            <div class="metric-value">{{ tasks.length }}</div>
-          </div>
-          <div class="card-title">任务总数</div>
-        </div>
-        <div class="card-footer">
-          <div class="footer-text">管理您的全部YAML任务</div>
+    <!-- 数据展示区域 -->
+    <div class="data-display">
+      <div class="display-header" v-if="filteredTasks.length > 0">
+        <div class="result-info">
+          <span class="result-count">共 {{ filteredTasks.length }} 个任务</span>
         </div>
       </div>
-      
-      <div class="summary-card running-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <FileOutlined class="metric-icon" />
-            <div class="metric-value">{{ templates.length }}</div>
+
+      <!-- 表格视图 -->
+      <a-table
+        v-if="viewMode === 'table'"
+        :columns="columns"
+        :data-source="filteredTasks"
+        :loading="loading"
+        row-key="id"
+        :pagination="{ 
+          pageSize: 12, 
+          showSizeChanger: true, 
+          showQuickJumper: true,
+          showTotal: (total: number) => `共 ${total} 条数据`,
+          pageSizeOptions: ['12', '24', '48', '96']
+        }"
+        class="yaml-task-table"
+      >
+        <!-- 任务名称列 -->
+        <template #name="{ text }">
+          <div class="task-name">
+            <FileProtectOutlined />
+            <span class="task-title">{{ text }}</span>
           </div>
-          <div class="card-title">可用模板</div>
-        </div>
-        <div class="card-footer">
-          <div class="footer-text">部署模板库</div>
-        </div>
-      </div>
-      
-      <div class="summary-card env-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <CloudServerOutlined class="metric-icon" />
-            <div class="metric-value">{{ clusters.length }}</div>
+        </template>
+        
+        <!-- 创建时间列 -->
+        <template #created_at="{ text }">
+          <div class="timestamp">
+            <ClockCircleOutlined />
+            <a-tooltip :title="formatDateTime(text)">
+              {{ formatDate(text) }}
+            </a-tooltip>
           </div>
-          <div class="card-title">集群连接</div>
-        </div>
-        <div class="card-footer">
-          <div class="footer-text">{{ clusters.length > 0 ? '连接正常' : '等待连接' }}</div>
-        </div>
-      </div>
-    </div>
+        </template>
 
-    <!-- 视图切换 -->
-    <div class="view-toggle">
-      <a-radio-group v-model:value="viewMode" button-style="solid">
-        <a-radio-button value="table">
-          <UnorderedListOutlined />
-          表格视图
-        </a-radio-button>
-        <a-radio-button value="card">
-          <AppstoreOutlined />
-          卡片视图
-        </a-radio-button>
-      </a-radio-group>
-    </div>
+        <!-- 更新时间列 -->
+        <template #updated_at="{ text }">
+          <div class="timestamp">
+            <ClockCircleOutlined />
+            <a-tooltip :title="formatDateTime(text)">
+              {{ formatDate(text) }}
+            </a-tooltip>
+          </div>
+        </template>
 
-    <!-- 表格视图 -->
-    <a-table
-      v-if="viewMode === 'table'"
-      :columns="columns"
-      :data-source="filteredTasks"
-      :loading="loading"
-      row-key="id"
-      :pagination="{ 
-        pageSize: 10, 
-        showSizeChanger: true, 
-        showQuickJumper: true,
-        showTotal: (total: number) => `共 ${total} 条数据`
-      }"
-      class="services-table yaml-task-table"
-    >
-      <!-- 任务名称列 -->
-      <template #name="{ text }">
-        <div class="task-name">
-          <FileProtectOutlined />
-          <span class="task-title">{{ text }}</span>
-        </div>
-      </template>
-      
-      <!-- 创建时间列 -->
-      <template #created_at="{ text }">
-        <div class="timestamp">
-          <ClockCircleOutlined />
-          <a-tooltip :title="formatDateTime(text)">
-            {{ formatDate(text) }}
-          </a-tooltip>
-        </div>
-      </template>
-
-      <!-- 更新时间列 -->
-      <template #updated_at="{ text }">
-        <div class="timestamp">
-          <ClockCircleOutlined />
-          <a-tooltip :title="formatDateTime(text)">
-            {{ formatDate(text) }}
-          </a-tooltip>
-        </div>
-      </template>
-
-      <!-- 操作列 -->
-      <template #action="{ record }">
-        <div class="action-column">
-          <a-tooltip title="应用任务">
-            <a-button type="primary" ghost shape="circle" @click="handleApply(record)">
-              <template #icon><PlayCircleOutlined /></template>
-            </a-button>
-          </a-tooltip>
-          
-          <a-tooltip title="编辑任务">
-            <a-button type="primary" ghost shape="circle" @click="handleEdit(record)">
-              <template #icon><EditOutlined /></template>
-            </a-button>
-          </a-tooltip>
-          
-          <a-tooltip title="删除任务">
-            <a-popconfirm
-              title="确定要删除该任务吗?"
-              description="此操作不可撤销"
-              @confirm="handleDelete(record)"
-              ok-text="确定"
-              cancel-text="取消"
-            >
-              <a-button type="primary" danger ghost shape="circle">
-                <template #icon><DeleteOutlined /></template>
-              </a-button>
-            </a-popconfirm>
-          </a-tooltip>
-        </div>
-      </template>
-
-      <!-- 空状态 -->
-      <template #emptyText>
-        <div class="empty-state">
-          <FileProtectOutlined style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
-          <p>暂无任务数据</p>
-          <a-button type="primary" @click="showCreateModal">创建第一个任务</a-button>
-        </div>
-      </template>
-    </a-table>
-
-    <!-- 卡片视图 -->
-    <div v-else class="card-view">
-      <a-spin :spinning="loading">
-        <a-empty v-if="filteredTasks.length === 0" description="暂无任务数据" />
-        <div v-else class="service-cards yaml-task-cards">
-          <div v-for="task in filteredTasks" :key="task.id" class="service-card yaml-task-card">
-            <div class="card-header">
-              <div class="service-title task-title">
-                <FileProtectOutlined class="service-icon" />
-                <h3>{{ task.name }}</h3>
-              </div>
-              <a-tag color="blue" class="card-type-tag">
-                <span class="status-dot"></span>
-                YAML任务
-              </a-tag>
-            </div>
-            
-            <div class="card-content">
-              <div class="card-detail template-detail">
-                <span class="detail-label">模板:</span>
-                <span class="detail-value">
-                  <FileOutlined />
-                  {{ getTemplateName(task.template_id) }}
-                </span>
-              </div>
-              <div class="card-detail cluster-detail">
-                <span class="detail-label">集群:</span>
-                <span class="detail-value">
-                  <CloudServerOutlined />
-                  {{ getClusterName(task.cluster_id) }}
-                </span>
-              </div>
-              <div class="card-detail variables-detail">
-                <span class="detail-label">变量:</span>
-                <span class="detail-value">
-                  <CodeOutlined />
-                  {{ task.variables?.length || 0 }} 个
-                </span>
-              </div>
-              <div class="card-detail created-detail">
-                <span class="detail-label">创建时间:</span>
-                <span class="detail-value">
-                  <ClockCircleOutlined />
-                  {{ formatDate(task.created_at) }}
-                </span>
-              </div>
-            </div>
-            
-            <div class="card-footer card-action-footer">
-              <a-button type="primary" ghost size="small" @click="handleApply(task)">
+        <!-- 操作列 -->
+        <template #action="{ record }">
+          <div class="action-column">
+            <a-tooltip title="应用任务">
+              <a-button type="primary" ghost shape="circle" @click="handleApply(record)">
                 <template #icon><PlayCircleOutlined /></template>
-                应用
               </a-button>
-              <a-button type="primary" ghost size="small" @click="handleEdit(task)">
+            </a-tooltip>
+            
+            <a-tooltip title="编辑任务">
+              <a-button type="primary" ghost shape="circle" @click="handleEdit(record)">
                 <template #icon><EditOutlined /></template>
-                编辑
               </a-button>
+            </a-tooltip>
+            
+            <a-tooltip title="删除任务">
               <a-popconfirm
                 title="确定要删除该任务吗?"
-                @confirm="handleDelete(task)"
+                description="此操作不可撤销"
+                @confirm="handleDelete(record)"
                 ok-text="确定"
                 cancel-text="取消"
               >
-                <a-button type="primary" danger ghost size="small">
+                <a-button type="primary" danger ghost shape="circle">
                   <template #icon><DeleteOutlined /></template>
-                  删除
                 </a-button>
               </a-popconfirm>
+            </a-tooltip>
+          </div>
+        </template>
+
+        <!-- 空状态 -->
+        <template #emptyText>
+          <div class="empty-state">
+            <FileProtectOutlined style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
+            <p>暂无任务数据</p>
+            <a-button type="primary" @click="showCreateModal">创建第一个任务</a-button>
+          </div>
+        </template>
+      </a-table>
+
+      <!-- 卡片视图 -->
+      <div v-else class="card-view">
+        <a-spin :spinning="loading">
+          <a-empty v-if="filteredTasks.length === 0" description="暂无任务数据">
+            <template #image>
+              <FileProtectOutlined style="font-size: 64px; color: #d9d9d9;" />
+            </template>
+            <template #description>
+              <span style="color: #999;">暂无任务数据</span>
+            </template>
+            <a-button type="primary" @click="showCreateModal">创建第一个任务</a-button>
+          </a-empty>
+          <div v-else class="yaml-task-cards">
+            <div v-for="task in filteredTasks" :key="task.id" class="yaml-task-card">
+              <div class="card-header">
+                <div class="service-title task-title">
+                  <FileProtectOutlined class="service-icon" />
+                  <h3>{{ task.name }}</h3>
+                </div>
+                <a-tag color="blue" class="card-type-tag">
+                  <span class="status-dot"></span>
+                  YAML任务
+                </a-tag>
+              </div>
+              
+              <div class="card-content">
+                <div class="card-detail template-detail">
+                  <span class="detail-label">模板:</span>
+                  <span class="detail-value">
+                    <FileOutlined />
+                    {{ getTemplateName(task.template_id) }}
+                  </span>
+                </div>
+                <div class="card-detail cluster-detail">
+                  <span class="detail-label">集群:</span>
+                  <span class="detail-value">
+                    <CloudServerOutlined />
+                    {{ getClusterName(task.cluster_id) }}
+                  </span>
+                </div>
+                <div class="card-detail variables-detail">
+                  <span class="detail-label">变量:</span>
+                  <span class="detail-value">
+                    <CodeOutlined />
+                    {{ task.variables?.length || 0 }} 个
+                  </span>
+                </div>
+                <div class="card-detail created-detail">
+                  <span class="detail-label">创建时间:</span>
+                  <span class="detail-value">
+                    <ClockCircleOutlined />
+                    {{ formatDate(task.created_at) }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="card-footer card-action-footer">
+                <a-button type="primary" ghost size="small" @click="handleApply(task)">
+                  <template #icon><PlayCircleOutlined /></template>
+                  应用
+                </a-button>
+                <a-button type="primary" ghost size="small" @click="handleEdit(task)">
+                  <template #icon><EditOutlined /></template>
+                  编辑
+                </a-button>
+                <a-popconfirm
+                  title="确定要删除该任务吗?"
+                  @confirm="handleDelete(task)"
+                  ok-text="确定"
+                  cancel-text="取消"
+                >
+                  <a-button type="primary" danger ghost size="small">
+                    <template #icon><DeleteOutlined /></template>
+                    删除
+                  </a-button>
+                </a-popconfirm>
+              </div>
             </div>
           </div>
-        </div>
-      </a-spin>
+        </a-spin>
+      </div>
     </div>
 
     <!-- 创建/编辑任务模态框 -->
@@ -274,7 +279,7 @@
       :title="isEdit ? '编辑任务' : '创建任务'"
       @ok="handleSubmit"
       @cancel="closeModal"
-      width="900px"
+      :width="900"
       :okText="isEdit ? '保存更改' : '创建任务'"
       :confirmLoading="submitLoading"
       class="yaml-task-modal"
@@ -437,6 +442,16 @@ const formRef = ref<FormInstance>();
 const clusters = ref<ClusterItem[]>([]);
 const templates = ref<TemplateItem[]>([]);
 const viewMode = ref<'table' | 'card'>('table');
+
+// 计算属性：近期任务数量（7天内）
+const recentTasksCount = computed(() => {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  return tasks.value.filter(task => {
+    if (!task.created_at) return false;
+    return new Date(task.created_at) > sevenDaysAgo;
+  }).length;
+});
 
 // 表单状态
 const formState = reactive<Partial<YamlTask>>({
@@ -687,422 +702,479 @@ onMounted(async () => {
 </script>
 
 <style>
-/* 继承集群管理页面的基础样式 */
+/* 现代化大气设计系统 */
 :root {
-  --primary-color: #1890ff;
+  --primary-color: #1677ff;
+  --primary-hover: #4096ff;
+  --primary-active: #0958d9;
   --success-color: #52c41a;
   --warning-color: #faad14;
-  --error-color: #f5222d;
+  --error-color: #ff4d4f;
+  --text-primary: #000000d9;
+  --text-secondary: #00000073;
+  --text-tertiary: #00000040;
+  --text-quaternary: #00000026;
+  --border-color: #d9d9d9;
+  --border-color-split: #f0f0f0;
+  --background-color: #f5f5f5;
+  --component-background: #ffffff;
+  --layout-header-background: #001529;
+  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-3: 0 9px 28px rgba(0, 0, 0, 0.12);
+  --border-radius-base: 8px;
+  --border-radius-sm: 6px;
+  --border-radius-lg: 12px;
   --font-size-base: 14px;
-  --border-radius-base: 4px;
-  --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-xxl: 24px;
+  --line-height-base: 1.5714;
   --transition-duration: 0.3s;
+  --transition-function: cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
-.yaml-task-manager {
-  background-color: #f0f2f5;
-  border-radius: 8px;
+/* ==================== 布局容器 ==================== */
+.yaml-task-management-container {
+  min-height: 100vh;
+  background: var(--background-color);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* 仪表板标题样式 */
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.dashboard-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #262626;
-  margin: 0;
-  display: flex;
-  align-items: center;
-}
-
-.dashboard-icon {
-  margin-right: 14px;
-  font-size: 28px;
-  color: #1890ff;
-}
-
-.dashboard-stats {
-  display: flex;
-  gap: 20px;
-}
-
-.stat-item {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border-radius: 8px;
-  padding: 10px 18px;
-  color: white;
-  min-width: 120px;
-  text-align: center;
-  box-shadow: 0 3px 8px rgba(24, 144, 255, 0.2);
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.stat-label {
-  font-size: 12px;
-  opacity: 0.9;
-  margin-top: 4px;
-}
-
-/* 控制面板样式 */
-.control-panel {
-  display: flex;
-  justify-content: space-between;
+/* ==================== 页面头部 ==================== */
+.page-header {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
   margin-bottom: 24px;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
 }
 
-.search-filters {
+.header-content {
+  padding: 32px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.title-section {
+  flex: 1;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.title-icon {
+  font-size: 28px;
+  color: var(--primary-color);
+  margin-right: 16px;
+}
+
+.page-title h1 {
+  font-size: var(--font-size-xxl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: var(--line-height-base);
+}
+
+.header-actions {
+  flex-shrink: 0;
+}
+
+/* ==================== 概览卡片 ==================== */
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.overview-card {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  padding: 24px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-duration) var(--transition-function);
+  border: 1px solid var(--border-color-split);
+}
+
+.overview-card:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.total-tasks .card-icon {
+  background: rgba(22, 119, 255, 0.1);
+  color: var(--primary-color);
+}
+
+.total-templates .card-icon {
+  background: rgba(82, 196, 26, 0.1);
+  color: var(--success-color);
+}
+
+.total-clusters .card-icon {
+  background: rgba(250, 173, 20, 0.1);
+  color: var(--warning-color);
+}
+
+.recent-activity .card-icon {
+  background: rgba(114, 46, 209, 0.1);
+  color: #722ed1;
+}
+
+.card-info {
+  flex: 1;
+}
+
+.card-number {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.card-label {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: var(--line-height-base);
+}
+
+/* ==================== 工具栏 ==================== */
+.toolbar {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  border: 1px solid var(--border-color-split);
+}
+
+.toolbar-left {
   display: flex;
   gap: 16px;
-  flex-wrap: wrap;
   align-items: center;
   flex: 1;
 }
 
-.control-item {
-  min-width: 200px;
-}
-
 .search-input {
-  flex-grow: 1;
-  max-width: 300px;
+  width: 320px;
 }
 
-.action-buttons {
+.search-input :deep(.ant-input) {
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-base);
+  height: 40px;
+}
+
+.toolbar-right {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
-  margin-left: 20px;
+  flex-shrink: 0;
 }
 
-.refresh-btn {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border: none;
-  height: 36px;
-  width: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.create-btn {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border: none;
-  height: 36px;
-  padding: 0 16px;
-  font-weight: 500;
-}
-
-/* 状态摘要卡片 */
-.status-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 28px;
-}
-
-.summary-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  transition: transform 0.3s, box-shadow 0.3s;
-  display: flex;
-  flex-direction: column;
-}
-
-.summary-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-}
-
-.card-content {
-  padding: 24px;
-  flex-grow: 1;
-}
-
-.card-title {
-  font-size: 14px;
-  color: #8c8c8c;
-  margin-top: 10px;
-}
-
-.card-metric {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.metric-icon {
-  font-size: 28px;
-  margin-right: 16px;
-}
-
-.metric-value {
-  font-size: 32px;
-  font-weight: 600;
-  color: #262626;
-}
-
-.total-card .metric-icon {
-  color: #1890ff;
-}
-
-.running-card .metric-icon {
-  color: #52c41a;
-}
-
-.env-card .metric-icon {
-  color: #722ed1;
-}
-
-.card-footer {
-  padding: 14px 24px;
-  background-color: #fafafa;
-  border-top: 1px solid #f0f0f0;
-}
-
-.footer-text {
-  font-size: 12px;
-  color: #8c8c8c;
-  margin-top: 6px;
-}
-
-/* 视图切换按钮 */
-.view-toggle {
-  margin-bottom: 20px;
-  text-align: right;
+.view-toggle :deep(.ant-radio-group) {
+  border-radius: var(--border-radius-sm);
 }
 
 .view-toggle :deep(.ant-radio-button-wrapper) {
-  padding: 0 16px;
-  height: 36px;
-  line-height: 34px;
-  display: inline-flex;
+  height: 32px;
+  line-height: 30px;
+  padding: 0 12px;
+  border-radius: var(--border-radius-sm);
+}
+
+.view-toggle :deep(.ant-radio-button-wrapper:first-child) {
+  border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
+}
+
+.view-toggle :deep(.ant-radio-button-wrapper:last-child) {
+  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+}
+
+/* ==================== 数据展示区域 ==================== */
+.data-display {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  box-shadow: var(--shadow-1);
+  border: 1px solid var(--border-color-split);
+  overflow: hidden;
+}
+
+.display-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color-split);
+  background: var(--component-background);
+}
+
+.result-info {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
 }
 
-.view-toggle :deep(.ant-radio-button-wrapper svg) {
-  margin-right: 6px;
+.result-count {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
-/* YAML任务表格样式 */
+/* ==================== 表格样式 ==================== */
 .yaml-task-table {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  border: none;
+}
+
+.yaml-task-table :deep(.ant-table-container) {
+  border-radius: 0;
 }
 
 .yaml-task-table :deep(.ant-table-thead > tr > th) {
-  background-color: #f5f7fa;
+  background: #fafafa;
   font-weight: 600;
-  padding: 14px 16px;
+  padding: 16px 16px;
+  border-bottom: 1px solid var(--border-color-split);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+}
+
+.yaml-task-table :deep(.ant-table-tbody > tr) {
+  transition: background-color var(--transition-duration) var(--transition-function);
+}
+
+.yaml-task-table :deep(.ant-table-tbody > tr:hover) {
+  background-color: #fafafa;
 }
 
 .yaml-task-table :deep(.ant-table-tbody > tr > td) {
-  padding: 12px 16px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color-split);
+  vertical-align: middle;
+  font-size: var(--font-size-base);
 }
 
 .task-name {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   font-weight: 500;
 }
 
 .task-title {
-  color: #1890ff;
+  color: var(--primary-color);
 }
 
 .timestamp {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #595959;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
 }
 
 .action-column {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .action-column :deep(.ant-btn) {
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-duration) var(--transition-function);
 }
 
-/* 卡片视图容器 */
+.action-column :deep(.ant-btn:hover) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+/* ==================== 卡片视图 ==================== */
 .card-view {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  padding: 24px;
 }
 
-/* YAML任务卡片样式 */
 .yaml-task-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 30px;
-  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 24px;
 }
 
 .yaml-task-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s, box-shadow 0.3s;
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  box-shadow: var(--shadow-1);
+  transition: all var(--transition-duration) var(--transition-function);
   overflow: hidden;
+  border: 1px solid var(--border-color-split);
   position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 350px;
-  border: 1px solid #eaeaea;
-  margin-bottom: 20px;
 }
 
 .yaml-task-card:hover {
+  box-shadow: var(--shadow-2);
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .card-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
-  background-color: #fafafa;
+  padding: 24px 24px 16px;
+  background: var(--component-background);
   position: relative;
 }
 
-.service-title {
+.task-title {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-right: 45px;
+  margin-right: 80px;
 }
 
-.service-title h3 {
+.task-title h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #333;
-  word-break: break-all;
-  line-height: 1.4;
+  color: var(--text-primary);
+  line-height: 1.3;
 }
 
 .service-icon {
   font-size: 20px;
-  color: #1890ff;
+  color: var(--primary-color);
 }
 
 .card-type-tag {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 2px 10px;
-}
-
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: currentColor;
+  top: 20px;
+  right: 16px;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  font-size: 12px;
 }
 
 .card-content {
-  padding: 20px;
-  flex-grow: 1;
+  padding: 0 24px 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: #fff;
 }
 
 .card-detail {
   display: flex;
   align-items: center;
-  line-height: 1.5;
+  line-height: var(--line-height-base);
 }
 
 .detail-label {
-  color: #666;
+  color: var(--text-secondary);
   min-width: 100px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
+  font-weight: 500;
 }
 
 .detail-value {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #333;
+  gap: 8px;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
   flex: 1;
+  font-weight: 500;
 }
 
 .card-action-footer {
-  padding: 16px 20px;
-  background-color: #f5f7fa;
-  border-top: 1px solid #eeeeee;
+  padding: 16px 24px 20px;
+  background: #fafafa;
+  border-top: 1px solid var(--border-color-split);
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
 .card-action-footer .ant-btn {
   flex: 1;
-  min-width: 80px;
-  border-radius: 4px;
   height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  transition: all var(--transition-duration) var(--transition-function);
+  font-size: var(--font-size-base);
 }
 
-.card-action-footer .ant-btn svg {
-  margin-right: 8px;
+.card-action-footer .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
 }
 
-/* YAML任务模态框样式 */
-.yaml-task-modal {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+/* ==================== 模态框样式 ==================== */
+.yaml-task-modal :deep(.ant-modal-content) {
+  border-radius: var(--border-radius-base);
+  overflow: hidden;
+  box-shadow: var(--shadow-3);
+}
+
+.yaml-task-modal :deep(.ant-modal-header) {
+  background: var(--component-background);
+  border-bottom: 1px solid var(--border-color-split);
+  padding: 20px 24px;
+}
+
+.yaml-task-modal :deep(.ant-modal-title) {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .modal-alert {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  border-radius: var(--border-radius-sm);
 }
 
 .yaml-task-form {
-  padding: 10px;
+  padding: 8px 0;
 }
 
 .form-section {
   margin-bottom: 32px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-color-split);
 }
 
 .form-section:last-child {
@@ -1111,9 +1183,9 @@ onMounted(async () => {
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary);
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -1135,21 +1207,30 @@ onMounted(async () => {
   margin-bottom: 20px;
 }
 
-.form-input,
-.form-select {
-  border-radius: 8px;
-  height: 42px;
+.form-input, .form-select {
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-duration) var(--transition-function);
+  font-size: var(--font-size-base);
+}
+
+.form-input {
+  height: 40px;
+}
+
+.form-input:focus, .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
 }
 
 .add-variable-btn {
-  border-radius: 10px;
+  border-radius: var(--border-radius-sm);
   height: 40px;
   font-weight: 500;
 }
 
 .variables-area {
   background: #f8fafc;
-  border-radius: 12px;
+  border-radius: var(--border-radius-lg);
   padding: 20px;
 }
 
@@ -1168,16 +1249,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: white;
-  border-radius: 10px;
+  background: var(--component-background);
+  border-radius: var(--border-radius-sm);
   padding: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-1);
 }
 
 .variable-number {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--border-radius-sm);
   background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
   color: white;
   display: flex;
@@ -1190,80 +1271,165 @@ onMounted(async () => {
 .variable-input {
   flex: 1;
   height: 40px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color-split);
 }
 
 .remove-variable-btn {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all var(--transition-duration) var(--transition-function);
 }
 
 .remove-variable-btn:hover {
   background: #fef2f2;
-  color: #ef4444;
+  color: var(--error-color);
 }
 
-/* 空状态样式 */
+/* ==================== 空状态 ==================== */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 0;
+  padding: 60px 0;
+  color: var(--text-secondary);
 }
 
-/* 响应式调整 */
+.empty-state p {
+  margin: 16px 0 24px;
+  font-size: var(--font-size-base);
+}
+
+/* ==================== 响应式设计 ==================== */
 @media (max-width: 1400px) {
-  .yaml-task-cards {
-    justify-content: space-around;
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
   }
   
-  .yaml-task-card {
-    width: 320px;
+  .yaml-task-cards {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .yaml-task-management-container {
+    padding: 16px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    padding: 24px 32px;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .toolbar-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .toolbar-right {
+    justify-content: space-between;
   }
 }
 
 @media (max-width: 768px) {
+  .yaml-task-management-container {
+    padding: 12px;
+  }
+  
+  .header-content {
+    padding: 20px 24px;
+  }
+  
+  .page-title h1 {
+    font-size: var(--font-size-xl);
+  }
+  
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .overview-card {
+    padding: 16px;
+  }
+  
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    margin-right: 12px;
+  }
+  
+  .card-number {
+    font-size: var(--font-size-lg);
+  }
+  
   .yaml-task-cards {
-    flex-direction: column;
-    align-items: center;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
   
   .yaml-task-card {
-    width: 100%;
-    max-width: 450px;
+    margin-bottom: 0;
   }
   
   .card-action-footer {
-    flex-wrap: wrap;
-  }
-  
-  .dashboard-header {
     flex-direction: column;
-    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
   
-  .dashboard-stats {
-    margin-top: 16px;
-    width: 100%;
+  .overview-card {
+    padding: 12px;
   }
   
-  .control-panel {
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    margin-right: 8px;
+  }
+  
+  .toolbar-right {
     flex-direction: column;
+    gap: 8px;
   }
   
-  .search-filters {
-    margin-bottom: 16px;
+  .yaml-task-table :deep(.ant-table-tbody > tr > td) {
+    padding: 12px 8px;
+    font-size: 13px;
   }
   
-  .action-buttons {
-    margin-left: 0;
-    justify-content: flex-end;
+  .action-column {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .action-column :deep(.ant-btn) {
+    width: 28px;
+    height: 28px;
   }
 }
 </style>

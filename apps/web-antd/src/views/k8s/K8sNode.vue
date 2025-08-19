@@ -1,44 +1,85 @@
 <template>
-  <div class="service-manager node-manager">
-    <!-- 仪表板标题 -->
-    <div class="dashboard-header">
-      <h2 class="dashboard-title">
-        <ClusterOutlined class="dashboard-icon" />
-        Kubernetes 节点管理
-      </h2>
-      <div class="dashboard-stats">
-        <div class="stat-item">
-          <div class="stat-value">{{ nodes.length }}</div>
-          <div class="stat-label">节点总数</div>
+  <div class="cluster-management-container node-management-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="title-section">
+          <div class="page-title">
+            <ClusterOutlined class="title-icon" />
+            <h1>Kubernetes 节点管理</h1>
+          </div>
+          <p class="page-subtitle">管理和监控集群中的所有Kubernetes节点</p>
         </div>
-        <div class="stat-item">
-          <div class="stat-value">{{ route.query.cluster_id }}</div>
-          <div class="stat-label">集群ID</div>
+        <div class="header-actions">
+          <a-button type="primary" size="large" @click="refreshData" :loading="loading">
+            <template #icon><ReloadOutlined /></template>
+            刷新数据
+          </a-button>
         </div>
       </div>
     </div>
 
-    <!-- 查询和操作工具栏 -->
-    <div class="control-panel">
-      <div class="search-filters">
+    <!-- 数据概览卡片 -->
+    <div class="overview-cards">
+      <div class="overview-card total-clusters">
+        <div class="card-icon">
+          <DashboardOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ nodes.length }}</div>
+          <div class="card-label">节点总数</div>
+        </div>
+      </div>
+      
+      <div class="overview-card running-clusters">
+        <div class="card-icon">
+          <CheckCircleOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ healthyNodes }}</div>
+          <div class="card-label">健康节点</div>
+        </div>
+      </div>
+      
+      <div class="overview-card env-types">
+        <div class="card-icon">
+          <WarningOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ warningNodes + errorNodes }}</div>
+          <div class="card-label">问题节点</div>
+        </div>
+      </div>
+      
+      <div class="overview-card resource-usage">
+        <div class="card-icon">
+          <EnvironmentOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ route.query.cluster_id }}</div>
+          <div class="card-label">集群ID</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-left">
         <a-input-search
           v-model:value="searchText"
           placeholder="搜索节点名称、IP或角色"
-          class="control-item search-input"
+          class="search-input"
           @search="handleSearch"
           allow-clear
-        >
-          <template #prefix><SearchOutlined /></template>
-        </a-input-search>
+        />
         
         <a-select
           v-model:value="statusFilter"
           placeholder="状态筛选"
-          class="control-item status-selector"
+          class="env-filter"
           allow-clear
           @change="handleFilterChange"
         >
-          <template #suffixIcon><ApiOutlined /></template>
           <a-select-option value="Ready">
             <span class="status-option">
               <CheckCircleOutlined style="color: #52c41a" />
@@ -62,11 +103,10 @@
         <a-select
           v-model:value="roleFilter"
           placeholder="角色筛选"
-          class="control-item role-selector"
+          class="env-filter"
           allow-clear
           @change="handleFilterChange"
         >
-          <template #suffixIcon><UserOutlined /></template>
           <a-select-option value="master">
             <span class="role-option">
               <CrownOutlined style="color: #722ed1" />
@@ -82,17 +122,12 @@
         </a-select>
       </div>
       
-      <div class="action-buttons">
-        <a-tooltip title="刷新数据">
-          <a-button type="primary" class="refresh-btn" @click="refreshData" :loading="loading">
-            <template #icon><ReloadOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        
+      <div class="toolbar-right">
         <a-dropdown>
-          <a-button type="primary" class="manage-btn">
+          <a-button type="primary">
             <template #icon><SettingOutlined /></template>
             节点管理
+            <DownOutlined />
           </a-button>
           <template #overlay>
             <a-menu>
@@ -117,7 +152,6 @@
           danger
           @click="handleToggleSchedule()" 
           :disabled="!hasSelectedNode"
-          class="schedule-btn"
         >
           <template #icon><ScheduleOutlined /></template>
           启用/禁用调度
@@ -125,248 +159,225 @@
       </div>
     </div>
 
-    <!-- 状态摘要卡片 -->
-    <div class="status-summary">
-      <div class="summary-card total-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <DashboardOutlined class="metric-icon" />
-            <div class="metric-value">{{ nodes.length }}</div>
+    <!-- 数据展示区域 -->
+    <div class="data-display">
+      <div class="display-header" v-if="filteredData.length > 0">
+        <div class="result-info">
+          <span class="result-count">共 {{ filteredData.length }} 个节点</span>
+          <div class="env-tags">
+            <a-tag color="green">健康 {{ healthyNodes }}</a-tag>
+            <a-tag color="orange" v-if="warningNodes > 0">警告 {{ warningNodes }}</a-tag>
+            <a-tag color="red" v-if="errorNodes > 0">错误 {{ errorNodes }}</a-tag>
           </div>
-          <div class="card-title">节点总数</div>
-        </div>
-        <div class="card-footer">
-          <div class="footer-text">全部Kubernetes节点</div>
         </div>
       </div>
-      
-      <div class="summary-card healthy-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <CheckCircleOutlined class="metric-icon" />
-            <div class="metric-value">{{ healthyNodes }}</div>
+
+      <!-- 表格视图 -->
+      <a-table
+        :columns="columns"
+        :data-source="filteredData"
+        :row-selection="{ 
+          type: 'radio', 
+          onChange: onSelectChange,
+          selectedRowKeys: selectedRowKeys
+        }"
+        :loading="loading"
+        row-key="name"
+        :pagination="{ 
+          pageSize: 12, 
+          showSizeChanger: true, 
+          showQuickJumper: true,
+          showTotal: (total: number) => `共 ${total} 条数据`,
+          pageSizeOptions: ['12', '24', '48', '96']
+        }"
+        class="cluster-table node-table"
+      >
+        <!-- 节点名称列 -->
+        <template #name="{ text, record }">
+          <div class="cluster-name node-name">
+            <div class="node-status-dot" :class="getNodeStatusClass(record.status)"></div>
+            <span>{{ text }}</span>
           </div>
-          <div class="card-title">健康节点</div>
-        </div>
-        <div class="card-footer">
-          <a-progress 
-            :percent="healthyPercentage" 
-            :stroke-color="{ from: '#1890ff', to: '#52c41a' }" 
-            size="small" 
-            :show-info="false" 
-          />
-          <div class="footer-text">{{ healthyPercentage }}% 节点正常运行</div>
-        </div>
-      </div>
-      
-      <div class="summary-card problem-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <WarningOutlined class="metric-icon" />
-            <div class="metric-value">{{ warningNodes + errorNodes }}</div>
-          </div>
-          <div class="card-title">问题节点</div>
-        </div>
-        <div class="card-footer">
-          <a-progress 
-            :percent="problemPercentage" 
-            status="exception" 
-            size="small" 
-            :show-info="false"
-          />
-          <div class="footer-text">{{ warningNodes }} 个警告, {{ errorNodes }} 个错误</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 表格视图 -->
-    <a-table
-      :columns="columns"
-      :data-source="filteredData"
-      :row-selection="{ 
-        type: 'radio', 
-        onChange: onSelectChange,
-        selectedRowKeys: selectedRowKeys
-      }"
-      :loading="loading"
-      row-key="name"
-      :pagination="{ 
-        pageSize: 10, 
-        showSizeChanger: true, 
-        showQuickJumper: true,
-        showTotal: (total: number) => `共 ${total} 条数据`
-      }"
-      class="services-table node-table"
-    >
-      <!-- 节点名称列 -->
-      <template #name="{ text, record }">
-        <div class="node-name">
-          <div class="node-status-dot" :class="getNodeStatusClass(record.status)"></div>
-          <span>{{ text }}</span>
-        </div>
-      </template>
-      
-      <!-- 状态列 -->
-      <template #status="{ text }">
-        <a-tag :color="getStatusColor(text)" class="status-tag">
-          <span class="status-dot"></span>
-          {{ text }}
-        </a-tag>
-      </template>
-
-      <!-- IP地址列 -->
-      <template #ip="{ text }">
-        <span class="ip-address">
-          <GlobalOutlined />
-          {{ text }}
-        </span>
-      </template>
-
-      <!-- 角色列 -->
-      <template #roles="{ text }">
-        <div class="roles-cell">
-          <template v-if="text && typeof text === 'string'">
-            <a-tag 
-              v-for="role in text.split(',').filter(Boolean)" 
-              :key="role" 
-              :color="getRoleColor(role)"
-              class="role-tag"
-            >
-              <span class="status-dot"></span>
-              {{ role }}
-            </a-tag>
-          </template>
-          <a-tag v-else color="default" class="role-tag">
+        </template>
+        
+        <!-- 状态列 -->
+        <template #status="{ text }">
+          <a-tag :color="getStatusColor(text)" class="status-tag">
             <span class="status-dot"></span>
-            未知
+            {{ text }}
           </a-tag>
-        </div>
-      </template>
+        </template>
 
-      <!-- 创建时间列 -->
-      <template #age="{ text }">
-        <div class="timestamp">
-          <ClockCircleOutlined />
-          <span>{{ text }}</span>
-        </div>
-      </template>
+        <!-- IP地址列 -->
+        <template #ip="{ text }">
+          <div class="timestamp ip-address">
+            <GlobalOutlined />
+            <span>{{ text }}</span>
+          </div>
+        </template>
 
-      <!-- 资源使用列 -->
-      <template #info="{ record }">
-        <div class="node-info-cell">
-          <a-tooltip title="CPU使用率">
-            <progress-chart 
-              type="cpu" 
-              :percentage="30" 
-              :title="`CPU: 30%`" 
-              color="#1890ff" 
-            />
-          </a-tooltip>
-          <a-tooltip title="内存使用率">
-            <progress-chart 
-              type="memory" 
-              :percentage="45" 
-              :title="`内存: 45%`" 
-              color="#52c41a" 
-            />
-          </a-tooltip>
-          <a-tooltip title="磁盘使用率">
-            <progress-chart 
-              type="disk" 
-              :percentage="25" 
-              :title="`磁盘: 25%`" 
-              color="#722ed1" 
-            />
-          </a-tooltip>
-        </div>
-      </template>
-
-      <!-- 标签列 -->
-      <template #labels="{ record }">
-        <div class="labels-cell">
-          <a-tag v-for="(label, index) in getNodeLabels(record)" :key="index" color="blue" class="label-tag">
-            {{ label }}
-          </a-tag>
-          <a-tag v-if="getNodeLabels(record).length > 3" color="blue" class="label-tag">
-            +{{ getNodeLabels(record).length - 3 }}
-          </a-tag>
-        </div>
-      </template>
-
-      <!-- 操作列 -->
-      <template #action="{ record }">
-        <div class="action-column">
-          <a-tooltip title="查看详情">
-            <a-button type="primary" ghost shape="circle" @click="handleViewDetails(record)">
-              <template #icon><EyeOutlined /></template>
-            </a-button>
-          </a-tooltip>
-          
-          <a-tooltip title="删除标签">
-            <a-button type="primary" ghost shape="circle" @click="showDeleteLabelModal(record)">
-              <template #icon><TagOutlined /></template>
-            </a-button>
-          </a-tooltip>
-          
-          <a-tooltip :title="record.schedulable ? '禁用调度' : '启用调度'">
-            <a-button 
-              :type="record.schedulable ? 'primary' : 'primary'" 
-              :ghost="record.schedulable"
-              :danger="!record.schedulable"
-              shape="circle" 
-              @click="handleToggleSchedule(record)"
-            >
-              <template #icon>
-                <PauseOutlined v-if="record.schedulable" />
-                <CaretRightOutlined v-else />
-              </template>
-            </a-button>
-          </a-tooltip>
-          
-          <a-dropdown>
-            <a-button type="primary" ghost shape="circle">
-              <template #icon><MoreOutlined /></template>
-            </a-button>
-            <template #overlay>
-              <a-menu>
-                <a-menu-item key="1" @click="handleAddLabel(record)">
-                  <TagOutlined /> 添加标签
-                </a-menu-item>
-                <a-menu-item key="2" @click="handleAddTaint(record)">
-                  <WarningOutlined /> 添加 Taint
-                </a-menu-item>
-                <a-menu-item key="3" @click="handleDeleteTaint(record)">
-                  <DeleteOutlined /> 删除 Taint
-                </a-menu-item>
-                <a-menu-divider />
-                <a-menu-item key="4" @click="handleCordon(record)" danger>
-                  <StopOutlined /> 维护模式
-                </a-menu-item>
-              </a-menu>
+        <!-- 角色列 -->
+        <template #roles="{ text }">
+          <div class="roles-cell">
+            <template v-if="text && typeof text === 'string'">
+              <a-tag 
+                v-for="role in text.split(',').filter(Boolean)" 
+                :key="role" 
+                :color="getRoleColor(role)"
+                class="env-tag role-tag"
+              >
+                <span class="status-dot"></span>
+                {{ role }}
+              </a-tag>
             </template>
-          </a-dropdown>
-        </div>
-      </template>
-    </a-table>
+            <a-tag v-else color="default" class="env-tag role-tag">
+              <span class="status-dot"></span>
+              未知
+            </a-tag>
+          </div>
+        </template>
+
+        <!-- 创建时间列 -->
+        <template #age="{ text }">
+          <div class="timestamp">
+            <ClockCircleOutlined />
+            <span>{{ text }}</span>
+          </div>
+        </template>
+
+        <!-- 资源使用列 -->
+        <template #info="{ record }">
+          <div class="node-info-cell">
+            <a-tooltip title="CPU使用率: 30%">
+              <div class="progress-chart">
+                <div class="chart-icon">
+                  <ApiOutlined style="color: #1890ff" />
+                </div>
+                <div class="chart-bar">
+                  <div class="chart-fill" style="width: 30%; background-color: #1890ff;"></div>
+                </div>
+                <span class="chart-title">CPU 30%</span>
+              </div>
+            </a-tooltip>
+            <a-tooltip title="内存使用率: 45%">
+              <div class="progress-chart">
+                <div class="chart-icon">
+                  <EnvironmentOutlined style="color: #52c41a" />
+                </div>
+                <div class="chart-bar">
+                  <div class="chart-fill" style="width: 45%; background-color: #52c41a;"></div>
+                </div>
+                <span class="chart-title">内存 45%</span>
+              </div>
+            </a-tooltip>
+            <a-tooltip title="磁盘使用率: 25%">
+              <div class="progress-chart">
+                <div class="chart-icon">
+                  <StopOutlined style="color: #722ed1" />
+                </div>
+                <div class="chart-bar">
+                  <div class="chart-fill" style="width: 25%; background-color: #722ed1;"></div>
+                </div>
+                <span class="chart-title">磁盘 25%</span>
+              </div>
+            </a-tooltip>
+          </div>
+        </template>
+
+        <!-- 标签列 -->
+        <template #labels="{ record }">
+          <div class="labels-cell">
+            <a-tag v-for="(label, index) in getNodeLabels(record)" :key="index" color="blue" class="label-tag">
+              {{ label }}
+            </a-tag>
+            <a-tag v-if="getNodeLabels(record).length > 3" color="blue" class="label-tag">
+              +{{ getNodeLabels(record).length - 3 }}
+            </a-tag>
+          </div>
+        </template>
+
+        <!-- 操作列 -->
+        <template #action="{ record }">
+          <div class="action-column">
+            <a-tooltip title="查看详情">
+              <a-button type="primary" ghost shape="circle" @click="handleViewDetails(record)">
+                <template #icon><EyeOutlined /></template>
+              </a-button>
+            </a-tooltip>
+            
+            <a-tooltip title="删除标签">
+              <a-button type="primary" ghost shape="circle" @click="showDeleteLabelModal(record)">
+                <template #icon><TagOutlined /></template>
+              </a-button>
+            </a-tooltip>
+            
+            <a-tooltip :title="record.schedulable ? '禁用调度' : '启用调度'">
+              <a-button 
+                :type="record.schedulable ? 'primary' : 'primary'" 
+                :ghost="record.schedulable"
+                :danger="!record.schedulable"
+                shape="circle" 
+                @click="handleToggleSchedule(record)"
+              >
+                <template #icon>
+                  <PauseOutlined v-if="record.schedulable" />
+                  <CaretRightOutlined v-else />
+                </template>
+              </a-button>
+            </a-tooltip>
+            
+            <a-dropdown>
+              <a-button type="primary" ghost shape="circle">
+                <template #icon><MoreOutlined /></template>
+              </a-button>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item key="1" @click="handleAddLabel(record)">
+                    <TagOutlined /> 添加标签
+                  </a-menu-item>
+                  <a-menu-item key="2" @click="handleAddTaint(record)">
+                    <WarningOutlined /> 添加 Taint
+                  </a-menu-item>
+                  <a-menu-item key="3" @click="handleDeleteTaint(record)">
+                    <DeleteOutlined /> 删除 Taint
+                  </a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="4" @click="handleCordon(record)" danger>
+                    <StopOutlined /> 维护模式
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
+          </div>
+        </template>
+
+        <!-- 空状态 -->
+        <template #emptyText>
+          <div class="empty-state">
+            <ClusterOutlined style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
+            <p>暂无节点数据</p>
+            <a-button type="primary" @click="refreshData">刷新数据</a-button>
+          </div>
+        </template>
+      </a-table>
+    </div>
 
     <!-- 添加标签模态框 -->
     <a-modal
       v-model:open="isAddLabelModalVisible"
       title="添加节点标签"
-      :confirm-loading="submitLoading"
-      @cancel="closeAddLabelModal"
+      :width="800"
       @ok="handleSubmitAddLabel"
-      class="node-modal"
+      @cancel="closeAddLabelModal"
+      :confirmLoading="submitLoading"
+      class="cluster-modal node-modal"
     >
-      <a-alert
-        type="info"
-        show-icon
-        banner
-        message="节点标签可用于 Pod 调度及资源分配"
-        style="margin-bottom: 16px"
-        class="modal-alert"
-      />
-      <a-form :model="labelForm" layout="vertical" class="node-form">
+      <a-alert type="info" show-icon class="modal-alert">
+        <template #message>添加节点标签</template>
+        <template #description>节点标签可用于 Pod 调度及资源分配</template>
+      </a-alert>
+      
+      <a-form :model="labelForm" layout="vertical" class="cluster-form node-form">
         <a-form-item
           label="节点名称"
           name="nodeName"
@@ -428,20 +439,18 @@
     <a-modal
       v-model:open="isAddTaintModalVisible"
       title="添加节点 Taint"
-      :confirm-loading="submitLoading"
-      @cancel="closeAddTaintModal"
+      :width="800"
       @ok="handleSubmitAddTaint"
-      class="node-modal"
+      @cancel="closeAddTaintModal"
+      :confirmLoading="submitLoading"
+      class="cluster-modal node-modal"
     >
-      <a-alert
-        type="info"
-        show-icon
-        banner
-        message="Taint 用于阻止 Pod 调度到节点上"
-        style="margin-bottom: 16px"
-        class="modal-alert"
-      />
-      <a-form :model="taintForm" layout="vertical" class="node-form">
+      <a-alert type="info" show-icon class="modal-alert">
+        <template #message>添加节点 Taint</template>
+        <template #description>Taint 用于阻止 Pod 调度到节点上</template>
+      </a-alert>
+      
+      <a-form :model="taintForm" layout="vertical" class="cluster-form node-form">
         <a-form-item
           label="节点名称"
           name="nodeName"
@@ -493,7 +502,7 @@
             placeholder="示例：- key: &quot;example-key&quot;
   value: &quot;example-value&quot; 
   effect: &quot;NoSchedule&quot;"
-            class="yaml-editor"
+            class="form-textarea yaml-editor"
           />
         </a-form-item>
         
@@ -511,20 +520,18 @@
     <a-modal
       v-model:open="isDeleteTaintModalVisible"
       title="删除节点 Taint"
-      :confirm-loading="submitLoading"
-      @cancel="closeDeleteTaintModal"
+      :width="800"
       @ok="handleSubmitDeleteTaint"
-      class="node-modal"
+      @cancel="closeDeleteTaintModal"
+      :confirmLoading="submitLoading"
+      class="cluster-modal node-modal"
     >
-      <a-alert
-        type="info"
-        show-icon
-        banner
-        message="删除 Taint 将允许 Pod 重新调度到节点上"
-        style="margin-bottom: 16px"
-        class="modal-alert"
-      />
-      <a-form :model="deleteTaintForm" layout="vertical" class="node-form">
+      <a-alert type="info" show-icon class="modal-alert">
+        <template #message>删除节点 Taint</template>
+        <template #description>删除 Taint 将允许 Pod 重新调度到节点上</template>
+      </a-alert>
+      
+      <a-form :model="deleteTaintForm" layout="vertical" class="cluster-form node-form">
         <a-form-item
           label="节点名称"
           name="nodeName"
@@ -565,7 +572,7 @@
             placeholder="示例：- key: &quot;example-key&quot;
   value: &quot;example-value&quot; 
   effect: &quot;NoSchedule&quot;"
-            class="yaml-editor"
+            class="form-textarea yaml-editor"
           />
         </a-form-item>
       </a-form>
@@ -575,20 +582,18 @@
     <a-modal
       v-model:open="isDeleteLabelModalVisible"
       title="删除节点标签"
-      :confirm-loading="submitLoading"
-      @cancel="closeDeleteLabelModal"
+      :width="600"
       @ok="handleDeleteLabel"
-      class="node-modal"
+      @cancel="closeDeleteLabelModal"
+      :confirmLoading="submitLoading"
+      class="cluster-modal node-modal"
     >
-      <a-alert
-        type="warning"
-        show-icon
-        banner
-        message="删除标签可能会影响依赖此标签的 Pod 调度"
-        style="margin-bottom: 16px"
-        class="modal-alert"
-      />
-      <a-form :model="deleteLabelForm" layout="vertical" class="node-form">
+      <a-alert type="warning" show-icon class="modal-alert">
+        <template #message>删除节点标签</template>
+        <template #description>删除标签可能会影响依赖此标签的 Pod 调度</template>
+      </a-alert>
+      
+      <a-form :model="deleteLabelForm" layout="vertical" class="cluster-form node-form">
         <a-form-item
           label="选择标签"
           name="label"
@@ -615,14 +620,14 @@
     <a-modal
       v-model:open="isViewDetailsModalVisible"
       title="节点详情"
-      width="800px"
+      width="900px"
       @cancel="closeViewDetailsModal"
       :footer="null"
-      class="yaml-modal node-detail-modal"
+      class="cluster-modal node-detail-modal"
     >
       <a-spin :spinning="detailsLoading">
         <div v-if="selectedNodeDetails" class="node-details">
-          <a-alert class="yaml-info" type="info" show-icon>
+          <a-alert class="modal-alert" type="info" show-icon>
             <template #message>
               <span>{{ selectedNodeDetails.name }}</span>
             </template>
@@ -645,16 +650,16 @@
                     <div class="detail-value">
                       <template v-if="selectedNodeDetails.roles && typeof selectedNodeDetails.roles === 'string'">
                         <a-tag 
-                          v-for="role in (selectedNodeDetails.roles as string[])" 
+                          v-for="role in (selectedNodeDetails.roles as string).split(',').filter(Boolean)" 
                           :key="role" 
                           :color="getRoleColor(role)"
-                          class="role-tag"
+                          class="env-tag role-tag"
                         >
                           <span class="status-dot"></span>
                           {{ role }}
                         </a-tag>
                       </template>
-                      <a-tag v-else color="default" class="role-tag">
+                      <a-tag v-else color="default" class="env-tag role-tag">
                         <span class="status-dot"></span>
                         未知
                       </a-tag>
@@ -841,7 +846,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, reactive, onMounted, h } from 'vue';
+import { computed, ref, reactive, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { message, Modal } from 'ant-design-vue';
 import type { GetNodeDetailRes } from '#/api';
@@ -859,7 +864,6 @@ import {
   EyeOutlined,
   DeleteOutlined,
   ReloadOutlined,
-  SearchOutlined,
   TagOutlined,
   TagsOutlined,
   WarningOutlined,
@@ -881,11 +885,9 @@ import {
   SettingOutlined,
   GlobalOutlined,
   ClockCircleOutlined,
-  UserOutlined,
   CrownOutlined,
   CodeSandboxOutlined,
   DashboardOutlined,
-  PartitionOutlined
 } from '@ant-design/icons-vue';
 
 // 自定义节点类型接口
@@ -912,37 +914,6 @@ interface NodeEvent {
   component: string;
   object: string;
 }
-
-// 类型定义补充
-type ProgressChartProps = {
-  type: 'cpu' | 'memory' | 'disk';
-  percentage: number;
-  title: string;
-  color: string;
-};
-
-// 创建进度图表组件
-const ProgressChart = (props: ProgressChartProps, { slots }: any) => {
-  const { percentage, title, color, type } = props;
-  
-  return h('div', { class: 'progress-chart' }, [
-    h('div', { class: 'chart-icon' }, [
-      type === 'cpu' ? h(ApiOutlined) : 
-      type === 'memory' ? h(EnvironmentOutlined) : 
-      h(StopOutlined)
-    ]),
-    h('div', { class: 'chart-bar' }, [
-      h('div', { 
-        class: 'chart-fill',
-        style: {
-          width: `${percentage}%`,
-          backgroundColor: color
-        }
-      })
-    ]),
-    h('div', { class: 'chart-title' }, title)
-  ]);
-};
 
 // 状态和常量
 const route = useRoute();
@@ -996,18 +967,6 @@ const warningNodes = computed(() => {
 
 const errorNodes = computed(() => {
   return nodes.value.filter((node) => node.status === 'NotReady').length;
-});
-
-// 健康节点百分比
-const healthyPercentage = computed(() => {
-  if (nodes.value.length === 0) return 0;
-  return Math.round((healthyNodes.value / nodes.value.length) * 100);
-});
-
-// 问题节点百分比
-const problemPercentage = computed(() => {
-  if (nodes.value.length === 0) return 0;
-  return Math.round(((warningNodes.value + errorNodes.value) / nodes.value.length) * 100);
 });
 
 // 计算属性：过滤后的节点数据
@@ -1248,6 +1207,7 @@ const handleSearch = (value: string): void => {
 const handleFilterChange = (): void => {
   // 状态和角色筛选器变化时会自动通过计算属性更新表格数据
 };
+
 // 选择表格行
 const onSelectChange = (keys: string[], rows: NodeItem[]): void => {
   selectedRowKeys.value = keys;
@@ -1693,245 +1653,296 @@ onMounted(() => {
 </script>
 
 <style>
+/* 现代化大气设计系统 */
 :root {
-  --primary-color: #1890ff;
+  --primary-color: #1677ff;
+  --primary-hover: #4096ff;
+  --primary-active: #0958d9;
   --success-color: #52c41a;
   --warning-color: #faad14;
-  --error-color: #f5222d;
+  --error-color: #ff4d4f;
+  --text-primary: #000000d9;
+  --text-secondary: #00000073;
+  --text-tertiary: #00000040;
+  --text-quaternary: #00000026;
+  --border-color: #d9d9d9;
+  --border-color-split: #f0f0f0;
+  --background-color: #f5f5f5;
+  --component-background: #ffffff;
+  --layout-header-background: #001529;
+  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-3: 0 9px 28px rgba(0, 0, 0, 0.12);
+  --border-radius-base: 8px;
+  --border-radius-sm: 6px;
+  --border-radius-lg: 12px;
   --font-size-base: 14px;
-  --border-radius-base: 4px;
-  --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-xxl: 24px;
+  --line-height-base: 1.5714;
   --transition-duration: 0.3s;
+  --transition-function: cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
-.node-manager {
-  background-color: #f0f2f5;
-  border-radius: 8px;
+/* ==================== 布局容器 ==================== */
+.cluster-management-container {
+  min-height: 100vh;
+  background: var(--background-color);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* 仪表板标题样式 */
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.dashboard-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #262626;
-  margin: 0;
-  display: flex;
-  align-items: center;
-}
-
-.dashboard-icon {
-  margin-right: 14px;
-  font-size: 28px;
-  color: #1890ff;
-}
-
-.dashboard-stats {
-  display: flex;
-  gap: 20px;
-}
-
-.stat-item {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border-radius: 8px;
-  padding: 10px 18px;
-  color: white;
-  min-width: 120px;
-  text-align: center;
-  box-shadow: 0 3px 8px rgba(24, 144, 255, 0.2);
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.stat-label {
-  font-size: 12px;
-  opacity: 0.9;
-  margin-top: 4px;
-}
-
-/* 控制面板样式 */
-.control-panel {
-  display: flex;
-  justify-content: space-between;
+/* ==================== 页面头部 ==================== */
+.page-header {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
   margin-bottom: 24px;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
 }
 
-.search-filters {
+.header-content {
+  padding: 32px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.title-section {
+  flex: 1;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.title-icon {
+  font-size: 28px;
+  color: var(--primary-color);
+  margin-right: 16px;
+}
+
+.page-title h1 {
+  font-size: var(--font-size-xxl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: var(--line-height-base);
+}
+
+.header-actions {
+  flex-shrink: 0;
+}
+
+/* ==================== 概览卡片 ==================== */
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.overview-card {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  padding: 24px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-duration) var(--transition-function);
+  border: 1px solid var(--border-color-split);
+}
+
+.overview-card:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.total-clusters .card-icon {
+  background: rgba(22, 119, 255, 0.1);
+  color: var(--primary-color);
+}
+
+.running-clusters .card-icon {
+  background: rgba(82, 196, 26, 0.1);
+  color: var(--success-color);
+}
+
+.env-types .card-icon {
+  background: rgba(250, 173, 20, 0.1);
+  color: var(--warning-color);
+}
+
+.resource-usage .card-icon {
+  background: rgba(114, 46, 209, 0.1);
+  color: #722ed1;
+}
+
+.card-info {
+  flex: 1;
+}
+
+.card-number {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.card-label {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: var(--line-height-base);
+}
+
+/* ==================== 工具栏 ==================== */
+.toolbar {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  border: 1px solid var(--border-color-split);
+}
+
+.toolbar-left {
   display: flex;
   gap: 16px;
-  flex-wrap: wrap;
   align-items: center;
   flex: 1;
 }
 
-.control-item {
-  min-width: 200px;
-}
-
 .search-input {
-  flex-grow: 1;
-  max-width: 300px;
+  width: 320px;
 }
 
-.action-buttons {
+.search-input :deep(.ant-input) {
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-base);
+  height: 40px;
+}
+
+.env-filter {
+  width: 160px;
+}
+
+.env-filter :deep(.ant-select-selector) {
+  border-radius: var(--border-radius-sm);
+  height: 40px;
+}
+
+.toolbar-right {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
-  margin-left: 20px;
+  flex-shrink: 0;
 }
 
-.refresh-btn {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border: none;
-  height: 36px;
-  width: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.manage-btn {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border: none;
-  height: 36px;
-  padding: 0 16px;
-  font-weight: 500;
-}
-
-.schedule-btn {
-  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
-  border: none;
-  height: 36px;
-  padding: 0 16px;
-  font-weight: 500;
-}
-
-.status-option,
-.role-option,
-.node-option,
-.label-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.status-option :deep(svg),
-.role-option :deep(svg),
-.node-option :deep(svg),
-.label-option :deep(svg) {
-  margin-right: 4px;
-}
-
-/* 状态摘要卡片 */
-.status-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 28px;
-}
-
-.summary-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+/* ==================== 数据展示区域 ==================== */
+.data-display {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  box-shadow: var(--shadow-1);
+  border: 1px solid var(--border-color-split);
   overflow: hidden;
-  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.display-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color-split);
+  background: var(--component-background);
+}
+
+.result-info {
   display: flex;
-  flex-direction: column;
-}
-
-.summary-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-}
-
-.card-content {
-  padding: 24px;
-  flex-grow: 1;
-}
-
-.card-title {
-  font-size: 14px;
-  color: #8c8c8c;
-  margin-top: 10px;
-}
-
-.card-metric {
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
 }
 
-.metric-icon {
-  font-size: 28px;
-  margin-right: 16px;
+.result-count {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
-.metric-value {
-  font-size: 32px;
-  font-weight: 600;
-  color: #262626;
+.env-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.total-card .metric-icon {
-  color: #1890ff;
-}
-
-.healthy-card .metric-icon {
-  color: #52c41a;
-}
-
-.problem-card .metric-icon {
-  color: #f5222d;
-}
-
-.card-footer {
-  padding: 14px 24px;
-  background-color: #fafafa;
-  border-top: 1px solid #f0f0f0;
-}
-
-.footer-text {
+.env-tags :deep(.ant-tag) {
+  border-radius: var(--border-radius-sm);
   font-size: 12px;
-  color: #8c8c8c;
-  margin-top: 6px;
+  font-weight: 500;
+  margin: 0;
 }
 
-/* 节点表格样式 */
-.node-table {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  margin-top: 20px;
+/* ==================== 表格样式 ==================== */
+.cluster-table {
+  border: none;
 }
 
-.node-table :deep(.ant-table-thead > tr > th) {
-  background-color: #f5f7fa;
+.cluster-table :deep(.ant-table-container) {
+  border-radius: 0;
+}
+
+.cluster-table :deep(.ant-table-thead > tr > th) {
+  background: #fafafa;
   font-weight: 600;
-  padding: 14px 16px;
+  padding: 16px 16px;
+  border-bottom: 1px solid var(--border-color-split);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
 }
 
-.node-table :deep(.ant-table-tbody > tr > td) {
-  padding: 12px 16px;
+.cluster-table :deep(.ant-table-tbody > tr) {
+  transition: background-color var(--transition-duration) var(--transition-function);
+}
+
+.cluster-table :deep(.ant-table-tbody > tr:hover) {
+  background-color: #fafafa;
+}
+
+.cluster-table :deep(.ant-table-tbody > tr > td) {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color-split);
+  vertical-align: middle;
+  font-size: var(--font-size-base);
+}
+
+.cluster-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
 }
 
 .node-name {
@@ -1963,25 +1974,31 @@ onMounted(() => {
   background-color: #d9d9d9;
 }
 
-.status-tag,
-.role-tag,
-.label-tag,
-.taint-tag {
+.env-tag, .status-tag, .role-tag, .label-tag, .taint-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: var(--border-radius-base);
+  font-size: 12px;
+  border: none;
 }
 
 .status-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: currentColor;
+}
+
+.timestamp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
 }
 
 .ip-address {
@@ -1989,13 +2006,6 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   font-family: 'Courier New', monospace;
-  color: #595959;
-}
-
-.timestamp {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   color: #595959;
 }
 
@@ -2013,24 +2023,28 @@ onMounted(() => {
 
 .action-column {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .action-column :deep(.ant-btn) {
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-duration) var(--transition-function);
+}
+
+.action-column :deep(.ant-btn:hover) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
 }
 
 /* 节点信息单元格 */
 .node-info-cell {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-items: center;
+  align-items: flex-start;
 }
 
 /* 进度图表组件 */
@@ -2065,23 +2079,47 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-/* 节点详情和模态框样式 */
-.node-modal {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+/* ==================== 模态框样式 ==================== */
+.cluster-modal :deep(.ant-modal-content) {
+  border-radius: var(--border-radius-base);
+  overflow: hidden;
+  box-shadow: var(--shadow-3);
+}
+
+.cluster-modal :deep(.ant-modal-header) {
+  background: var(--component-background);
+  border-bottom: 1px solid var(--border-color-split);
+  padding: 20px 24px;
+}
+
+.cluster-modal :deep(.ant-modal-title) {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .modal-alert {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  border-radius: var(--border-radius-sm);
 }
 
-.node-form {
-  padding: 10px;
+.cluster-form {
+  padding: 8px 0;
 }
 
-.form-input,
-.form-select {
-  border-radius: 8px;
-  height: 42px;
+.form-input, .form-select, .form-textarea {
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-duration) var(--transition-function);
+  font-size: var(--font-size-base);
+}
+
+.form-input {
+  height: 40px;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
 }
 
 .yaml-editor {
@@ -2102,14 +2140,23 @@ onMounted(() => {
   margin-bottom: 10px;
 }
 
-.yaml-modal {
-  font-family: "Consolas", "Monaco", monospace;
+.status-option,
+.role-option,
+.node-option,
+.label-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.yaml-info {
-  margin-bottom: 16px;
+.status-option :deep(svg),
+.role-option :deep(svg),
+.node-option :deep(svg),
+.label-option :deep(svg) {
+  margin-right: 4px;
 }
 
+/* 节点详情样式 */
 .node-detail-modal .ant-tabs-nav {
   margin-bottom: 16px;
 }
@@ -2265,10 +2312,24 @@ onMounted(() => {
   margin-top: 16px;
 }
 
-/* 响应式调整 */
+/* ==================== 空状态 ==================== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 0;
+  color: var(--text-secondary);
+}
+
+.empty-state p {
+  margin: 16px 0 24px;
+  font-size: var(--font-size-base);
+}
+
+/* ==================== 响应式设计 ==================== */
 @media (max-width: 1400px) {
-  .status-summary {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
   }
   
   .details-grid {
@@ -2276,33 +2337,115 @@ onMounted(() => {
   }
 }
 
-@media (max-width: 768px) {
-  .dashboard-header {
-    flex-direction: column;
-    align-items: flex-start;
+@media (max-width: 1024px) {
+  .cluster-management-container {
+    padding: 16px;
   }
   
-  .dashboard-stats {
-    margin-top: 16px;
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    padding: 24px 32px;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .toolbar-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .search-input {
     width: 100%;
   }
   
-  .control-panel {
-    flex-direction: column;
+  .env-filter {
+    width: 100%;
   }
   
-  .search-filters {
-    margin-bottom: 16px;
-  }
-  
-  .action-buttons {
-    margin-left: 0;
-    justify-content: flex-end;
+  .toolbar-right {
+    justify-content: space-between;
   }
   
   .node-info-cell {
-    flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .cluster-management-container {
+    padding: 12px;
+  }
+  
+  .header-content {
+    padding: 20px 24px;
+  }
+  
+  .page-title h1 {
+    font-size: var(--font-size-xl);
+  }
+  
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .overview-card {
+    padding: 16px;
+  }
+  
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    margin-right: 12px;
+  }
+  
+  .card-number {
+    font-size: var(--font-size-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .overview-card {
+    padding: 12px;
+  }
+  
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    margin-right: 8px;
+  }
+  
+  .toolbar-right {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .cluster-table :deep(.ant-table-tbody > tr > td) {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+  
+  .action-column {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .action-column :deep(.ant-btn) {
+    width: 28px;
+    height: 28px;
   }
 }
 </style>

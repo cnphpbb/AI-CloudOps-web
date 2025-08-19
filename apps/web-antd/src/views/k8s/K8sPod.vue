@@ -1,31 +1,78 @@
 <template>
-  <div class="service-manager pod-manager">
-    <!-- 仪表板标题 -->
-    <div class="dashboard-header">
-      <h2 class="dashboard-title">
-        <CloudServerOutlined class="dashboard-icon" />
-        Kubernetes Pod 管理器
-      </h2>
-      <div class="dashboard-stats">
-        <div class="stat-item">
-          <div class="stat-value">{{ filteredPods.length }}</div>
-          <div class="stat-label">Pods</div>
+  <div class="cluster-management-container pod-management-container">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="title-section">
+          <div class="page-title">
+            <CloudServerOutlined class="title-icon" />
+            <h1>Kubernetes Pod 管理</h1>
+          </div>
+          <p class="page-subtitle">管理和监控集群中的所有Pod实例</p>
         </div>
-        <div class="stat-item">
-          <div class="stat-value">{{ selectedNamespace }}</div>
-          <div class="stat-label">命名空间</div>
+        <div class="header-actions">
+          <a-button type="primary" size="large" @click="getPods" :loading="loading">
+            <template #icon><ReloadOutlined /></template>
+            刷新数据
+          </a-button>
         </div>
       </div>
     </div>
 
-    <!-- 查询和操作工具栏 -->
-    <div class="control-panel">
-      <div class="search-filters">
-        <a-select v-model:value="selectedCluster" placeholder="选择集群" class="control-item cluster-selector"
-          :loading="clustersLoading" @change="handleClusterChange">
-          <template #suffixIcon>
-            <ClusterOutlined />
-          </template>
+    <!-- 数据概览卡片 -->
+    <div class="overview-cards">
+      <div class="overview-card total-clusters">
+        <div class="card-icon">
+          <DashboardOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ pods.length }}</div>
+          <div class="card-label">Pod 总数</div>
+        </div>
+      </div>
+      
+      <div class="overview-card running-clusters">
+        <div class="card-icon">
+          <CheckCircleOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ runningPodsCount }}</div>
+          <div class="card-label">运行中</div>
+        </div>
+      </div>
+      
+      <div class="overview-card env-types">
+        <div class="card-icon">
+          <WarningOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number">{{ problemPodsCount }}</div>
+          <div class="card-label">问题Pod</div>
+        </div>
+      </div>
+      
+      <div class="overview-card resource-usage">
+        <div class="card-icon">
+          <ClusterOutlined />
+        </div>
+        <div class="card-info">
+          <div class="card-number cluster-name">{{ selectedClusterName || '未选择' }}</div>
+          <div class="card-label">当前集群</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <a-select 
+          v-model:value="selectedCluster" 
+          placeholder="选择集群" 
+          class="env-filter cluster-selector"
+          :loading="clustersLoading" 
+          @change="handleClusterChange"
+        >
+          <template #suffixIcon><ClusterOutlined /></template>
           <a-select-option v-for="cluster in clusters" :key="cluster.id" :value="cluster.id">
             <span class="cluster-option">
               <CloudServerOutlined />
@@ -34,11 +81,14 @@
           </a-select-option>
         </a-select>
 
-        <a-select v-model:value="selectedNamespace" placeholder="选择命名空间" class="control-item namespace-selector"
-          :loading="namespacesLoading" @change="handleNamespaceChange">
-          <template #suffixIcon>
-            <PartitionOutlined />
-          </template>
+        <a-select 
+          v-model:value="selectedNamespace" 
+          placeholder="选择命名空间" 
+          class="env-filter namespace-selector"
+          :loading="namespacesLoading" 
+          @change="handleNamespaceChange"
+        >
+          <template #suffixIcon><PartitionOutlined /></template>
           <a-select-option v-for="ns in namespaces" :key="ns" :value="ns">
             <span class="namespace-option">
               <AppstoreOutlined />
@@ -47,265 +97,241 @@
           </a-select-option>
         </a-select>
 
-        <a-input-search v-model:value="searchText" placeholder="搜索 Pod 名称" class="control-item search-input"
-          @search="onSearch" allow-clear>
-          <template #prefix>
-            <SearchOutlined />
-          </template>
-        </a-input-search>
+        <a-input-search
+          v-model:value="searchText"
+          placeholder="搜索 Pod 名称"
+          class="search-input"
+          @search="onSearch"
+          allow-clear
+        />
       </div>
-
-      <div class="action-buttons">
-        <a-tooltip title="刷新数据">
-          <a-button type="primary" class="refresh-btn" @click="getPods" :loading="loading">
-            <template #icon>
-              <ReloadOutlined />
-            </template>
-          </a-button>
-        </a-tooltip>
-
-        <a-button type="primary" danger class="delete-btn" @click="handleBatchDelete" :disabled="!selectedRows.length">
-          <template #icon>
-            <DeleteOutlined />
-          </template>
-          批量删除 {{ selectedRows.length ? `(${selectedRows.length})` : '' }}
+      
+      <div class="toolbar-right">
+        <div class="view-toggle">
+          <a-radio-group v-model:value="viewMode" button-style="solid" size="small">
+            <a-radio-button value="table">
+              <TableOutlined />
+            </a-radio-button>
+            <a-radio-button value="card">
+              <AppstoreOutlined />
+            </a-radio-button>
+          </a-radio-group>
+        </div>
+        
+        <a-button @click="getPods" :loading="loading">
+          <template #icon><ReloadOutlined /></template>
+        </a-button>
+        
+        <a-button 
+          type="primary" 
+          danger 
+          @click="handleBatchDelete" 
+          :disabled="!selectedRows.length"
+          v-if="selectedRows.length > 0"
+        >
+          <template #icon><DeleteOutlined /></template>
+          删除 ({{ selectedRows.length }})
         </a-button>
       </div>
     </div>
 
-    <!-- 状态摘要卡片 -->
-    <div class="status-summary">
-      <div class="summary-card total-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <DashboardOutlined class="metric-icon" />
-            <div class="metric-value">{{ pods.length }}</div>
-          </div>
-          <div class="card-title">Pod 总数</div>
-        </div>
-        <div class="card-footer">
-          <div class="footer-text">{{ selectedNamespace }} 命名空间</div>
-        </div>
-      </div>
-
-      <div class="summary-card running-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <CheckCircleOutlined class="metric-icon" />
-            <div class="metric-value">{{ runningPodsCount }}</div>
-          </div>
-          <div class="card-title">运行中 Pods</div>
-        </div>
-        <div class="card-footer">
-          <a-progress :percent="runningPodsPercentage" :stroke-color="{ from: '#1890ff', to: '#52c41a' }" size="small"
-            :show-info="false" />
-          <div class="footer-text">{{ runningPodsPercentage }}% 运行正常</div>
-        </div>
-      </div>
-
-      <div class="summary-card problem-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <WarningOutlined class="metric-icon" />
-            <div class="metric-value">{{ problemPodsCount }}</div>
-          </div>
-          <div class="card-title">问题 Pods</div>
-        </div>
-        <div class="card-footer">
-          <a-progress :percent="problemPodsPercentage" status="exception" size="small" :show-info="false" />
-          <div class="footer-text">{{ problemPodsPercentage }}% 需要关注</div>
-        </div>
-      </div>
-
-      <div class="summary-card cluster-card">
-        <div class="card-content">
-          <div class="card-metric">
-            <ClusterOutlined class="metric-icon" />
-            <div class="metric-value cluster-name">{{ selectedClusterName || '未选择' }}</div>
-          </div>
-          <div class="card-title">当前集群</div>
-        </div>
-        <div class="card-footer">
-          <div class="system-status">
-            <span class="status-indicator"></span>
-            <span class="status-text">系统在线</span>
+    <!-- 数据展示区域 -->
+    <div class="data-display">
+      <div class="display-header" v-if="filteredPods.length > 0">
+        <div class="result-info">
+          <span class="result-count">共 {{ filteredPods.length }} 个Pod</span>
+          <div class="env-tags">
+            <a-tag color="green">运行中 {{ runningPodsCount }}</a-tag>
+            <a-tag color="orange" v-if="problemPodsCount > 0">问题 {{ problemPodsCount }}</a-tag>
+            <a-tag color="blue">{{ selectedNamespace }}</a-tag>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 视图切换 -->
-    <div class="view-toggle">
-      <a-radio-group v-model:value="viewMode" button-style="solid">
-        <a-radio-button value="table">
-          <TableOutlined />
-          表格视图
-        </a-radio-button>
-        <a-radio-button value="card">
-          <AppstoreOutlined />
-          卡片视图
-        </a-radio-button>
-      </a-radio-group>
-    </div>
+      <!-- 表格视图 -->
+      <a-table
+        v-if="viewMode === 'table'"
+        :columns="columns"
+        :data-source="filteredPods"
+        :row-selection="rowSelection"
+        :loading="loading"
+        row-key="name"
+        :pagination="{ 
+          pageSize: 12, 
+          showSizeChanger: true, 
+          showQuickJumper: true,
+          showTotal: (total: number) => `共 ${total} 条数据`,
+          pageSizeOptions: ['12', '24', '48', '96']
+        }"
+        class="cluster-table pod-table"
+      >
+        <!-- Pod名称列 -->
+        <template #name="{ text }">
+          <div class="cluster-name pod-name">
+            <CodepenOutlined />
+            <span>{{ text }}</span>
+          </div>
+        </template>
 
-    <!-- 表格视图 -->
-    <a-table v-if="viewMode === 'table'" :columns="columns" :data-source="filteredPods" :row-selection="rowSelection"
-      :loading="loading" row-key="name" :pagination="{
-        pageSize: 10,
-        showSizeChanger: true,
-        showQuickJumper: true,
-        showTotal: (total: number) => `共 ${total} 条数据`
-      }" class="services-table pod-table">
-      <!-- Pod名称列 -->
-      <template #name="{ text }">
-        <div class="pod-name">
-          <CodepenOutlined />
-          <span>{{ text }}</span>
-        </div>
-      </template>
+        <!-- 命名空间列 -->
+        <template #namespace="{ text }">
+          <a-tag class="env-tag namespace-tag">
+            <AppstoreOutlined /> {{ text }}
+          </a-tag>
+        </template>
 
-      <!-- 命名空间列 -->
-      <template #namespace="{ text }">
-        <a-tag class="namespace-tag">
-          <AppstoreOutlined /> {{ text }}
-        </a-tag>
-      </template>
+        <!-- 状态列 -->
+        <template #status="{ text }">
+          <a-tag :color="getPodStatusColor(text)" class="status-tag">
+            <span class="status-dot"></span>
+            {{ text }}
+          </a-tag>
+        </template>
 
-      <!-- 状态列 -->
-      <template #status="{ text }">
-        <a-tag :color="getPodStatusColor(text)" class="status-tag">
-          <span class="status-dot"></span>
-          {{ text }}
-        </a-tag>
-      </template>
+        <!-- IP地址列 -->
+        <template #ip="{ text }">
+          <div class="timestamp ip-address">
+            <GlobalOutlined />
+            <span>{{ text }}</span>
+          </div>
+        </template>
 
-      <!-- IP地址列 -->
-      <template #ip="{ text }">
-        <span class="ip-address">
-          <GlobalOutlined />
-          {{ text }}
-        </span>
-      </template>
+        <!-- 创建时间列 -->
+        <template #age="{ text }">
+          <div class="timestamp">
+            <ClockCircleOutlined />
+            <span>{{ text }}</span>
+          </div>
+        </template>
 
-      <!-- 创建时间列 -->
-      <template #age="{ text }">
-        <div class="timestamp">
-          <ClockCircleOutlined />
-          <span>{{ text }}</span>
-        </div>
-      </template>
-
-      <!-- 操作列 -->
-      <template #action="{ record }">
-        <div class="action-column">
-          <a-tooltip title="查看 YAML">
-            <a-button type="primary" ghost shape="circle" @click="viewPodYaml(record)">
-              <template #icon>
-                <CodeOutlined />
-              </template>
-            </a-button>
-          </a-tooltip>
-
-          <a-tooltip title="查看日志">
-            <a-button type="primary" ghost shape="circle" @click="viewPodLogs(record)">
-              <template #icon>
-                <FileTextOutlined />
-              </template>
-            </a-button>
-          </a-tooltip>
-
-          <a-tooltip title="删除 Pod">
-            <a-popconfirm title="确定要删除该 Pod 吗?" description="此操作不可撤销" @confirm="handleDelete(record)" ok-text="确定"
-              cancel-text="取消">
-              <a-button type="primary" danger ghost shape="circle">
-                <template #icon>
-                  <DeleteOutlined />
-                </template>
+        <!-- 操作列 -->
+        <template #action="{ record }">
+          <div class="action-column">
+            <a-tooltip title="查看 YAML">
+              <a-button type="primary" ghost shape="circle" @click="viewPodYaml(record)">
+                <template #icon><CodeOutlined /></template>
               </a-button>
-            </a-popconfirm>
-          </a-tooltip>
-        </div>
-      </template>
-    </a-table>
+            </a-tooltip>
 
-    <!-- 卡片视图 -->
-    <div v-else class="card-view">
-      <a-spin :spinning="loading">
-        <a-empty v-if="filteredPods.length === 0" description="暂无 Pod 数据" />
-        <div v-else class="service-cards pod-cards">
-          <a-checkbox-group v-model:value="selectedCardIds" class="card-checkbox-group">
-            <div v-for="pod in filteredPods" :key="pod.name" class="service-card pod-card">
-              <div class="card-header">
-                <a-checkbox :value="pod.name" class="card-checkbox" />
-                <div class="service-title pod-title">
-                  <CodepenOutlined class="service-icon" />
-                  <h3>{{ pod.name }}</h3>
-                </div>
-                <a-tag :color="getPodStatusColor(pod.status)" class="card-type-tag status-tag">
-                  <span class="status-dot"></span>
-                  {{ pod.status }}
-                </a-tag>
-              </div>
+            <a-tooltip title="查看日志">
+              <a-button type="primary" ghost shape="circle" @click="viewPodLogs(record)">
+                <template #icon><FileTextOutlined /></template>
+              </a-button>
+            </a-tooltip>
 
-              <div class="card-content">
-                <div class="card-detail namespace-detail">
-                  <span class="detail-label">命名空间:</span>
-                  <span class="detail-value">
-                    <AppstoreOutlined />
-                    {{ pod.namespace }}
-                  </span>
-                </div>
-                <div class="card-detail ip-detail">
-                  <span class="detail-label">IP地址:</span>
-                  <span class="detail-value">
-                    <GlobalOutlined />
-                    {{ pod.ip }}
-                  </span>
-                </div>
-                <div class="card-detail age-detail">
-                  <span class="detail-label">创建时间:</span>
-                  <span class="detail-value">
-                    <ClockCircleOutlined />
-                    {{ pod.age }}
-                  </span>
-                </div>
-                <div class="card-detail containers-detail">
-                  <span class="detail-label">容器数量:</span>
-                  <span class="detail-value">{{ pod.containers?.length || 0 }}</span>
-                </div>
-              </div>
-
-              <div class="card-footer card-action-footer">
-                <a-button type="primary" ghost size="small" @click="viewPodYaml(pod)">
-                  <template #icon>
-                    <CodeOutlined />
-                  </template>
-                  YAML
+            <a-tooltip title="删除 Pod">
+              <a-popconfirm
+                title="确定要删除该 Pod 吗?"
+                description="此操作不可撤销"
+                @confirm="handleDelete(record)"
+                ok-text="确定"
+                cancel-text="取消"
+              >
+                <a-button type="primary" danger ghost shape="circle">
+                  <template #icon><DeleteOutlined /></template>
                 </a-button>
-                <a-button type="primary" ghost size="small" @click="viewPodLogs(pod)">
-                  <template #icon>
-                    <FileTextOutlined />
-                  </template>
-                  日志
-                </a-button>
-                <a-popconfirm title="确定要删除该 Pod 吗?" @confirm="handleDelete(pod)" ok-text="确定" cancel-text="取消">
-                  <a-button type="primary" danger ghost size="small">
-                    <template #icon>
-                      <DeleteOutlined />
-                    </template>
-                    删除
+              </a-popconfirm>
+            </a-tooltip>
+          </div>
+        </template>
+
+        <!-- 空状态 -->
+        <template #emptyText>
+          <div class="empty-state">
+            <CloudServerOutlined style="font-size: 48px; color: #d9d9d9; margin-bottom: 16px" />
+            <p>暂无Pod数据</p>
+            <a-button type="primary" @click="getPods">刷新数据</a-button>
+          </div>
+        </template>
+      </a-table>
+
+      <!-- 卡片视图 -->
+      <div v-else class="card-view">
+        <a-spin :spinning="loading">
+          <a-empty v-if="filteredPods.length === 0" description="暂无Pod数据">
+            <template #image>
+              <CloudServerOutlined style="font-size: 64px; color: #d9d9d9;" />
+            </template>
+            <template #description>
+              <span style="color: #999;">暂无Pod数据</span>
+            </template>
+            <a-button type="primary" @click="getPods">刷新数据</a-button>
+          </a-empty>
+          <div v-else class="cluster-cards pod-cards">
+            <a-checkbox-group v-model:value="selectedCardIds" class="card-checkbox-group">
+              <div v-for="pod in filteredPods" :key="pod.name" class="cluster-card pod-card">
+                <div class="card-header">
+                  <a-checkbox :value="pod.name" class="card-checkbox" />
+                  <div class="service-title pod-title">
+                    <CodepenOutlined class="service-icon" />
+                    <h3>{{ pod.name }}</h3>
+                  </div>
+                  <a-tag :color="getPodStatusColor(pod.status)" class="card-type-tag env-tag status-tag">
+                    <span class="status-dot"></span>
+                    {{ pod.status }}
+                  </a-tag>
+                </div>
+
+                <div class="card-content">
+                  <div class="card-detail namespace-detail">
+                    <span class="detail-label">命名空间:</span>
+                    <span class="detail-value">
+                      <AppstoreOutlined />
+                      {{ pod.namespace }}
+                    </span>
+                  </div>
+                  <div class="card-detail ip-detail">
+                    <span class="detail-label">IP地址:</span>
+                    <span class="detail-value">
+                      <GlobalOutlined />
+                      {{ pod.ip }}
+                    </span>
+                  </div>
+                  <div class="card-detail age-detail">
+                    <span class="detail-label">创建时间:</span>
+                    <span class="detail-value">
+                      <ClockCircleOutlined />
+                      {{ pod.age }}
+                    </span>
+                  </div>
+                  <div class="card-detail containers-detail">
+                    <span class="detail-label">容器数量:</span>
+                    <span class="detail-value">{{ pod.containers?.length || 0 }}</span>
+                  </div>
+                </div>
+
+                <div class="card-footer card-action-footer">
+                  <a-button type="primary" ghost size="small" @click="viewPodYaml(pod)">
+                    <template #icon><CodeOutlined /></template>
+                    YAML
                   </a-button>
-                </a-popconfirm>
+                  <a-button type="primary" ghost size="small" @click="viewPodLogs(pod)">
+                    <template #icon><FileTextOutlined /></template>
+                    日志
+                  </a-button>
+                  <a-popconfirm title="确定要删除该 Pod 吗?" @confirm="handleDelete(pod)" ok-text="确定" cancel-text="取消">
+                    <a-button type="primary" danger ghost size="small">
+                      <template #icon><DeleteOutlined /></template>
+                      删除
+                    </a-button>
+                  </a-popconfirm>
+                </div>
               </div>
-            </div>
-          </a-checkbox-group>
-        </div>
-      </a-spin>
+            </a-checkbox-group>
+          </div>
+        </a-spin>
+      </div>
     </div>
 
     <!-- Pod YAML 模态框 -->
-    <a-modal v-model:open="yamlModalVisible" title="Pod YAML 配置" width="800px" class="yaml-modal" :footer="null">
-      <a-alert v-if="selectedPod" class="yaml-info" type="info" show-icon>
+    <a-modal 
+      v-model:open="yamlModalVisible" 
+      title="Pod YAML 配置" 
+      width="900px" 
+      class="cluster-modal yaml-modal" 
+      :footer="null"
+    >
+      <a-alert v-if="selectedPod" class="modal-alert" type="info" show-icon>
         <template #message>
           <span>{{ selectedPod.name }} ({{ selectedPod.namespace }})</span>
         </template>
@@ -313,11 +339,10 @@
           <div>状态: {{ selectedPod.status }} | IP: {{ selectedPod.ip }}</div>
         </template>
       </a-alert>
+      
       <div class="yaml-actions">
         <a-button type="primary" size="small" @click="copyYaml">
-          <template #icon>
-            <CopyOutlined />
-          </template>
+          <template #icon><CopyOutlined /></template>
           复制
         </a-button>
       </div>
@@ -325,8 +350,14 @@
     </a-modal>
 
     <!-- Pod 日志查看模态框 -->
-    <a-modal v-model:open="logModalVisible" title="Pod 日志查看" width="800px" :footer="null" class="yaml-modal logs-modal">
-      <a-alert v-if="selectedPod" class="yaml-info" type="info" show-icon>
+    <a-modal 
+      v-model:open="logModalVisible" 
+      title="Pod 日志查看" 
+      width="900px" 
+      :footer="null" 
+      class="cluster-modal logs-modal"
+    >
+      <a-alert v-if="selectedPod" class="modal-alert" type="info" show-icon>
         <template #message>
           <span>{{ selectedPod.name }} ({{ selectedPod.namespace }})</span>
         </template>
@@ -336,11 +367,13 @@
       </a-alert>
 
       <div class="logs-toolbar">
-        <a-select v-model:value="selectedContainer" class="container-select" placeholder="选择容器"
-          @change="handleContainerChange">
-          <template #suffixIcon>
-            <ContainerOutlined />
-          </template>
+        <a-select 
+          v-model:value="selectedContainer" 
+          class="form-select container-select" 
+          placeholder="选择容器"
+          @change="handleContainerChange"
+        >
+          <template #suffixIcon><ContainerOutlined /></template>
           <a-select-option v-for="container in containers" :key="container" :value="container">
             <span class="container-option">
               <ContainerOutlined />
@@ -350,16 +383,12 @@
         </a-select>
 
         <a-button type="primary" @click="fetchPodLogs" :disabled="!selectedContainer" class="logs-refresh-btn">
-          <template #icon>
-            <SyncOutlined />
-          </template>
+          <template #icon><SyncOutlined /></template>
           刷新日志
         </a-button>
 
         <a-button type="primary" @click="copyLogs" :disabled="!podLogs">
-          <template #icon>
-            <CopyOutlined />
-          </template>
+          <template #icon><CopyOutlined /></template>
           复制
         </a-button>
       </div>
@@ -396,7 +425,6 @@ import {
 import {
   SyncOutlined,
   DeleteOutlined,
-  SearchOutlined,
   CloudServerOutlined,
   TableOutlined,
   AppstoreOutlined,
@@ -453,6 +481,7 @@ const columns = [
     title: 'Pod 名称',
     dataIndex: 'name',
     key: 'name',
+    width: '25%',
     sorter: (a: Pod, b: Pod) => a.name.localeCompare(b.name),
     slots: { customRender: 'name' },
   },
@@ -460,12 +489,14 @@ const columns = [
     title: '命名空间',
     dataIndex: 'namespace',
     key: 'namespace',
+    width: '15%',
     slots: { customRender: 'namespace' },
   },
   {
     title: '状态',
     dataIndex: 'status',
     key: 'status',
+    width: '12%',
     slots: { customRender: 'status' },
     filters: [
       { text: 'Running', value: 'Running' },
@@ -480,21 +511,23 @@ const columns = [
     title: 'IP地址',
     dataIndex: 'ip',
     key: 'ip',
+    width: '15%',
     slots: { customRender: 'ip' },
   },
   {
     title: '创建时间',
     dataIndex: 'age',
     key: 'age',
+    width: '15%',
     sorter: (a: Pod, b: Pod) => a.age.localeCompare(b.age),
     slots: { customRender: 'age' },
   },
   {
     title: '操作',
     key: 'action',
-    slots: { customRender: 'action' },
+    width: '18%',
     fixed: 'right',
-    width: 150,
+    slots: { customRender: 'action' },
   },
 ];
 
@@ -534,11 +567,11 @@ watch(selectedCardIds, (newValue) => {
 
 // 表格选择配置
 const rowSelection = {
-  onChange: (selectedRowKeys: string[], selectedRowsData: Pod[]) => {
+  onChange: (_selectedRowKeys: string[], selectedRowsData: Pod[]) => {
     selectedRows.value = selectedRowsData;
     selectedCardIds.value = selectedRowsData.map(row => row.name);
   },
-  getCheckboxProps: (record: Pod) => ({
+  getCheckboxProps: (_record: Pod) => ({
     disabled: false, // 可以根据条件禁用某些行的选择
   }),
 };
@@ -771,127 +804,243 @@ onMounted(() => {
 </script>
 
 <style>
+/* 现代化大气设计系统 */
 :root {
-  --primary-color: #1890ff;
+  --primary-color: #1677ff;
+  --primary-hover: #4096ff;
+  --primary-active: #0958d9;
   --success-color: #52c41a;
   --warning-color: #faad14;
-  --error-color: #f5222d;
+  --error-color: #ff4d4f;
+  --text-primary: #000000d9;
+  --text-secondary: #00000073;
+  --text-tertiary: #00000040;
+  --text-quaternary: #00000026;
+  --border-color: #d9d9d9;
+  --border-color-split: #f0f0f0;
+  --background-color: #f5f5f5;
+  --component-background: #ffffff;
+  --layout-header-background: #001529;
+  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 6px 16px rgba(0, 0, 0, 0.08);
+  --shadow-3: 0 9px 28px rgba(0, 0, 0, 0.12);
+  --border-radius-base: 8px;
+  --border-radius-sm: 6px;
+  --border-radius-lg: 12px;
   --font-size-base: 14px;
-  --border-radius-base: 4px;
-  --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  --font-size-xxl: 24px;
+  --line-height-base: 1.5714;
   --transition-duration: 0.3s;
+  --transition-function: cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
-.pod-manager {
-  background-color: #f0f2f5;
-  border-radius: 8px;
+/* ==================== 布局容器 ==================== */
+.cluster-management-container {
+  min-height: 100vh;
+  background: var(--background-color);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* 仪表板标题样式 */
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.dashboard-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #262626;
-  margin: 0;
-  display: flex;
-  align-items: center;
-}
-
-.dashboard-icon {
-  margin-right: 14px;
-  font-size: 28px;
-  color: #1890ff;
-}
-
-.dashboard-stats {
-  display: flex;
-  gap: 20px;
-}
-
-.stat-item {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border-radius: 8px;
-  padding: 10px 18px;
-  color: white;
-  min-width: 120px;
-  text-align: center;
-  box-shadow: 0 3px 8px rgba(24, 144, 255, 0.2);
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.stat-label {
-  font-size: 12px;
-  opacity: 0.9;
-  margin-top: 4px;
-}
-
-/* 控制面板样式 */
-.control-panel {
-  display: flex;
-  justify-content: space-between;
+/* ==================== 页面头部 ==================== */
+.page-header {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
   margin-bottom: 24px;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
 }
 
-.search-filters {
+.header-content {
+  padding: 32px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.title-section {
+  flex: 1;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.title-icon {
+  font-size: 28px;
+  color: var(--primary-color);
+  margin-right: 16px;
+}
+
+.page-title h1 {
+  font-size: var(--font-size-xxl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: var(--line-height-base);
+}
+
+.header-actions {
+  flex-shrink: 0;
+}
+
+/* ==================== 概览卡片 ==================== */
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.overview-card {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  padding: 24px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  align-items: center;
+  transition: all var(--transition-duration) var(--transition-function);
+  border: 1px solid var(--border-color-split);
+}
+
+.overview-card:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.total-clusters .card-icon {
+  background: rgba(22, 119, 255, 0.1);
+  color: var(--primary-color);
+}
+
+.running-clusters .card-icon {
+  background: rgba(82, 196, 26, 0.1);
+  color: var(--success-color);
+}
+
+.env-types .card-icon {
+  background: rgba(250, 173, 20, 0.1);
+  color: var(--warning-color);
+}
+
+.resource-usage .card-icon {
+  background: rgba(114, 46, 209, 0.1);
+  color: #722ed1;
+}
+
+.card-info {
+  flex: 1;
+}
+
+.card-number {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.card-label {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: var(--line-height-base);
+}
+
+.cluster-name {
+  font-size: 18px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* ==================== 工具栏 ==================== */
+.toolbar {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  border: 1px solid var(--border-color-split);
+}
+
+.toolbar-left {
   display: flex;
   gap: 16px;
-  flex-wrap: wrap;
   align-items: center;
   flex: 1;
 }
 
-.control-item {
-  min-width: 200px;
-}
-
 .search-input {
-  flex-grow: 1;
-  max-width: 300px;
+  width: 320px;
 }
 
-.action-buttons {
+.search-input :deep(.ant-input) {
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-base);
+  height: 40px;
+}
+
+.env-filter {
+  width: 160px;
+}
+
+.env-filter :deep(.ant-select-selector) {
+  border-radius: var(--border-radius-sm);
+  height: 40px;
+}
+
+.toolbar-right {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
-  margin-left: 20px;
+  flex-shrink: 0;
 }
 
-.refresh-btn {
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border: none;
-  height: 36px;
-  width: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.view-toggle :deep(.ant-radio-group) {
+  border-radius: var(--border-radius-sm);
 }
 
-.delete-btn {
-  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
-  border: none;
-  height: 36px;
-  padding: 0 16px;
-  font-weight: 500;
+.view-toggle :deep(.ant-radio-button-wrapper) {
+  height: 32px;
+  line-height: 30px;
+  padding: 0 12px;
+  border-radius: var(--border-radius-sm);
+}
+
+.view-toggle :deep(.ant-radio-button-wrapper:first-child) {
+  border-radius: var(--border-radius-sm) 0 0 var(--border-radius-sm);
+}
+
+.view-toggle :deep(.ant-radio-button-wrapper:last-child) {
+  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
 }
 
 .cluster-option,
@@ -908,146 +1057,84 @@ onMounted(() => {
   margin-right: 4px;
 }
 
-/* 状态摘要卡片 */
-.status-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
-  margin-bottom: 28px;
-}
-
-.summary-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+/* ==================== 数据展示区域 ==================== */
+.data-display {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  box-shadow: var(--shadow-1);
+  border: 1px solid var(--border-color-split);
   overflow: hidden;
-  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.display-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color-split);
+  background: var(--component-background);
+}
+
+.result-info {
   display: flex;
-  flex-direction: column;
-}
-
-.summary-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-}
-
-.card-content {
-  padding: 24px;
-  flex-grow: 1;
-}
-
-.card-title {
-  font-size: 14px;
-  color: #8c8c8c;
-  margin-top: 10px;
-}
-
-.card-metric {
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
 }
 
-.metric-icon {
-  font-size: 28px;
-  margin-right: 16px;
+.result-count {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
-.metric-value {
-  font-size: 32px;
+.env-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.env-tags :deep(.ant-tag) {
+  border-radius: var(--border-radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* ==================== 表格样式 ==================== */
+.cluster-table {
+  border: none;
+}
+
+.cluster-table :deep(.ant-table-container) {
+  border-radius: 0;
+}
+
+.cluster-table :deep(.ant-table-thead > tr > th) {
+  background: #fafafa;
   font-weight: 600;
-  color: #262626;
+  padding: 16px 16px;
+  border-bottom: 1px solid var(--border-color-split);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
 }
 
-.total-card .metric-icon {
-  color: #1890ff;
+.cluster-table :deep(.ant-table-tbody > tr) {
+  transition: background-color var(--transition-duration) var(--transition-function);
 }
 
-.running-card .metric-icon {
-  color: #52c41a;
+.cluster-table :deep(.ant-table-tbody > tr:hover) {
+  background-color: #fafafa;
 }
 
-.problem-card .metric-icon {
-  color: #f5222d;
-}
-
-.cluster-card .metric-icon {
-  color: #722ed1;
+.cluster-table :deep(.ant-table-tbody > tr > td) {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color-split);
+  vertical-align: middle;
+  font-size: var(--font-size-base);
 }
 
 .cluster-name {
-  font-size: 22px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 200px;
-}
-
-.card-footer {
-  padding: 14px 24px;
-  background-color: #fafafa;
-  border-top: 1px solid #f0f0f0;
-}
-
-.footer-text {
-  font-size: 12px;
-  color: #8c8c8c;
-  margin-top: 6px;
-}
-
-.system-status {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.status-indicator {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #52c41a;
-  display: inline-block;
-}
-
-.status-text {
-  font-size: 13px;
-  color: #52c41a;
-}
-
-/* 视图切换按钮 */
-.view-toggle {
-  margin-bottom: 20px;
-  text-align: right;
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper) {
-  padding: 0 16px;
-  height: 36px;
-  line-height: 34px;
-  display: inline-flex;
-  align-items: center;
-}
-
-.view-toggle :deep(.ant-radio-button-wrapper svg) {
-  margin-right: 6px;
-}
-
-/* Pod表格样式 */
-.pod-table {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-.pod-table :deep(.ant-table-thead > tr > th) {
-  background-color: #f5f7fa;
-  font-weight: 600;
-  padding: 14px 16px;
-}
-
-.pod-table :deep(.ant-table-tbody > tr > td) {
-  padding: 12px 16px;
+  gap: 12px;
+  font-weight: 500;
 }
 
 .pod-name {
@@ -1069,22 +1156,31 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-.status-tag {
-  font-weight: 500;
+.env-tag, .status-tag {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: var(--border-radius-base);
+  font-size: 12px;
+  border: none;
 }
 
 .status-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: currentColor;
+}
+
+.timestamp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
 }
 
 .ip-address {
@@ -1095,191 +1191,186 @@ onMounted(() => {
   color: #595959;
 }
 
-.timestamp {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #595959;
-}
-
 .action-column {
   display: flex;
-  gap: 12px;
-  justify-content: center;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .action-column :deep(.ant-btn) {
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-duration) var(--transition-function);
 }
 
-/* 卡片视图容器 */
+.action-column :deep(.ant-btn:hover) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+/* ==================== 卡片视图 ==================== */
 .card-view {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  padding: 24px;
 }
 
-/* 卡片容器布局优化 - 横向排列 */
+.cluster-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 24px;
+}
+
 .card-checkbox-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 30px;
-  padding: 10px;
+  display: contents;
 }
 
-/* 卡片样式优化 */
-.pod-card,
-.service-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s, box-shadow 0.3s;
+.cluster-card {
+  background: var(--component-background);
+  border-radius: var(--border-radius-base);
+  box-shadow: var(--shadow-1);
+  transition: all var(--transition-duration) var(--transition-function);
   overflow: hidden;
+  border: 1px solid var(--border-color-split);
   position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 350px;
-  border: 1px solid #eaeaea;
-  margin-bottom: 20px;
 }
 
-.pod-card:hover,
-.service-card:hover {
+.cluster-card:hover {
+  box-shadow: var(--shadow-2);
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-/* 卡片头部样式 */
 .card-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
-  background-color: #fafafa;
+  padding: 24px 24px 16px;
+  background: var(--component-background);
   position: relative;
 }
 
-.pod-title,
 .service-title {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-right: 45px;
+  margin-right: 60px;
 }
 
-.pod-title h3,
 .service-title h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #333;
-  word-break: break-all;
-  line-height: 1.4;
+  color: var(--text-primary);
+  line-height: 1.3;
 }
 
 .service-icon {
   font-size: 20px;
-  color: #1890ff;
+  color: var(--primary-color);
 }
 
 .card-type-tag {
   position: absolute;
-  top: 12px;
-  right: 50px;
-  padding: 2px 10px;
+  top: 20px;
+  right: 48px;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  font-size: 12px;
 }
 
 .card-checkbox {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 20px;
+  right: 16px;
 }
 
-/* 卡片内容区域 */
 .card-content {
-  padding: 20px;
-  flex-grow: 1;
+  padding: 0 24px 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: #fff;
 }
 
 .card-detail {
   display: flex;
   align-items: center;
-  line-height: 1.5;
+  line-height: var(--line-height-base);
 }
 
 .detail-label {
-  color: #666;
+  color: var(--text-secondary);
   min-width: 100px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
+  font-weight: 500;
 }
 
 .detail-value {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: #333;
+  gap: 8px;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
   flex: 1;
+  font-weight: 500;
 }
 
-/* 卡片底部按钮区域 */
 .card-action-footer {
-  padding: 16px 20px;
-  background-color: #f5f7fa;
-  border-top: 1px solid #eeeeee;
+  padding: 16px 24px 20px;
+  background: #fafafa;
+  border-top: 1px solid var(--border-color-split);
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
 .card-action-footer .ant-btn {
   flex: 1;
-  min-width: 80px;
-  border-radius: 4px;
   height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.card-action-footer .ant-btn svg {
-  margin-right: 8px;
-}
-
-/* 状态标签样式 */
-.status-tag {
+  border-radius: var(--border-radius-sm);
   font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 13px;
+  transition: all var(--transition-duration) var(--transition-function);
+  font-size: var(--font-size-base);
 }
 
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: currentColor;
+.card-action-footer .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+}
+
+/* ==================== 模态框样式 ==================== */
+.cluster-modal :deep(.ant-modal-content) {
+  border-radius: var(--border-radius-base);
+  overflow: hidden;
+  box-shadow: var(--shadow-3);
+}
+
+.cluster-modal :deep(.ant-modal-header) {
+  background: var(--component-background);
+  border-bottom: 1px solid var(--border-color-split);
+  padding: 20px 24px;
+}
+
+.cluster-modal :deep(.ant-modal-title) {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-alert {
+  margin-bottom: 20px;
+  border-radius: var(--border-radius-sm);
+}
+
+.form-select {
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-duration) var(--transition-function);
+  font-size: var(--font-size-base);
+}
+
+.form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
 }
 
 /* YAML模态框 */
 .yaml-modal {
   font-family: "Consolas", "Monaco", monospace;
-}
-
-.yaml-info {
-  margin-bottom: 16px;
 }
 
 .yaml-actions {
@@ -1346,32 +1437,150 @@ onMounted(() => {
   word-break: break-all;
 }
 
-/* 响应式调整 */
-@media (max-width: 1400px) {
-  .card-checkbox-group {
-    justify-content: space-around;
-  }
+/* ==================== 空状态 ==================== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 0;
+  color: var(--text-secondary);
+}
 
-  .pod-card,
-  .service-card {
-    width: 320px;
+.empty-state p {
+  margin: 16px 0 24px;
+  font-size: var(--font-size-base);
+}
+
+/* ==================== 响应式设计 ==================== */
+@media (max-width: 1400px) {
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .cluster-cards {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .cluster-management-container {
+    padding: 16px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    padding: 24px 32px;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .toolbar-left {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .env-filter {
+    width: 100%;
+  }
+  
+  .toolbar-right {
+    justify-content: space-between;
   }
 }
 
 @media (max-width: 768px) {
-  .card-checkbox-group {
-    flex-direction: column;
-    align-items: center;
+  .cluster-management-container {
+    padding: 12px;
   }
-
-  .pod-card,
-  .service-card {
-    width: 100%;
-    max-width: 450px;
+  
+  .header-content {
+    padding: 20px 24px;
   }
-
+  
+  .page-title h1 {
+    font-size: var(--font-size-xl);
+  }
+  
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .overview-card {
+    padding: 16px;
+  }
+  
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    margin-right: 12px;
+  }
+  
+  .card-number {
+    font-size: var(--font-size-lg);
+  }
+  
+  .cluster-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .cluster-card {
+    margin-bottom: 0;
+  }
+  
   .card-action-footer {
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .overview-card {
+    padding: 12px;
+  }
+  
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    margin-right: 8px;
+  }
+  
+  .toolbar-right {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .cluster-table :deep(.ant-table-tbody > tr > td) {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+  
+  .action-column {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .action-column :deep(.ant-btn) {
+    width: 28px;
+    height: 28px;
   }
 }
 </style>

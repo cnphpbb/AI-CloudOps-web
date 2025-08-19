@@ -64,6 +64,7 @@ const routes: RouteRecordRaw[] = [
         path: '/k8s_configmap',
         component: () => import('#/views/k8s/K8sConfigmap.vue'),
         meta: {
+          hideInMenu: true,
           icon: 'lucide:user-round-minus',
           title: 'ConfigMap管理',
         },
