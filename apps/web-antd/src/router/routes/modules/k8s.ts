@@ -8,6 +8,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       order: 3,
       title: 'k8s运维管理',
+      icon: 'tabler:cloud-network'
     },
     name: 'K8s',
     path: '/k8s',

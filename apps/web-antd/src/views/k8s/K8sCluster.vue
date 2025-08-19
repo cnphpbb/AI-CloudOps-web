@@ -387,29 +387,36 @@
           </a-col>
         </a-row>
         
-        <a-divider orientation="left">资源配置</a-divider>
-        
+        <a-divider orientation="left">集群资源限制</a-divider>
+        <a-alert
+          type="warning"
+          show-icon
+          banner
+          message="警告"
+          description="设置资源限制是一个敏感操作,请仔细确认输入的值是否正确。错误的资源限制可能会影响集群的正常运行。"
+          style="margin-bottom: 16px"
+        />
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="CPU 请求" name="cpu_request">
-              <a-input-number v-model:value="addForm.cpu_request" style="width: 100%" placeholder="请输入 CPU 请求" addon-after="cores" />
+            <a-form-item label="集群 CPU 请求 (cores)" name="cpu_request">
+              <a-input-number v-model:value="addForm.cpu_request" style="width: 100%" placeholder="请输入集群 CPU 请求" addon-after="cores" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="CPU 限制" name="cpu_limit">
-              <a-input-number v-model:value="addForm.cpu_limit" style="width: 100%" placeholder="请输入 CPU 限制" addon-after="cores" />
+            <a-form-item label="集群 CPU 限制 (cores)" name="cpu_limit">
+              <a-input-number v-model:value="addForm.cpu_limit" style="width: 100%" placeholder="请输入集群 CPU 限制" addon-after="cores" />  
             </a-form-item>
           </a-col>
         </a-row>
         
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="内存请求" name="memory_request">
+            <a-form-item label="集群内存请求 (Mi)" name="memory_request">
               <a-input-number v-model:value="addForm.memory_request" style="width: 100%" placeholder="请输入内存请求" addon-after="Mi" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="内存限制" name="memory_limit">
+            <a-form-item label="集群内存限制 (Mi)" name="memory_limit">
               <a-input-number v-model:value="addForm.memory_limit" style="width: 100%" placeholder="请输入内存限制" addon-after="Mi" />
             </a-form-item>
           </a-col>
@@ -828,8 +835,13 @@ const onEnvFilterChange = (value: string) => {
   filterEnv.value = value;
 };
 
-// 新增集群
-const handleAdd = async () => {
+// 检查是否填写了资源限制
+const hasResourceLimits = (form: ClusterForm) => {
+  return form.cpu_request || form.cpu_limit || form.memory_request || form.memory_limit;
+};
+
+// 执行新增集群操作
+const executeAdd = async () => {
   submitLoading.value = true;
   try {
     const formToSubmit = {
@@ -861,6 +873,24 @@ const handleAdd = async () => {
   }
 };
 
+// 新增集群
+const handleAdd = async () => {
+  // 检查是否填写了资源限制
+  if (hasResourceLimits(addForm)) {
+    Modal.confirm({
+      title: '确认资源限制设置',
+      content: `您设置了以下资源限制：\n${addForm.cpu_request ? `CPU请求: ${addForm.cpu_request} cores\n` : ''}${addForm.cpu_limit ? `CPU限制: ${addForm.cpu_limit} cores\n` : ''}${addForm.memory_request ? `内存请求: ${addForm.memory_request} Mi\n` : ''}${addForm.memory_limit ? `内存限制: ${addForm.memory_limit} Mi\n` : ''}\n这是一个敏感操作，错误的资源限制可能会影响集群的正常运行。\n\n请确认这些设置是否正确？`,
+      okText: '确认创建',
+      okType: 'danger',
+      cancelText: '取消',
+      width: 500,
+      onOk: executeAdd,
+    });
+  } else {
+    await executeAdd();
+  }
+};
+
 // 编辑集群
 const handleEdit = async (id: number) => {
   loading.value = true;
@@ -887,8 +917,8 @@ const handleEdit = async (id: number) => {
   }
 };
 
-// 更新集群
-const handleUpdate = async () => {
+// 执行更新集群操作
+const executeUpdate = async () => {
   if (!editForm.id) {
     message.error('集群 ID 无效');
     return;
@@ -908,6 +938,29 @@ const handleUpdate = async () => {
     message.error(error.message || '更新集群失败');
   } finally {
     submitLoading.value = false;
+  }
+};
+
+// 更新集群
+const handleUpdate = async () => {
+  if (!editForm.id) {
+    message.error('集群 ID 无效');
+    return;
+  }
+  
+  // 检查是否填写了资源限制
+  if (hasResourceLimits(editForm)) {
+    Modal.confirm({
+      title: '确认资源限制设置',
+      content: `您设置了以下资源限制：\n${editForm.cpu_request ? `CPU请求: ${editForm.cpu_request} cores\n` : ''}${editForm.cpu_limit ? `CPU限制: ${editForm.cpu_limit} cores\n` : ''}${editForm.memory_request ? `内存请求: ${editForm.memory_request} Mi\n` : ''}${editForm.memory_limit ? `内存限制: ${editForm.memory_limit} Mi\n` : ''}\n这是一个敏感操作，错误的资源限制可能会影响集群的正常运行。\n\n请确认这些设置是否正确？`,
+      okText: '确认更新',
+      okType: 'danger',
+      cancelText: '取消',
+      width: 500,
+      onOk: executeUpdate,
+    });
+  } else {
+    await executeUpdate();
   }
 };
 

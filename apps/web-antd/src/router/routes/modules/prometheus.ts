@@ -8,6 +8,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       order: 2,
       title: 'Prometheus管理',
+      icon: 'lucide:monitor',
     },
     name: 'Prometheus',
     path: '/prometheus',
@@ -36,7 +37,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/prometheus/MonitorAlertPool.vue'),
         meta: {
           title: 'alert告警池',
-          icon: 'lucide:alert-triangle',
+          icon: 'tabler:alert-circle-filled',
         },
       },
 

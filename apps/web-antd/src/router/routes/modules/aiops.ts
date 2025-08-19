@@ -6,7 +6,7 @@ const routes: RouteRecordRaw[] = [
   {
     component: BasicLayout,
     meta: {
-      icon: 'lucide:ticket',
+      icon: 'lucide:album',
       order: 99,
       title: 'AIops',
     },
@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
         path: '/ai_assistant',
         component: () => import('#/views/aiops/AssistantManager.vue'),
         meta: {
-          icon: 'lucide:robot',
+          icon: 'lucide:anchor',
           title: 'AI小助手',
         },
       },

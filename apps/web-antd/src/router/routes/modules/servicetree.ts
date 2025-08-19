@@ -9,6 +9,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       order: 1,
       title: $t('page.serviceTree.title'),
+      icon: 'tabler:binary-tree-2',
     },
     name: 'ServiceTree',
     path: '/tree',
