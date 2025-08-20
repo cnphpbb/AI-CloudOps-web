@@ -130,7 +130,8 @@
           <template v-if="column.key === 'actions'">
             <div class="action-buttons">
               <a-button type="text" size="small" @click="handleView(record)">查看</a-button>
-              <a-button type="text" size="small" @click="handleEdit(record)">编辑</a-button>
+              <a-button type="text" size="small" @click="handleEdit(record)">编辑信息</a-button>
+              <a-button type="text" size="small" @click="handleEPwd(record)">修改密码</a-button>
               <a-button type="text" size="small" @click="handleRoleManagement(record)">角色</a-button>
               <a-popconfirm title="确定要删除吗？" @confirm="handleDelete(record)">
                 <a-button type="text" size="small" danger>删除</a-button>
@@ -211,8 +212,46 @@
         </div>
       </div>
     </a-modal>
-
-    <!-- 编辑用户 -->
+    <!-- 修改密码 -->
+    <a-modal
+      v-model:open="pwdModalVisible"
+      :title="modalTitle"
+      width="600px"
+      @ok="handleChangePasswordSubmit"
+      :confirm-loading="submitLoading"
+    >
+      <a-form ref="formRef" :model="formData" :rules="formChangPwdRules" layout="vertical">
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="用户名" name="username">
+              <a-input v-model:value="formData.username" :disabled=true />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item 
+              label="登录密码" 
+              name="password"
+              :rules="[{ required: true, message: '请输入密码' }]"
+            >
+              <a-input-password v-model:value="formData.password" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="新的密码" name="newPassword">
+              <a-input-password v-model:value="formData.newPassword" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="密码确认" name="confirmPassword">
+              <a-input-password v-model:value="formData.confirmPassword" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </a-form>
+    </a-modal>
+    <!-- 编辑用户,不修改密码 -->
     <a-modal
       v-model:open="modalVisible"
       :title="modalTitle"
@@ -382,6 +421,8 @@ import {
   deleteUser,
   getUserDetailApi,
   getUserStatistics,
+  changePassword,
+  type ChangePasswordReq,
   type UserSignUpReq,
   type UpdateProfileReq,
   type GetUserListReq
@@ -444,6 +485,7 @@ const avatarUploading = ref(false);
 const modalVisible = ref(false);
 const roleModalVisible = ref(false);
 const viewModalVisible = ref(false);
+const pwdModalVisible = ref(false);
 const modalTitle = ref('');
 
 // 数据
@@ -513,6 +555,39 @@ const formRules = computed(() => {
       {
         validator: (_rule: any, value: string) => {
           if (value && value !== formData.password) {
+            return Promise.reject('两次输入的密码不一致');
+          }
+          return Promise.resolve();
+        },
+        trigger: 'blur'
+      }
+    ];
+  }
+
+  return rules;
+});
+
+// 修改密码表单验证规则
+const formChangPwdRules = computed(() => {
+  const rules: any = {
+    password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  };
+
+  if (modalTitle.value === '修改密码') {
+    rules.password = [
+      { required: true, message: '请输入密码', trigger: 'blur' },
+      { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+    ];
+    rules.newPassword = [
+      { required: true, message: '请输入密码', trigger: 'blur' },
+      { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+    ];
+    
+    rules.confirmPassword = [
+      { required: true, message: '请确认密码', trigger: 'blur' },
+      {
+        validator: (_rule: any, value: string) => {
+          if (value && value !== formData.newPassword) {
             return Promise.reject('两次输入的密码不一致');
           }
           return Promise.resolve();
@@ -722,6 +797,20 @@ const handleAdd = () => {
   modalVisible.value = true;
 };
 
+const handleEPwd = async (user: UserInfo) => {
+  try {
+    modalTitle.value = '修改密码';
+    const response = await getUserDetailApi(user.id);
+    Object.assign(formData, {
+      id: response.id,
+      username: response.username,
+    });
+    pwdModalVisible.value = true;
+  } catch (error: any) {
+    message.error(error.message || '获取用户数据失败')
+  }
+}
+
 const handleEdit = async (user: UserInfo) => {
   try {
     modalTitle.value = '编辑用户';
@@ -807,6 +896,31 @@ const handleStatusChange = async (user: UserInfo, newStatus: number) => {
     message.error(error.message || '状态更新失败');
   }
 };
+
+const handleChangePasswordSubmit = async () => {
+  try {
+    await formRef.value?.validate();
+    submitLoading.value = true;
+
+    const changePasswordData: ChangePasswordReq = {
+      user_id: formData.id as number,
+      username: formData.username,
+      password: formData.password,
+      new_password: formData.newPassword,
+      confirm_password: formData.confirmPassword,
+    }
+    //message.info(JSON.stringify(changePasswordData))
+    await changePassword(changePasswordData);
+    message.success('更新成功');
+    pwdModalVisible.value = false;
+  }  catch (error: any) {
+    if (!error.errorFields) {
+      message.error(error.message || '操作失败');
+    }
+  } finally {
+    submitLoading.value = false;
+  }
+}
 
 const handleSubmit = async () => {
   try {
