@@ -418,9 +418,9 @@ const loadCategoryList = async (): Promise<void> => {
 
     const response = await listWorkorderCategory(params);
     
-    if (response?.data) {
-      categoryList.value = response.data.items || [];
-      total.value = response.data.total || 0;
+    if (response) {
+      categoryList.value = response.items || [];
+      total.value = response.total || 0;
       
       // 更新统计数据
       updateStatistics();
@@ -499,13 +499,13 @@ const handleEdit = async (record: WorkorderCategoryItem): Promise<void> => {
     
     loadingMsg();
     
-    if (response?.data) {
+    if (response) {
       formDialog.isEdit = true;
       formDialog.data = {
-        id: response.data.id,
-        name: response.data.name,
-        description: response.data.description || '',
-        status: response.data.status
+        id: response.id,
+        name: response.name,
+        description: response.description || '',
+        status: response.status
       };
       formDialog.visible = true;
       detailDialog.visible = false; // 如果是从详情对话框打开的，关闭详情对话框
@@ -525,8 +525,8 @@ const handleView = async (record: WorkorderCategoryItem): Promise<void> => {
     
     loadingMsg();
     
-    if (response?.data) {
-      detailDialog.data = response.data;
+    if (response) {
+      detailDialog.data = response;
       detailDialog.visible = true;
     }
   } catch (error) {
