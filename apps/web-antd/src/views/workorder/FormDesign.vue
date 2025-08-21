@@ -214,7 +214,7 @@
             <a-collapse>
               <a-collapse-panel 
                 v-for="(field, index) in formSchema.fields" 
-                :key="field.name"
+                :key="index"
                 :header="getFieldDisplayName(field)"
                 class="field-panel"
               >
