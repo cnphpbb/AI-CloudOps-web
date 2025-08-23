@@ -844,7 +844,7 @@ const closeDetailDialog = (): void => {
   detailDialog.visible = false;
 };
 
-// 辅助方法
+
 const formatDate = (dateStr: string | undefined): string => {
   if (!dateStr) return '';
   const d = new Date(dateStr);

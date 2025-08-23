@@ -1,13 +1,5 @@
 import { requestClient } from '#/api/request';
-
-// 用户信息接口
-export interface User {
-  id: number;
-  username: string;
-  real_name?: string;
-  email?: string;
-  phone?: string;
-}
+import type { User } from '#/api/core/user'
 
 // 发送组配置接口
 export interface MonitorSendGroup {

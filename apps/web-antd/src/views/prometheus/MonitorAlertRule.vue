@@ -690,7 +690,6 @@ const sendGroupPagination = reactive({
 const poolLoading = ref(false);
 const sendGroupLoading = ref(false);
 
-// --- 辅助函数 ---
 const createInitialForm = () => ({
   name: '',
   pool_id: undefined as number | undefined,
@@ -1144,7 +1143,6 @@ const removeEditAnnotation = (item: LabelOrAnnotationItem) => {
   if (index !== -1) editForm.annotations.splice(index, 1);
 };
 
-// --- 辅助函数 ---
 const severityText = (severity: AlertRuleSeverity | undefined): 'critical' | 'warning' | 'info' => {
   if (severity === AlertRuleSeverity.Critical) return 'critical';
   if (severity === AlertRuleSeverity.Warning) return 'warning';

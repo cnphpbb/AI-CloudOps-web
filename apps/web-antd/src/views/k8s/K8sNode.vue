@@ -1133,7 +1133,7 @@ const getEventColor = (type: string | undefined): string => {
   return typeMap[type] || 'blue';
 };
 
-// Taint颜色映射
+
 const getTaintColor = (taint: string): string => {
   if (!taint) return 'blue';
   
@@ -1398,7 +1398,7 @@ const handleDeleteLabel = async (): Promise<void> => {
   }
 };
 
-// 打开添加Taint操作
+
 const handleAddTaint = (record: NodeItem | GetNodeDetailRes | null = null): void => {
   if (record) {
     taintForm.nodeName = record.name;
@@ -1406,7 +1406,7 @@ const handleAddTaint = (record: NodeItem | GetNodeDetailRes | null = null): void
   isAddTaintModalVisible.value = true;
 };
 
-// 添加Taint
+
 const handleSubmitAddTaint = async (): Promise<void> => {
   submitLoading.value = true;
   try {
@@ -1435,7 +1435,7 @@ const handleSubmitAddTaint = async (): Promise<void> => {
   }
 };
 
-// 打开删除Taint操作
+
 const handleDeleteTaint = (record: NodeItem | GetNodeDetailRes | null = null): void => {
   if (record) {
     deleteTaintForm.nodeName = record.name;
@@ -1443,7 +1443,7 @@ const handleDeleteTaint = (record: NodeItem | GetNodeDetailRes | null = null): v
   isDeleteTaintModalVisible.value = true;
 };
 
-// 删除Taint
+
 const handleSubmitDeleteTaint = async (): Promise<void> => {
   submitLoading.value = true;
   try {
@@ -1472,7 +1472,7 @@ const handleSubmitDeleteTaint = async (): Promise<void> => {
   }
 };
 
-// 快速删除Taint
+
 const handleQuickDeleteTaint = (taint: string): void => {
   Modal.confirm({
     title: '确认删除污点',
@@ -1514,7 +1514,7 @@ const handleQuickDeleteTaint = (taint: string): void => {
   });
 };
 
-// 检查Taint YAML格式
+
 const checkTaintYaml = async (nodeName: string): Promise<void> => {
   try {
     await checkTaintYamlApi({
@@ -1528,7 +1528,7 @@ const checkTaintYaml = async (nodeName: string): Promise<void> => {
   }
 };
 
-// 清空Taint
+
 const handleClearTaints = (): void => {
   // 检查是否有选中节点
   if (!selectedNode.value && !selectedNodeDetails.value) {
@@ -1551,7 +1551,7 @@ const handleClearTaints = (): void => {
     cancelText: '取消',
     onOk: async () => {
       try {
-        // 实现清空Taint的逻辑，这里可能需要调用API
+
         message.success(`已清空节点 ${node.name} 的所有污点`);
         
         // 刷新数据
@@ -1621,14 +1621,14 @@ const closeAddLabelModal = (): void => {
   isAddLabelModalVisible.value = false;
 };
 
-// 关闭添加Taint模态框
+
 const closeAddTaintModal = (): void => {
   taintForm.nodeName = '';
   taintForm.taintYaml = '';
   isAddTaintModalVisible.value = false;
 };
 
-// 关闭删除Taint模态框
+
 const closeDeleteTaintModal = (): void => {
   deleteTaintForm.nodeName = '';
   deleteTaintForm.taintYaml = '';

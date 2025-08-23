@@ -3,7 +3,6 @@ export * from './system';
 export * from './user';
 export * from './tree';
 export * from './k8s';
-export * from './ai';
 export * from './prometheus_alert_event';
 export * from './prometheus_alert_record';
 export * from './prometheus_alert_rule';

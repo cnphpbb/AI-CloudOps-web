@@ -632,7 +632,7 @@ const syncToVisual = (): void => {
   }
 };
 
-// 辅助方法
+
 const getOutgoingConnections = (stepId: string) => connections.value.filter(c => c.from === stepId);
 const getStepNameById = (stepId: string) => processSteps.value.find(s => s.id === stepId)?.name || '未知步骤';
 const getStepTypeClass = (type: string): string => `step-${type.toLowerCase()}`;

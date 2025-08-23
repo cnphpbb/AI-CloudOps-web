@@ -670,7 +670,7 @@ const formRules = {
   ],
 };
 
-// 辅助方法
+
 const getRecordStatusClass = (record: MonitorRecordRule): string => {
   return record.enable === 1 ? 'status-full' : 'status-none';
 };

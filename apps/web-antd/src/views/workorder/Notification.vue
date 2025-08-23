@@ -833,7 +833,7 @@ const loadStats = async () => {
   }
 };
 
-// 辅助方法
+
 const getChannelColor = (channel: string): string => {
   const colorMap: Record<string, string> = {
     [NotificationChannel.FEISHU]: 'green',

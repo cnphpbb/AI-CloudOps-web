@@ -691,7 +691,7 @@ const formRules = {
   ]
 };
 
-// 辅助方法
+
 const getConfigTypeName = (type: ConfigType): string => {
   const typeNames: Record<ConfigType, string> = {
     [ConfigType.Prometheus]: 'Prometheus',

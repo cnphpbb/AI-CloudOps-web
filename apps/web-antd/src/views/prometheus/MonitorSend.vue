@@ -723,7 +723,7 @@ const formRules = {
   ]
 };
 
-// 辅助方法
+
 const getPoolStatusClass = (record: MonitorSendGroup): string => {
   if (record.enable === 1 && record.need_upgrade === 1) return 'status-full';
   if (record.enable === 1 || record.need_upgrade === 1) return 'status-partial';

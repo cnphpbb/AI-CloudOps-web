@@ -1,6 +1,13 @@
 import type { UserInfo } from '@vben/types';
-
 import { requestClient } from '#/api/request';
+
+export interface User {
+  id: number;
+  username: string;
+  real_name?: string;
+  email?: string;
+  phone?: string;
+}
 
 /**
  * 获取用户信息

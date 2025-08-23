@@ -66,7 +66,7 @@ onMounted(async () => {
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // HACK: 由于 Vite 代理 WebSocket 存在问题且无法修改配置，此处直接连接后端服务端口
+
     const host = 'localhost:8889';
     const wsUrl = `${protocol}//${host}/api/tree/local/terminal/${resourceId}?token=${token}`;
     

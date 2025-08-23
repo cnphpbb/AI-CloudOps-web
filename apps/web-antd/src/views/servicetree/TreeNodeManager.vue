@@ -705,7 +705,7 @@ const formRules = {
   ]
 };
 
-// 辅助方法
+
 const getNodeIconClass = (node: TreeNodeWithRelations): string => {
   return node.status === TreeNodeStatus.ACTIVE ? 'node-icon-active' : 'node-icon-inactive';
 };

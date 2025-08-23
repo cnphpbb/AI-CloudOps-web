@@ -894,7 +894,7 @@ const allTypesFieldsExample = JSON.stringify([
   }
 ], null, 2);
 
-// 辅助方法
+
 const getStatusColor = (status: number): string => {
   const colorMap = { 
     [FormDesignStatus.Draft]: 'orange', 

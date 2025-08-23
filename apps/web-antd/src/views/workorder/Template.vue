@@ -683,7 +683,7 @@ const formTotalPages = computed(() => {
   return Math.ceil(formPagination.total / formPagination.pageSize);
 });
 
-// 辅助方法
+
 const getStatusColor = (status: number): string => {
   const colorMap = {
     [TemplateStatus.Enabled]: 'green',

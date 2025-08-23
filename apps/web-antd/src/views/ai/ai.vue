@@ -61,7 +61,7 @@
           <div class="mode-switcher">
             <button 
               class="mode-button" 
-              :class="{ 'active': currentMode === 'rag' }"
+              :class="{ 'active': currentMode === 1 }"
               @click="switchMode('rag')"
               title="RAG模式 - 基于知识库回答"
             >
@@ -70,7 +70,7 @@
             </button>
             <button 
               class="mode-button" 
-              :class="{ 'active': currentMode === 'mcp' }"
+              :class="{ 'active': currentMode === 2 }"
               @click="switchMode('mcp')"
               title="MCP模式 - 工具调用模式"
             >
@@ -117,7 +117,17 @@
                   <span></span>
                   <span></span>
                 </div>
-                <span class="typing-text">AI正在思考中...（最长等待60秒）</span>
+                <div class="typing-info">
+                  <span class="typing-text">AI正在思考中...</span>
+                  <div class="typing-details">
+                    <span class="mode-badge" :class="currentMode === 1 ? 'rag' : 'mcp'">
+                      {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
+                    </span>
+                    <span class="session-info" v-if="sessionId">
+                      会话: {{ sessionId.slice(-8) }}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <!-- 正常消息内容 -->
@@ -131,9 +141,31 @@
                 </div>
                 <div class="sources-list">
                   <div v-for="(source, idx) in msg.sources" :key="`source-${idx}`" class="source-item">
-                    <div class="source-title">{{ source.file_name || '未知来源' }}</div>
-                    <div v-if="source.url" class="source-url">{{ source.url }}</div>
+                    <div class="source-title">文档 {{ idx + 1 }}</div>
+                    <div class="source-preview">{{ source.content ? source.content.substring(0, 100) + '...' : '内容不可用' }}</div>
+                    <div v-if="source.score !== undefined" class="source-score">
+                      相关性: {{ (source.score * 100).toFixed(1) }}%
+                    </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- 后续问题推荐 -->
+              <div v-if="msg.followUpQuestions && msg.followUpQuestions.length > 0" class="follow-up-questions">
+                <div class="follow-up-header">
+                  <HelpCircle :size="14" />
+                  <span>您可能还想问</span>
+                </div>
+                <div class="follow-up-list">
+                  <button 
+                    v-for="(question, idx) in msg.followUpQuestions" 
+                    :key="`followup-${idx}`" 
+                    class="follow-up-question"
+                    @click="sendQuickMessage(question)"
+                    :disabled="sending"
+                  >
+                    {{ question }}
+                  </button>
                 </div>
               </div>
 
@@ -208,8 +240,8 @@
         <div class="input-hints">
           <span class="hint-item">Shift+Enter发送</span>
           <div class="mode-info">
-            <span class="mode-indicator" :class="currentMode">
-              {{ currentMode === 'rag' ? 'RAG模式' : 'MCP模式' }}
+            <span class="mode-indicator" :class="currentMode === 1 ? 'rag' : 'mcp'">
+              {{ currentMode === 1 ? 'RAG模式' : 'MCP模式' }}
             </span>
           </div>
           <span class="shortcut-hint">
@@ -253,10 +285,11 @@ import {
 } from 'lucide-vue-next';
 import { message } from 'ant-design-vue';
 import {
-  createAssistantSession,
-  queryAssistant,
+  assistantQuery,
   clearAssistantCache,
-  refreshKnowledgeBase
+  refreshKnowledgeBase,
+  assistantHealth,
+  getSessionInfo
 } from '#/api/core/assistant';
 
 // 状态管理
@@ -276,8 +309,9 @@ const floatWindow = ref(null);
 const messageInput = ref(null);
 const sessionId = ref('');
 
-// 模式管理
-const currentMode = ref('rag'); // 默认为rag模式
+// 模式管理 - 1=RAG模式，2=MCP模式
+const currentMode = ref(1); // 默认为RAG模式
+const chatHistory = ref([]); // 聊天历史记录
 
 // 高级选项
 const useWebSearch = ref(false);
@@ -287,30 +321,85 @@ const maxContextDocs = ref(5);
 const connectionStatus = computed(() => {
   if (sending.value) return '正在处理...';
   if (isRefreshing.value) return '刷新知识库中...';
-  if (!sessionId.value) return '未连接';
-  return isConnected.value ? '已连接' : '连接中...';
+  if (!sessionId.value) return '准备就绪';
+  return isConnected.value ? '已连接' : '准备就绪';
 });
 
 // 模式切换函数
 const switchMode = (mode) => {
-  if (currentMode.value === mode) return;
+  const modeNum = mode === 'rag' ? 1 : 2;
+  if (currentMode.value === modeNum) return;
   
-  currentMode.value = mode;
+  currentMode.value = modeNum;
   message.info(`已切换到${mode === 'rag' ? 'RAG' : 'MCP'}模式`);
-  // 重新初始化会话
-  initSession();
+  
+  // 清空聊天历史，重新开始会话
+  sessionId.value = '';
+  chatHistory.value = [];
+  isConnected.value = false;
 };
 
-// 显示成功和错误消息的辅助函数
+// 消息提示
 const showSuccess = (msg) => {
   message.success(msg);
 };
 
-const showError = (msg) => {
+const showError = (msg, duration = 5000) => {
   errorMessage.value = msg;
   setTimeout(() => {
     errorMessage.value = '';
-  }, 5000);
+  }, duration);
+};
+
+// 重试机制
+const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      // 指数退避
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      console.log(`重试第 ${attempt} 次，${delay}ms 后重试...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+};
+
+// 错误分类处理
+const handleApiError = (error, context = '') => {
+  const status = error?.response?.status;
+  const errorData = error?.response?.data;
+  const errorMsg = errorData?.message || error?.message || '未知错误';
+  
+  console.error(`${context} 错误:`, { status, errorData, error });
+
+  if (status === 429) {
+    showError('请求频率过高，请稍后再试', 3000);
+    return 'rate_limit';
+  } else if (status === 401 || status === 403) {
+    showError('认证失败，正在重新建立连接...');
+    // 清除会话状态
+    sessionId.value = '';
+    chatHistory.value = [];
+    isConnected.value = false;
+    return 'auth_error';
+  } else if (status === 404) {
+    showError('服务不可用，请检查服务器状态');
+    return 'service_unavailable';
+  } else if (status >= 500) {
+    showError(`服务器错误: ${errorMsg}`);
+    return 'server_error';
+  } else if (error.code === 'NETWORK_ERROR' || !status) {
+    showError('网络连接错误，请检查网络状态');
+    return 'network_error';
+  } else {
+    showError(`${context}: ${errorMsg}`);
+    return 'unknown_error';
+  }
 };
 
 // 悬浮窗位置和大小
@@ -378,7 +467,8 @@ const chatMessages = reactive([
 const toggleFloatWindow = () => {
   isFloatWindowVisible.value = !isFloatWindowVisible.value;
   if (isFloatWindowVisible.value) {
-    initSession();
+    // 检查服务健康状态
+    checkServiceHealth();
     nextTick(() => {
       scrollToBottom();
     });
@@ -407,7 +497,9 @@ const resetWindow = () => {
   sessionId.value = '';
   errorMessage.value = '';
   showAdvancedOptions.value = false;
-  currentMode.value = 'rag'; // 重置为默认模式
+  currentMode.value = 1; // 重置为默认RAG模式
+  chatHistory.value = [];
+  isConnected.value = false;
   initChatMessages();
 };
 
@@ -473,28 +565,16 @@ const stopResize = () => {
   document.removeEventListener('mouseup', stopResize);
 };
 
-// 初始化会话
-const initSession = async () => {
+// 检查服务健康状态
+const checkServiceHealth = async () => {
   try {
-    console.log('正在创建会话...');
-    isConnected.value = false;
-
-    const response = await createAssistantSession();
-    console.log('会话创建响应:', response);
-
-    if (response.session_id) {
-      sessionId.value = response.session_id;
-      isConnected.value = true;
-      console.log('会话已创建，ID:', sessionId.value);
-      showSuccess('会话连接成功');
-    } else {
-      throw new Error('会话创建失败，响应格式不正确');
-    }
+    await assistantHealth();
+    isConnected.value = true;
+    return true;
   } catch (error) {
-    console.error('创建会话错误:', error);
-    const errorMsg = error?.response?.message || error?.message || '连接服务器失败';
-    showError(`创建会话失败: ${errorMsg}`);
+    console.warn('服务健康检查失败:', error);
     isConnected.value = false;
+    return false;
   }
 };
 
@@ -518,83 +598,120 @@ const sendMessage = async (value) => {
 
   globalInputMessage.value = '';
 
-  // 检查会话是否已建立
-  if (!sessionId.value) {
-    console.log('会话未建立，正在重新创建...');
-    await initSession();
-    if (!sessionId.value) {
-      showError('会话未建立，请稍后重试');
-      return;
-    }
-  }
-
-  // 添加用户消息
-  chatMessages.push({
+  // 添加用户消息到聊天记录
+  const userMessage = {
     content: trimmedValue,
     type: 'user',
     time: formatTime(new Date())
+  };
+  chatMessages.push(userMessage);
+
+  // 添加用户消息到聊天历史
+  chatHistory.value.push({
+    role: 'user',
+    content: trimmedValue
   });
 
-  // 添加AI消息占位符
-  chatMessages.push({
+
+  const aiMessagePlaceholder = {
     content: '',
     type: 'ai',
-    time: formatTime(new Date())
-  });
+    time: formatTime(new Date()),
+    sources: [],
+    followUpQuestions: []
+  };
+  chatMessages.push(aiMessagePlaceholder);
 
   sending.value = true;
   await nextTick();
   scrollToBottom();
 
   try {
-    // 构建查询参数 - 根据当前模式添加mode参数
+    // 构建查询参数 - 使用新的接口结构
     const queryParams = {
       question: trimmedValue,
-      mode: currentMode.value, // 添加mode参数
-      session_id: sessionId.value,
-      use_web_search: useWebSearch.value,
-      max_context_docs: parseInt(maxContextDocs.value)
+      mode: currentMode.value,
+      chat_history: chatHistory.value.slice(-10), // 只保留最近10轮对话
+      use_web_search: useWebSearch.value
     };
+
+    // 如果有session_id，则传递给后端
+    if (sessionId.value) {
+      queryParams.session_id = sessionId.value;
+    }
 
     console.log('发送查询请求:', queryParams);
 
-    const response = await queryAssistant(queryParams);
+    const response = await assistantQuery(queryParams);
     console.log('查询响应:', response);
 
     if (response?.answer) {
-      // 更新AI消息内容
+
       const lastMessage = chatMessages[chatMessages.length - 1];
       if (lastMessage) {
         lastMessage.content = response.answer;
 
-        // 添加消息来源
-        if (response.sources && response.sources.length > 0) {
-          lastMessage.sources = response.sources;
+        // 添加消息来源（处理新的数据结构）
+        if (response.source_documents && response.source_documents.length > 0) {
+          lastMessage.sources = response.source_documents;
         }
 
-        // 更新会话ID（如果服务器返回了新的会话ID）
-        if (response.session_id && response.session_id !== sessionId.value) {
-          sessionId.value = response.session_id;
+        // 添加后续问题推荐
+        if (response.follow_up_questions && response.follow_up_questions.length > 0) {
+          lastMessage.followUpQuestions = response.follow_up_questions;
+        }
+
+        // 处理评分信息（如果API返回）
+        if (response.relevance_score !== undefined && response.relevance_score !== null) {
+          lastMessage.relevanceScore = response.relevance_score;
+        }
+
+        if (response.recall_rate !== undefined && response.recall_rate !== null) {
+          lastMessage.recallRate = response.recall_rate;
         }
       }
+
+      // 保存/更新会话ID
+      if (response.session_id) {
+        if (!sessionId.value) {
+          console.log('创建新会话，ID:', response.session_id);
+          showSuccess('会话已建立');
+        }
+        sessionId.value = response.session_id;
+        isConnected.value = true;
+      }
+
+
+      chatHistory.value.push({
+        role: 'assistant',
+        content: response.answer
+      });
+
     } else {
       throw new Error('AI响应格式不正确');
     }
   } catch (error) {
-    console.error('查询AI错误:', error);
 
-    // 移除AI消息占位符
     if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.type === 'ai' && !chatMessages[chatMessages.length - 1]?.content) {
       chatMessages.pop();
     }
 
-    const errorMsg = error?.response?.message || error?.message || '查询失败';
-    showError(`AI查询失败: ${errorMsg}`);
+    // 移除用户消息从聊天历史
+    if (chatHistory.value.length > 0 && chatHistory.value[chatHistory.value.length - 1]?.role === 'user') {
+      chatHistory.value.pop();
+    }
 
-    // 如果是会话相关错误，重新创建会话
-    if (error?.response?.status === 401 || error?.response?.status === 403) {
-      sessionId.value = '';
-      isConnected.value = false;
+    // 使用新的错误处理机制
+    const errorType = handleApiError(error, 'AI查询');
+    
+    // 根据错误类型决定是否重试
+    if (errorType === 'network_error' || errorType === 'server_error') {
+      // 对于网络错误和服务器错误，提供重试选项
+      setTimeout(() => {
+        if (confirm('查询失败，是否重试？')) {
+          sendMessage(trimmedValue);
+        }
+      }, 1000);
     }
   } finally {
     sending.value = false;
@@ -611,19 +728,31 @@ const refreshKnowledge = async () => {
     isRefreshing.value = true;
     console.log('正在刷新知识库...');
 
-    const response = await refreshKnowledgeBase();
+    // 使用重试机制
+    const response = await retryWithBackoff(async () => {
+      return await refreshKnowledgeBase();
+    });
+
     console.log('刷新知识库响应:', response);
 
-    if (response) {
-      const docsCount = response.documents_count;
-      message.success(`知识库刷新成功${docsCount ? `，共${docsCount}文档块` : ''}`);
+    if (response?.refreshed !== false) {
+      const docsCount = response?.documents_count;
+      const vectorCount = response?.vector_count;
+      let successMsg = '知识库刷新成功';
+      
+      if (docsCount !== undefined) {
+        successMsg += `，处理文档 ${docsCount} 个`;
+      }
+      if (vectorCount !== undefined) {
+        successMsg += `，向量 ${vectorCount} 个`;
+      }
+      
+      showSuccess(successMsg);
     } else {
-      throw new Error('刷新知识库失败，响应格式不正确');
+      throw new Error(response?.message || '刷新知识库失败');
     }
   } catch (error) {
-    console.error('刷新知识库错误:', error);
-    const errorMsg = error?.response?.message || error?.message || '刷新失败';
-    message.error(`刷新知识库失败: ${errorMsg}`);
+    handleApiError(error, '刷新知识库');
   } finally {
     isRefreshing.value = false;
   }
@@ -641,28 +770,33 @@ const clearChat = async () => {
   }
 
   try {
-    // 清除服务器缓存
+    // 清除服务器缓存（如果有会话）
     if (sessionId.value) {
-      const response = await clearAssistantCache();
-      console.log('清除缓存响应:', response);
-
-      if (!response?.success) {
-        console.warn('服务器未确认缓存清除成功');
+      try {
+        const response = await clearAssistantCache();
+        console.log('清除缓存响应:', response);
+        showSuccess('服务器缓存已清除');
+      } catch (error) {
+        console.warn('清除服务器缓存失败:', error);
+        // 继续清空本地记录
       }
     }
 
-    // 重新创建会话
+    // 清空本地状态
     sessionId.value = '';
+    chatHistory.value = [];
     isConnected.value = false;
     initChatMessages();
 
-    await initSession();
     message.success('聊天记录已清空');
   } catch (error) {
     console.error('清空聊天错误:', error);
-    // 即使清除缓存失败，也清空本地聊天记录
+    // 即使出错也要清空本地记录
+    sessionId.value = '';
+    chatHistory.value = [];
+    isConnected.value = false;
     initChatMessages();
-    message.error('清除缓存失败，但本地记录已清空');
+    message.warning('清空完成，但可能存在部分错误');
   }
 };
 
@@ -760,13 +894,13 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* 基础容器 */
+
 .ai-assistant-container {
   position: relative;
   z-index: 9999;
 }
 
-/* 悬浮按钮 */
+
 .assistant-float-button {
   position: fixed;
   bottom: 80px;
@@ -836,7 +970,7 @@ onBeforeUnmount(() => {
   border-left-color: #1f2937;
 }
 
-/* 遮罩层 */
+
 .float-window-overlay {
   position: fixed;
   top: 0;
@@ -847,7 +981,7 @@ onBeforeUnmount(() => {
   z-index: 9998;
 }
 
-/* 悬浮窗 */
+
 .ai-float-window {
   position: fixed;
   background: #1f2937;
@@ -862,7 +996,7 @@ onBeforeUnmount(() => {
   transition: all 0.3s ease;
 }
 
-/* 悬浮窗头部 */
+
 .float-window-header {
   background: linear-gradient(135deg, #2d3748, #1a202c);
   padding: 16px 20px;
@@ -943,7 +1077,7 @@ onBeforeUnmount(() => {
   color: white;
 }
 
-/* 状态栏 */
+
 .status-bar {
   display: flex;
   justify-content: space-between;
@@ -983,7 +1117,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
-/* 模式切换器 */
+
 .mode-switcher {
   display: flex;
   background: #374151;
@@ -1026,7 +1160,7 @@ onBeforeUnmount(() => {
   font-weight: 500;
 }
 
-/* 模式指示器 */
+
 .mode-info {
   display: flex;
   align-items: center;
@@ -1053,7 +1187,7 @@ onBeforeUnmount(() => {
   background: rgba(16, 185, 129, 0.1);
 }
 
-/* 错误提示横幅 */
+
 .error-banner {
   background: #fef2f2;
   border: 1px solid #fecaca;
@@ -1081,7 +1215,7 @@ onBeforeUnmount(() => {
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* 消息区域 */
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -1102,14 +1236,27 @@ onBeforeUnmount(() => {
   border-radius: 2px;
 }
 
-/* 消息样式 */
+
 .message {
   margin-bottom: 16px;
+  opacity: 0;
+  animation: messageSlideIn 0.3s ease-out forwards;
 }
 
 .message-wrapper {
   display: flex;
   gap: 12px;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .avatar-container {
@@ -1221,29 +1368,32 @@ onBeforeUnmount(() => {
   color: #3b82f6;
 }
 
-/* 打字指示器 */
+
 .typing-content {
-  background: #2d3748;
-  padding: 12px 16px;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #2d3748, #1a202c);
+  padding: 16px 20px;
+  border-radius: 12px;
   border: 1px solid #374151;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  animation: pulse-subtle 2s infinite;
 }
 
 .typing-animation {
   display: flex;
-  gap: 3px;
+  gap: 4px;
+  align-items: center;
 }
 
 .typing-animation span {
-  height: 4px;
-  width: 4px;
-  background: #3b82f6;
+  height: 6px;
+  width: 6px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   border-radius: 50%;
   display: block;
   animation: typing 1.4s infinite ease-in-out;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
 }
 
 .typing-animation span:nth-child(1) {
@@ -1258,25 +1408,66 @@ onBeforeUnmount(() => {
   animation-delay: 0.4s;
 }
 
-@keyframes typing {
+.typing-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
-  0%,
-  80%,
-  100% {
-    transform: scale(0.8);
+.typing-text {
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.typing-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.mode-badge {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.mode-badge.mcp {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.session-info {
+  color: #9ca3af;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0.8) translateY(0);
     opacity: 0.5;
   }
-
   40% {
-    transform: scale(1.2);
+    transform: scale(1.3) translateY(-2px);
     opacity: 1;
   }
 }
 
-.typing-text {
-  color: #d1d5db;
-  font-size: 14px;
-  font-weight: 500;
+@keyframes pulse-subtle {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+  }
 }
 
 /* 消息来源样式 */
@@ -1318,11 +1509,76 @@ onBeforeUnmount(() => {
   margin-bottom: 2px;
 }
 
-.source-url {
+.source-preview {
+  font-size: 12px;
+  color: #d1d5db;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px 8px;
+  border-radius: 4px;
+  line-height: 1.4;
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+.source-score {
   font-size: 11px;
-  color: #9ca3af;
-  opacity: 0.8;
-  word-break: break-all;
+  color: #10b981;
+  font-weight: 600;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  display: inline-block;
+}
+
+/* 后续问题推荐样式 */
+.follow-up-questions {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.follow-up-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #34d399;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.follow-up-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.follow-up-question {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.4;
+}
+
+.follow-up-question:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  transform: translateY(-1px);
+}
+
+.follow-up-question:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* 快捷操作 */

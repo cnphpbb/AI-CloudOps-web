@@ -766,7 +766,7 @@ const columns = [
   { title: '操作', key: 'action', fixed: 'right' as const, width: 200, align: 'center' as const },
 ];
 
-// 辅助方法
+
 const getServerStatusClass = (record: TreeLocalResource): string => {
   switch (record.status) {
     case ResourceStatus.RUNNING:
