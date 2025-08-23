@@ -12,7 +12,17 @@ const routes: RouteRecordRaw[] = [
     },
     name: 'Assistant',
     path: '/assistant',
+    redirect: '/assistant/query',
     children: [
+      {
+        name: 'AssistantQuery',
+        path: '/assistant/query',
+        component: () => import('#/views/assistant/AssistantQuery.vue'),
+        meta: {
+          icon: 'lucide:message-square',
+          title: '智能问答',
+        },
+      },
       {
         name: 'AssistantSession',
         path: '/assistant/session',
