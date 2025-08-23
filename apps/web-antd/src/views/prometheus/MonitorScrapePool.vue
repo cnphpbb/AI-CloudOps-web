@@ -620,7 +620,7 @@ const formRules = {
   ]
 };
 
-// 辅助方法
+
 const getPoolStatusClass = (record: MonitorScrapePool): string => {
   if (record.support_alert === 1 && record.support_record === 1) return 'status-full';
   if (record.support_alert === 1 || record.support_record === 1) return 'status-partial';

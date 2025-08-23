@@ -291,7 +291,7 @@ const detailDialog = reactive({
   form: null as MonitorAlertEvent | null
 });
 
-// 辅助方法
+
 const getAlertStatusClass = (record: MonitorAlertEvent): string => {
   switch (record.status) {
     case MonitorAlertEventStatus.FIRING: return 'status-firing';

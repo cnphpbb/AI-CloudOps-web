@@ -586,7 +586,7 @@ const formRules = {
   ]
 };
 
-// 辅助方法
+
 const getAvatarColor = (name: string): string => {
   const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
   let hash = 0;

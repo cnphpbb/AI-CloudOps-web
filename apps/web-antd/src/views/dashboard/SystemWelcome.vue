@@ -244,7 +244,7 @@ const updateDynamicData = () => {
     healthStatus.value = { color: 'warning', text: '一般' };
   }
   
-  // 智能告警处理率 (85-98%)
+
   alertRate.value = Math.max(85, Math.min(98, generateSmallChange(alertRate.value, 0.4)));
   
   // 模拟不同的告警数量和状态

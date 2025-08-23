@@ -676,7 +676,7 @@ const formRules = computed(() => ({
   ]
 }));
 
-// 辅助方法
+
 const getJobStatusClass = (record: MonitorScrapeJob): string => {
   if (record.enable === 1) return 'status-enabled';
   return 'status-disabled';

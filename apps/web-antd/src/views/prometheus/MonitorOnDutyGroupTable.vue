@@ -504,7 +504,7 @@ const fetchDutyGroups = async (): Promise<void> => {
     let groupData = null;
     
     if (response) {
-      // 如果response直接包含id和name字段，则说明数据在根级别
+
       if (response.id && response.name) {
         groupData = response;
       }
@@ -618,7 +618,7 @@ const fetchDutySchedule = async (): Promise<void> => {
       if (Array.isArray(response)) {
         planDetails = response;
       }
-      // 包含details字段的情况
+
       else if (response.details && Array.isArray(response.details)) {
         planDetails = response.details;
       }
@@ -945,7 +945,7 @@ const filterOption = (input: string, option: any) => {
   return option.label?.toLowerCase().indexOf(input.toLowerCase()) >= 0;
 };
 
-// 辅助方法
+
 const getAvatarColor = (name: string): string => {
   const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
   let hash = 0;
