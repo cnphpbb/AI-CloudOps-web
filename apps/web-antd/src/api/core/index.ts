@@ -17,3 +17,4 @@ export * from './workorder_instance';
 export * from './workorder_process';
 export * from './workorder_template';
 export * from './assistant';
+export * from './rca';

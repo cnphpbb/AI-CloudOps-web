@@ -1,28 +1,30 @@
 <template>
   <div class="health-container">
-    <div class="health-header">
+    <!-- 页面头部 -->
+    <div class="page-header">
       <div class="header-content">
-        <h1 class="page-title">
-          <HeartOutlined class="title-icon" />
-          健康检查
-        </h1>
-        <p class="page-description">监控智能助手服务的健康状态和系统资源</p>
-      </div>
-      <div class="header-actions">
-        <a-space>
-          <a-button @click="checkHealth" :loading="healthLoading">
-            <template #icon><HeartOutlined /></template>
-            健康检查
-          </a-button>
-          <a-button @click="checkReady" :loading="readyLoading">
-            <template #icon><CheckCircleOutlined /></template>
-            就绪检查
-          </a-button>
-          <a-button type="primary" danger @click="clearCache" :loading="cacheLoading">
-            <template #icon><ClearOutlined /></template>
-            清除缓存
-          </a-button>
-        </a-space>
+        <div class="header-left">
+          <div class="header-icon">
+            <HeartOutlined />
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">健康检查</h1>
+            <p class="page-subtitle">智能助手服务健康状态监控</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a-space>
+            <a-button @click="checkHealth" :loading="healthLoading">
+              健康检查
+            </a-button>
+            <a-button @click="checkReady" :loading="readyLoading">
+              就绪检查
+            </a-button>
+            <a-button type="primary" danger @click="clearCache" :loading="cacheLoading">
+              清除缓存
+            </a-button>
+          </a-space>
+        </div>
       </div>
     </div>
 
@@ -102,14 +104,11 @@
             </a-descriptions>
 
             <!-- 依赖项状态 -->
-            <div v-if="healthInfo.dependencies && Object.keys(healthInfo.dependencies).length > 0" class="dependencies-section">
+            <div v-if="healthInfo.dependencies && Object.keys(healthInfo.dependencies).length > 0"
+              class="dependencies-section">
               <a-divider orientation="left">依赖项状态</a-divider>
               <div class="dependencies-list">
-                <div 
-                  v-for="(status, name) in healthInfo.dependencies" 
-                  :key="name" 
-                  class="dependency-item"
-                >
+                <div v-for="(status, name) in healthInfo.dependencies" :key="name" class="dependency-item">
                   <div class="dependency-name">{{ name }}</div>
                   <div class="dependency-status">
                     <a-tag :color="status ? 'success' : 'error'">
@@ -158,13 +157,7 @@
               <div class="operation-content">
                 <div class="operation-title">清除缓存</div>
                 <div class="operation-desc">清理系统缓存，提升性能</div>
-                <a-button 
-                  type="primary" 
-                  danger 
-                  @click="clearCache" 
-                  :loading="cacheLoading"
-                  size="small"
-                >
+                <a-button type="primary" danger @click="clearCache" :loading="cacheLoading" size="small">
                   立即清除
                 </a-button>
               </div>
@@ -178,12 +171,7 @@
               <div class="operation-content">
                 <div class="operation-title">刷新状态</div>
                 <div class="operation-desc">重新检查所有状态信息</div>
-                <a-button 
-                  type="primary" 
-                  @click="refreshAllStatus" 
-                  :loading="refreshing"
-                  size="small"
-                >
+                <a-button type="primary" @click="refreshAllStatus" :loading="refreshing" size="small">
                   立即刷新
                 </a-button>
               </div>
@@ -197,11 +185,7 @@
               <div class="operation-content">
                 <div class="operation-title">导出报告</div>
                 <div class="operation-desc">导出健康检查报告</div>
-                <a-button 
-                  type="default" 
-                  @click="exportReport" 
-                  size="small"
-                >
+                <a-button type="default" @click="exportReport" size="small">
                   导出报告
                 </a-button>
               </div>
@@ -212,11 +196,8 @@
 
       <!-- 缓存操作结果 -->
       <a-card v-if="cacheInfo.cleared !== undefined" title="缓存操作结果" class="cache-result-card">
-        <a-result
-          :status="cacheInfo.cleared ? 'success' : 'error'"
-          :title="cacheInfo.cleared ? '缓存清理成功' : '缓存清理失败'"
-          :sub-title="cacheInfo.message"
-        >
+        <a-result :status="cacheInfo.cleared ? 'success' : 'error'" :title="cacheInfo.cleared ? '缓存清理成功' : '缓存清理失败'"
+          :sub-title="cacheInfo.message">
           <template #extra>
             <a-descriptions :column="2" size="small">
               <a-descriptions-item label="清理时间">
@@ -246,9 +227,9 @@ import {
   ReloadOutlined,
   DownloadOutlined
 } from '@ant-design/icons-vue';
-import { 
-  assistantHealth, 
-  assistantReady, 
+import {
+  assistantHealth,
+  assistantReady,
   clearAssistantCache,
   type ServiceHealthResponse,
   type ServiceReadyResponse,
@@ -313,11 +294,11 @@ const getHealthStatusText = (status: string) => {
 // 格式化运行时间
 const formatUptime = (uptime?: number) => {
   if (!uptime) return '未知';
-  
+
   const days = Math.floor(uptime / (24 * 3600));
   const hours = Math.floor((uptime % (24 * 3600)) / 3600);
   const minutes = Math.floor((uptime % 3600) / 60);
-  
+
   if (days > 0) {
     return `${days}天${hours}小时${minutes}分钟`;
   } else if (hours > 0) {
@@ -338,7 +319,7 @@ const checkHealth = async () => {
     healthLoading.value = true;
     const response = await assistantHealth();
     const data = response as ServiceHealthResponse;
-    
+
     Object.assign(healthInfo, data);
     message.success('健康检查完成');
   } catch (error: any) {
@@ -355,7 +336,7 @@ const checkReady = async () => {
     readyLoading.value = true;
     const response = await assistantReady();
     const data = response as ServiceReadyResponse;
-    
+
     Object.assign(readyInfo, data);
     message.success('就绪检查完成');
   } catch (error: any) {
@@ -372,9 +353,9 @@ const clearCache = async () => {
     cacheLoading.value = true;
     const response = await clearAssistantCache();
     const data = response as ClearCacheResponse;
-    
+
     Object.assign(cacheInfo, data);
-    
+
     if (data.cleared) {
       message.success('缓存清理成功');
     } else {
@@ -410,7 +391,7 @@ const exportReport = () => {
     ready: readyInfo,
     cache: cacheInfo
   };
-  
+
   const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -420,7 +401,7 @@ const exportReport = () => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  
+
   message.success('报告导出成功');
 };
 
@@ -460,46 +441,58 @@ onUnmounted(() => {
   min-height: 100vh;
 }
 
-.health-header {
+/* 页面头部 */
+.health-container .page-header {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.health-container .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--ant-border-color, #d9d9d9);
-
-  .header-content {
-    .page-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 24px;
-      font-weight: bold;
-      margin: 0;
-      background: linear-gradient(90deg, #1890ff, #52c41a);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .page-description {
-      margin: 0;
-      color: var(--ant-text-color-secondary);
-      font-size: 16px;
-      line-height: 1.5;
-    }
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
+  width: 100%;
 }
 
-.title-icon {
-  font-size: 28px;
+.health-container .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.health-container .header-icon {
+  font-size: 32px;
   color: #1890ff;
+}
+
+.health-container .header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.health-container .page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+  line-height: 1.2;
+}
+
+.health-container .page-subtitle {
+  color: #8c8c8c;
+  margin: 0;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.health-container .header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .health-content {
@@ -533,7 +526,8 @@ onUnmounted(() => {
           font-size: 24px;
           color: #fff;
 
-          &.healthy, &.ready {
+          &.healthy,
+          &.ready {
             background: #52c41a;
           }
 
@@ -569,7 +563,8 @@ onUnmounted(() => {
             font-weight: 600;
             line-height: 1.2;
 
-            &.healthy, &.ready {
+            &.healthy,
+            &.ready {
               color: #52c41a;
             }
 
@@ -707,17 +702,35 @@ onUnmounted(() => {
   .health-container {
     padding: 16px;
   }
-  
-  .health-header {
+
+  .health-container .page-header {
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .health-container .header-content {
     flex-direction: column;
+    align-items: flex-start;
     gap: 16px;
-    align-items: stretch;
   }
-  
-  .header-actions {
-    justify-content: center;
+
+  .health-container .header-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
-  
+
+  .health-container .page-title {
+    font-size: 20px;
+  }
+
+  .health-container .page-subtitle {
+    font-size: 13px;
+  }
+
+  .health-container .header-icon {
+    font-size: 36px;
+  }
+
   .status-card {
     .status-item {
       gap: 12px;

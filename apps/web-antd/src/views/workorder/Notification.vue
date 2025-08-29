@@ -25,10 +25,13 @@
             allow-clear
           >
             <a-select-option :value="undefined">全部渠道</a-select-option>
-            <a-select-option :value="NotificationChannel.FEISHU">飞书</a-select-option>
-            <a-select-option :value="NotificationChannel.EMAIL">邮箱</a-select-option>
-            <a-select-option :value="NotificationChannel.DINGTALK">钉钉</a-select-option>
-            <a-select-option :value="NotificationChannel.WECHAT">企业微信</a-select-option>
+            <a-select-option 
+              v-for="channel in getAvailableChannels()" 
+              :key="channel"
+              :value="channel"
+            >
+              {{ getNotificationChannelName(channel) }}
+            </a-select-option>
           </a-select>
           <a-select 
             v-model:value="statusFilter" 
@@ -38,8 +41,8 @@
             allow-clear
           >
             <a-select-option :value="undefined">全部状态</a-select-option>
-            <a-select-option :value="NotificationStatus.ENABLED">启用</a-select-option>
-            <a-select-option :value="NotificationStatus.DISABLED">禁用</a-select-option>
+            <a-select-option :value="NotificationStatus.Enabled">启用</a-select-option>
+            <a-select-option :value="NotificationStatus.Disabled">禁用</a-select-option>
           </a-select>
           <a-button @click="handleResetFilters" class="reset-btn">
             重置
@@ -48,45 +51,55 @@
       </div>
     </div>
 
-    <div class="stats-row">
-      <a-row :gutter="[16, 16]">
-        <a-col :xs="12" :sm="12" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="总配置数" :value="stats.total" :value-style="{ color: '#3f8600' }">
-              <template #prefix>
-                <BellOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="12" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="启用中" :value="stats.enabled" :value-style="{ color: '#52c41a' }">
-              <template #prefix>
-                <CheckCircleOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="12" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="禁用" :value="stats.disabled" :value-style="{ color: '#cf1322' }">
-              <template #prefix>
-                <StopOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-        <a-col :xs="12" :sm="12" :md="6" :lg="6">
-          <a-card class="stats-card">
-            <a-statistic title="今日发送" :value="stats.todaySent" :value-style="{ color: '#1890ff' }">
-              <template #prefix>
-                <SendOutlined />
-              </template>
-            </a-statistic>
-          </a-card>
-        </a-col>
-      </a-row>
+    <!-- 统计卡片 -->
+    <div class="stats-grid">
+      <a-card class="stats-card">
+        <a-statistic 
+          title="总配置数" 
+          :value="stats.total" 
+          :value-style="{ color: '#1890ff' }"
+        >
+          <template #prefix>
+            <BellOutlined />
+          </template>
+        </a-statistic>
+      </a-card>
+      
+      <a-card class="stats-card">
+        <a-statistic 
+          title="启用中" 
+          :value="stats.enabled" 
+          :value-style="{ color: '#52c41a' }"
+        >
+          <template #prefix>
+            <CheckCircleOutlined />
+          </template>
+        </a-statistic>
+      </a-card>
+      
+      <a-card class="stats-card">
+        <a-statistic 
+          title="禁用" 
+          :value="stats.disabled" 
+          :value-style="{ color: '#ff4d4f' }"
+        >
+          <template #prefix>
+            <StopOutlined />
+          </template>
+        </a-statistic>
+      </a-card>
+      
+      <a-card class="stats-card">
+        <a-statistic 
+          title="今日发送" 
+          :value="stats.todaySent" 
+          :value-style="{ color: '#fa8c16' }"
+        >
+          <template #prefix>
+            <SendOutlined />
+          </template>
+        </a-statistic>
+      </a-card>
     </div>
 
     <div class="table-container">
@@ -102,10 +115,10 @@
           @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
-            <template v-if="column.key === 'formName'">
-              <div class="form-name-cell">
-                <FormOutlined style="color: #1890ff; margin-right: 8px;" />
-                <span class="form-name-text">{{ getFormName(record.formId) }}</span>
+            <template v-if="column.key === 'name'">
+              <div class="name-cell">
+                <BellOutlined style="color: #1890ff; margin-right: 8px;" />
+                <span class="name-text">{{ record.name }}</span>
               </div>
             </template>
 
@@ -118,66 +131,63 @@
                   class="channel-tag"
                 >
                   <component :is="getChannelIcon(channel)" style="margin-right: 4px;" />
-                  {{ getChannelName(channel) }}
+                  {{ getNotificationChannelName(channel) }}
                 </a-tag>
               </div>
             </template>
 
-            <template v-if="column.key === 'recipients'">
-              <div class="recipients-cell">
-                <a-tooltip :title="record.recipients.join(', ')">
-                  <span>{{ getRecipientsDisplay(record.recipients) }}</span>
+            <template v-if="column.key === 'eventTypes'">
+              <div class="event-types-cell">
+                <a-tooltip>
+                  <template #title>
+                    <div v-for="eventType in record.event_types" :key="eventType">
+                      {{ getEventTypeName(eventType) }}
+                    </div>
+                  </template>
+                  <span>{{ getEventTypesDisplay(record.event_types) }}</span>
                 </a-tooltip>
               </div>
             </template>
 
-            <template v-if="column.key === 'formUrl'">
-              <div class="form-url-cell">
-                <a-input 
-                  :value="record.formUrl || generateFormUrl(record.formId)" 
-                  readonly 
-                  size="small"
-                  class="url-input"
-                />
-                <a-button 
-                  size="small" 
-                  @click="copyFormUrl(record.formUrl || generateFormUrl(record.formId))"
-                  style="margin-left: 8px;"
-                >
-                  <CopyOutlined />
-                </a-button>
+            <template v-if="column.key === 'recipientTypes'">
+              <div class="recipient-types-cell">
+                <a-tooltip>
+                  <template #title>
+                    <div v-for="recipientType in record.recipient_types" :key="recipientType">
+                      {{ getRecipientTypeName(recipientType) }}
+                    </div>
+                  </template>
+                  <span>{{ getRecipientTypesDisplay(record.recipient_types) }}</span>
+                </a-tooltip>
               </div>
             </template>
 
             <template v-if="column.key === 'status'">
               <a-switch 
-                :checked="record.status === NotificationStatus.ENABLED"
+                :checked="record.status === NotificationStatus.Enabled"
                 @change="(checked: boolean) => handleStatusToggle(record, checked)"
                 :loading="record.statusLoading"
               />
             </template>
 
-            <template v-if="column.key === 'sentCount'">
-              <div class="sent-count-cell">
-                <a-statistic 
-                  :value="record.sentCount || 0" 
-                  :value-style="{ fontSize: '14px' }"
-                />
+            <template v-if="column.key === 'priority'">
+              <div class="priority-cell">
+                <a-tag :color="getPriorityColor(record.priority)">
+                  {{ getPriorityName(record.priority) }}
+                </a-tag>
               </div>
             </template>
 
-            <template v-if="column.key === 'lastSent'">
-              <div class="date-info">
-                <span class="date" v-if="record.lastSent">{{ formatDate(record.lastSent) }}</span>
-                <span class="time" v-if="record.lastSent">{{ formatTime(record.lastSent) }}</span>
-                <span v-else class="text-gray">未发送</span>
+            <template v-if="column.key === 'triggerType'">
+              <div class="trigger-type-cell">
+                <span>{{ getTriggerTypeName(record.trigger_type) }}</span>
               </div>
             </template>
 
             <template v-if="column.key === 'createdAt'">
               <div class="date-info">
-                <span class="date">{{ formatDate(record.createdAt) }}</span>
-                <span class="time">{{ formatTime(record.createdAt) }}</span>
+                <span class="date">{{ formatDate(record.created_at) }}</span>
+                <span class="time">{{ formatTime(record.created_at) }}</span>
               </div>
             </template>
 
@@ -194,6 +204,9 @@
                     <a-menu @click="(e: any) => handleMenuClick(e.key, record)">
                       <a-menu-item key="test">
                         <SendOutlined /> 测试发送
+                      </a-menu-item>
+                      <a-menu-item key="manual">
+                        <MailOutlined /> 手动发送
                       </a-menu-item>
                       <a-menu-item key="logs">
                         <FileTextOutlined /> 发送记录
@@ -230,116 +243,146 @@
       class="responsive-modal notification-config-modal"
     >
       <a-form ref="formRef" :model="notificationDialog.form" :rules="notificationRules" layout="vertical">
-        <a-form-item label="关联表单" name="formId">
-          <a-select 
-            v-model:value="notificationDialog.form.formId" 
-            placeholder="请选择要配置通知的表单"
-            show-search
-            :filter-option="filterFormOption"
-            style="width: 100%"
-            :options="publishedForms.map((form: any) => ({
-              value: form.id,
-              label: form.name,
-              categoryName: form.categoryName
-            }))"
-            :loading="formsLoading"
-            option-label-prop="label"
-          >
-            <template #option="{ categoryName, label }">
-              <div class="form-option">
-                <span class="form-name">{{ label }}</span>
-                <span class="form-category">{{ categoryName }}</span>
-              </div>
-            </template>
-          </a-select>
-          <div style="margin-top: 8px; text-align: right;" v-if="formsPagination.total > formsPagination.pageSize">
-            <a-pagination
-              v-model:current="formsPagination.current"
-              :pageSize="formsPagination.pageSize"
-              :total="formsPagination.total"
-              :showTotal="(total: number) => '共 ' + total + ' 条'"
-              size="small"
-              @change="onFormsPageChange"
-              :showSizeChanger="false"
-            />
-          </div>
+        <a-form-item label="配置名称" name="name">
+          <a-input 
+            v-model:value="notificationDialog.form.name" 
+            placeholder="请输入通知配置名称"
+          />
         </a-form-item>
 
-        <a-form-item label="通知渠道" name="channels">
-          <a-checkbox-group v-model:value="notificationDialog.form.channels" style="width: 100%;">
-            <a-row :gutter="[16, 16]">
-              <a-col :span="12">
-                <a-checkbox :value="NotificationChannel.FEISHU">
-                  <span class="channel-option">
-                    <MessageOutlined style="color: #00b96b;" />
-                    飞书
-                  </span>
-                </a-checkbox>
-              </a-col>
-              <a-col :span="12">
-                <a-checkbox :value="NotificationChannel.EMAIL">
-                  <span class="channel-option">
-                    <MailOutlined style="color: #1890ff;" />
-                    邮箱
-                  </span>
-                </a-checkbox>
-              </a-col>
-              <a-col :span="12">
-                <a-checkbox :value="NotificationChannel.DINGTALK">
-                  <span class="channel-option">
-                    <PhoneOutlined style="color: #1677ff;" />
-                    钉钉
-                  </span>
-                </a-checkbox>
-              </a-col>
-              <a-col :span="12">
-                <a-checkbox :value="NotificationChannel.WECHAT">
-                  <span class="channel-option">
-                    <WechatOutlined style="color: #52c41a;" />
-                    企业微信
+        <a-form-item label="配置描述" name="description">
+          <a-textarea 
+            v-model:value="notificationDialog.form.description" 
+            placeholder="请输入通知配置描述"
+            :rows="3"
+          />
+        </a-form-item>
+
+        <a-form-item label="关联流程" name="processId">
+          <a-select 
+            v-model:value="notificationDialog.form.processId" 
+            placeholder="请选择关联流程（可选）"
+            allow-clear
+            show-search
+            option-filter-prop="label"
+            :loading="processLoading"
+            :dropdown-match-select-width="false"
+            @popup-scroll="(e: Event) => handleProcessScroll(e)"
+            @focus="() => loadProcesses(true)"
+          >
+            <a-select-option 
+              v-for="process in processes" 
+              :key="process.id"
+              :value="process.id"
+              :label="process.name"
+            >
+              <div class="form-option">
+                <span class="form-name">{{ process.name }}</span>
+                <span v-if="process.category?.name" class="form-category">{{ process.category.name }}</span>
+              </div>
+            </a-select-option>
+            <a-select-option 
+              v-if="processLoading" 
+              :value="`loading-${Date.now()}`" 
+              disabled
+            >
+              <div style="text-align: center; padding: 8px;">
+                <a-spin size="small" /> 加载中...
+              </div>
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="关联模板" name="templateId">
+          <a-select 
+            v-model:value="notificationDialog.form.templateId" 
+            placeholder="请选择关联模板（可选）"
+            allow-clear
+            show-search
+            option-filter-prop="label"
+            :loading="templateLoading"
+            :dropdown-match-select-width="false"
+            @popup-scroll="(e: Event) => handleTemplateScroll(e)"
+            @focus="() => loadTemplates(true)"
+          >
+            <a-select-option 
+              v-for="template in templates" 
+              :key="template.id"
+              :value="template.id"
+              :label="template.name"
+            >
+              <div class="form-option">
+                <span class="form-name">{{ template.name }}</span>
+                <span v-if="template.category?.name" class="form-category">{{ template.category.name }}</span>
+              </div>
+            </a-select-option>
+            <a-select-option 
+              v-if="templateLoading" 
+              :value="`loading-${Date.now()}`" 
+              disabled
+            >
+              <div style="text-align: center; padding: 8px;">
+                <a-spin size="small" /> 加载中...
+              </div>
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="关联分类" name="categoryId">
+          <a-select 
+            v-model:value="notificationDialog.form.categoryId" 
+            placeholder="请选择关联分类（可选）"
+            allow-clear
+            show-search
+            option-filter-prop="label"
+            :loading="categoryLoading"
+            :dropdown-match-select-width="false"
+            @popup-scroll="(e: Event) => handleCategoryScroll(e)"
+            @focus="() => loadCategories(true)"
+          >
+            <a-select-option 
+              v-for="category in categories" 
+              :key="category.id"
+              :value="category.id"
+              :label="category.name"
+            >
+              <div class="form-option">
+                <span class="form-name">{{ category.name }}</span>
+                <span v-if="category.description" class="form-category">{{ category.description }}</span>
+              </div>
+            </a-select-option>
+            <a-select-option 
+              v-if="categoryLoading" 
+              :value="`loading-${Date.now()}`" 
+              disabled
+            >
+              <div style="text-align: center; padding: 8px;">
+                <a-spin size="small" /> 加载中...
+              </div>
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="触发事件" name="eventTypes">
+          <a-checkbox-group v-model:value="notificationDialog.form.eventTypes" style="width: 100%;">
+            <a-row :gutter="[16, 8]">
+              <a-col 
+                :span="12" 
+                v-for="eventType in getAllEventTypes()" 
+                :key="eventType"
+              >
+                <a-checkbox :value="eventType">
+                  <span class="event-type-option">
+                    {{ getEventTypeName(eventType) }}
                   </span>
                 </a-checkbox>
               </a-col>
             </a-row>
           </a-checkbox-group>
-        </a-form-item>
-
-        <a-form-item label="通知对象" name="recipients">
-          <a-select 
-            v-model:value="notificationDialog.form.recipients" 
-            mode="tags"
-            placeholder="请输入邮箱地址、手机号或用户ID"
-            style="width: 100%"
-            :token-separators="[',', ';', ' ']"
-            :loading="usersLoading"
-            :options="suggestedUsers"
-            :filter-option="false"
-            @search="onUserSearch"
-          >
-            <template #option="{ label, value }">
-              <div class="user-option">
-                <a-avatar size="small" :style="{ backgroundColor: getAvatarColor(label) }">
-                  {{ getInitials(label) }}
-                </a-avatar>
-                <span style="margin-left: 8px;">{{ label }}</span>
-              </div>
-            </template>
-          </a-select>
-          <div style="margin-top: 8px; text-align: right;" v-if="usersPagination.total > usersPagination.pageSize">
-            <a-pagination
-              v-model:current="usersPagination.current"
-              :pageSize="usersPagination.pageSize"
-              :total="usersPagination.total"
-              :showTotal="(total: number) => '共 ' + total + ' 条'"
-              size="small"
-              @change="onUsersPageChange"
-              :showSizeChanger="false"
-            />
-          </div>
-          <div class="recipients-help">
+          <div class="form-help" style="margin-top: 8px;">
             <a-alert
-              message="支持以下格式"
-              description="邮箱：user@example.com | 手机号：13800138000 | 飞书用户ID：ou_xxx | 钉钉用户ID：xxx"
+              message="选择触发通知的工单事件类型"
+              description="建议选择关键事件以避免通知过多"
               type="info"
               show-icon
               banner
@@ -347,16 +390,125 @@
           </div>
         </a-form-item>
 
+        <a-form-item label="触发类型" name="triggerType">
+          <a-radio-group v-model:value="notificationDialog.form.triggerType">
+            <a-radio :value="NotificationTrigger.IMMEDIATE">立即触发</a-radio>
+            <a-radio :value="NotificationTrigger.DELAYED">延迟触发</a-radio>
+            <a-radio :value="NotificationTrigger.SCHEDULED">定时触发</a-radio>
+            <a-radio :value="NotificationTrigger.CONDITIONAL">条件触发</a-radio>
+          </a-radio-group>
+        </a-form-item>
+
+        <a-form-item 
+          label="触发条件" 
+          name="triggerCondition" 
+          v-if="notificationDialog.form.triggerType === 'conditional'"
+        >
+          <a-textarea
+            v-model:value="notificationDialog.form.triggerCondition"
+            placeholder="请输入触发条件（JSON格式）"
+            :rows="4"
+          />
+        </a-form-item>
+
+        <a-form-item label="通知渠道" name="channels">
+          <a-checkbox-group v-model:value="notificationDialog.form.channels" style="width: 100%;">
+            <a-row :gutter="[16, 16]">
+              <a-col 
+                :span="12" 
+                v-for="channel in getAllNotificationChannels()" 
+                :key="channel"
+              >
+                <a-checkbox :value="channel">
+                  <span class="channel-option">
+                    <component :is="getChannelIcon(channel)" :style="{ color: getChannelIconColor(channel) }" />
+                    {{ getNotificationChannelName(channel) }}
+                  </span>
+                </a-checkbox>
+              </a-col>
+            </a-row>
+          </a-checkbox-group>
+          <div class="form-help" style="margin-top: 8px;" v-if="notificationDialog.form.channels.includes('feishu') || notificationDialog.form.channels.includes('email')">
+            <a-alert
+              message="通知渠道配置建议"
+              type="info"
+              show-icon
+              banner
+            >
+              <template #description>
+                <div>
+                  <div v-if="notificationDialog.form.channels.includes('feishu')" style="margin-bottom: 4px;">
+                    <strong>飞书通知：</strong>需要确保接收人配置了有效的用户ID，系统会根据用户ID查找对应的飞书账号进行消息推送
+                  </div>
+                  <div v-if="notificationDialog.form.channels.includes('email')">
+                    <strong>邮件通知：</strong>需要确保接收人配置了有效的邮箱地址，支持通过用户ID、角色ID或部门ID自动获取邮箱
+                  </div>
+                </div>
+              </template>
+            </a-alert>
+          </div>
+        </a-form-item>
+
+        <a-form-item label="接收人类型" name="recipientTypes">
+          <a-checkbox-group v-model:value="notificationDialog.form.recipientTypes" style="width: 100%;">
+            <a-row :gutter="[16, 8]">
+              <a-col 
+                :span="12" 
+                v-for="recipientType in getAllRecipientTypes()" 
+                :key="recipientType"
+              >
+                <a-checkbox :value="recipientType">
+                  <span class="recipient-type-option">
+                    {{ getRecipientTypeName(recipientType) }}
+                  </span>
+                </a-checkbox>
+              </a-col>
+            </a-row>
+          </a-checkbox-group>
+        </a-form-item>
+
+        <a-form-item label="自定义接收人用户ID" name="recipientUsers" v-if="notificationDialog.form.recipientTypes.includes('user')">
+          <a-select 
+            v-model:value="notificationDialog.form.recipientUsers" 
+            mode="tags"
+            placeholder="请输入用户ID"
+            style="width: 100%"
+            :token-separators="[',', ';', ' ']"
+          />
+        </a-form-item>
+
+        <a-form-item label="接收人角色ID" name="recipientRoles" v-if="notificationDialog.form.recipientTypes.includes('role')">
+          <a-select 
+            v-model:value="notificationDialog.form.recipientRoles" 
+            mode="tags"
+            placeholder="请输入角色ID"
+            style="width: 100%"
+            :token-separators="[',', ';', ' ']"
+          />
+        </a-form-item>
+
+        <a-form-item label="接收人部门ID" name="recipientDepts" v-if="notificationDialog.form.recipientTypes.includes('dept')">
+          <a-select 
+            v-model:value="notificationDialog.form.recipientDepts" 
+            mode="tags"
+            placeholder="请输入部门ID"
+            style="width: 100%"
+            :token-separators="[',', ';', ' ']"
+          />
+        </a-form-item>
+
         <a-form-item label="消息模板" name="messageTemplate">
           <a-textarea
             v-model:value="notificationDialog.form.messageTemplate"
-            :rows="6"
-            placeholder="请输入通知消息模板，支持变量：{formName}, {formUrl}, {senderName}, {currentTime}"
+            :rows="8"
+            placeholder="请输入通知消息模板"
+            show-count
+            :maxlength="2000"
           />
           <div class="template-help">
             <a-alert
-              message="可用变量"
-              description="{formName} - 表单名称 | {formUrl} - 表单链接 | {senderName} - 发送人 | {currentTime} - 当前时间"
+              message="支持模板变量"
+              description="可以在消息中使用 {变量名} 的格式插入动态内容"
               type="info"
               show-icon
               banner
@@ -365,18 +517,17 @@
           </div>
         </a-form-item>
 
-        <a-form-item label="发送时机" name="triggerType">
-          <a-radio-group v-model:value="notificationDialog.form.triggerType">
-            <a-radio :value="NotificationTrigger.MANUAL">手动发送</a-radio>
-            <a-radio :value="NotificationTrigger.IMMEDIATE">表单发布后立即发送</a-radio>
-            <a-radio :value="NotificationTrigger.SCHEDULED">定时发送</a-radio>
-          </a-radio-group>
+        <a-form-item label="主题模板" name="subjectTemplate">
+          <a-input
+            v-model:value="notificationDialog.form.subjectTemplate"
+            placeholder="请输入主题模板（可选）"
+          />
         </a-form-item>
 
         <a-form-item 
           label="定时发送时间" 
           name="scheduledTime" 
-          v-if="notificationDialog.form.triggerType === NotificationTrigger.SCHEDULED"
+          v-if="notificationDialog.form.triggerType === 'scheduled'"
         >
           <a-date-picker
             v-model:value="notificationDialog.form.scheduledTime"
@@ -387,12 +538,57 @@
           />
         </a-form-item>
 
+        <a-form-item label="重复间隔（分钟）" name="repeatInterval">
+          <a-input-number
+            v-model:value="notificationDialog.form.repeatInterval"
+            placeholder="重复间隔（分钟）"
+            :min="0"
+            style="width: 100%"
+          />
+        </a-form-item>
+
+        <a-form-item label="最大重试次数" name="maxRetries">
+          <a-input-number
+            v-model:value="notificationDialog.form.maxRetries"
+            placeholder="最大重试次数"
+            :min="0"
+            :max="10"
+            style="width: 100%"
+          />
+        </a-form-item>
+
+        <a-form-item label="重试间隔（分钟）" name="retryInterval">
+          <a-input-number
+            v-model:value="notificationDialog.form.retryInterval"
+            placeholder="重试间隔（分钟）"
+            :min="1"
+            style="width: 100%"
+          />
+        </a-form-item>
+
+        <a-form-item label="优先级" name="priority">
+          <a-select v-model:value="notificationDialog.form.priority" placeholder="请选择优先级">
+            <a-select-option :value="NotificationPriority.High">高</a-select-option>
+            <a-select-option :value="NotificationPriority.Medium">中</a-select-option>
+            <a-select-option :value="NotificationPriority.Low">低</a-select-option>
+          </a-select>
+        </a-form-item>
+
         <a-form-item label="状态" name="status" v-if="notificationDialog.isEdit">
           <a-switch 
-            :checked="notificationDialog.form.status === NotificationStatus.ENABLED"
-            @change="(checked: boolean) => notificationDialog.form.status = checked ? NotificationStatus.ENABLED : NotificationStatus.DISABLED"
+            :checked="notificationDialog.form.status === NotificationStatus.Enabled"
+            @change="(checked: boolean) => notificationDialog.form.status = checked ? NotificationStatus.Enabled : NotificationStatus.Disabled"
             checked-children="启用" 
             un-checked-children="禁用" 
+          />
+        </a-form-item>
+
+        <a-form-item label="是否默认配置" name="isDefault" v-if="notificationDialog.isEdit">
+          <a-switch 
+            :checked="notificationDialog.form.isDefault === IsDefault.Yes"
+            @change="(checked: boolean) => notificationDialog.form.isDefault = checked ? IsDefault.Yes : IsDefault.No"
+            checked-children="是" 
+            un-checked-children="否" 
           />
         </a-form-item>
       </a-form>
@@ -409,27 +605,29 @@
     >
       <div v-if="detailDialog.notification" class="notification-details">
         <div class="detail-header">
-          <h2>{{ getFormName(detailDialog.notification.formId) }} - 通知配置</h2>
+          <h2>{{ detailDialog.notification.name }} - 通知配置</h2>
           <a-switch 
-            :checked="detailDialog.notification.status === NotificationStatus.ENABLED"
+            :checked="detailDialog.notification.status === NotificationStatus.Enabled"
             @change="(checked: boolean) => handleStatusToggle(detailDialog.notification!, checked)"
           />
         </div>
 
         <a-descriptions bordered :column="1" :labelStyle="{ width: '120px' }">
           <a-descriptions-item label="配置ID">{{ detailDialog.notification.id }}</a-descriptions-item>
-          <a-descriptions-item label="关联表单">
-            <a href="#" @click="viewForm(detailDialog.notification.formId)">
-              {{ getFormName(detailDialog.notification.formId) }}
-            </a>
-          </a-descriptions-item>
-          <a-descriptions-item label="表单链接">
-            <div class="form-url-display">
-              <a-input :value="detailDialog.notification.formUrl || generateFormUrl(detailDialog.notification.formId)" readonly size="small" />
-              <a-button size="small" @click="copyFormUrl(detailDialog.notification.formUrl || generateFormUrl(detailDialog.notification.formId))" style="margin-left: 8px;">
-                <CopyOutlined />
-              </a-button>
+          <a-descriptions-item label="配置名称">{{ detailDialog.notification.name }}</a-descriptions-item>
+          <a-descriptions-item label="配置描述">{{ detailDialog.notification.description || '无' }}</a-descriptions-item>
+          <a-descriptions-item label="关联模板ID">{{ detailDialog.notification.template_id || '无' }}</a-descriptions-item>
+          <a-descriptions-item label="关联流程ID">{{ detailDialog.notification.process_id || '无' }}</a-descriptions-item>
+          <a-descriptions-item label="关联分类ID">{{ detailDialog.notification.category_id || '无' }}</a-descriptions-item>
+          <a-descriptions-item label="触发事件">
+            <div class="event-types-display">
+              <a-tag v-for="eventType in detailDialog.notification.event_types" :key="eventType">
+                {{ getEventTypeName(eventType) }}
+              </a-tag>
             </div>
+          </a-descriptions-item>
+          <a-descriptions-item label="触发类型">
+            {{ getTriggerTypeName(detailDialog.notification.trigger_type) }}
           </a-descriptions-item>
           <a-descriptions-item label="通知渠道">
             <div class="channels-display">
@@ -439,25 +637,37 @@
                 :color="getChannelColor(channel)"
               >
                 <component :is="getChannelIcon(channel)" style="margin-right: 4px;" />
-                {{ getChannelName(channel) }}
+                {{ getNotificationChannelName(channel) }}
               </a-tag>
             </div>
           </a-descriptions-item>
-          <a-descriptions-item label="通知对象">
+          <a-descriptions-item label="接收人类型">
+            <div class="recipient-types-display">
+              <a-tag v-for="recipientType in detailDialog.notification.recipient_types" :key="recipientType">
+                {{ getRecipientTypeName(recipientType) }}
+              </a-tag>
+            </div>
+          </a-descriptions-item>
+          <a-descriptions-item label="自定义接收人">
             <div class="recipients-display">
-              <a-tag v-for="recipient in detailDialog.notification.recipients" :key="recipient">
+              <a-tag v-for="recipient in (detailDialog.notification.recipient_users || [])" :key="recipient">
                 {{ recipient }}
               </a-tag>
+              <span v-if="!detailDialog.notification.recipient_users?.length">无</span>
             </div>
           </a-descriptions-item>
-          <a-descriptions-item label="发送时机">
-            {{ getTriggerTypeName(detailDialog.notification.triggerType) }}
+          <a-descriptions-item label="优先级">
+            <a-tag :color="getPriorityColor(detailDialog.notification.priority)">
+              {{ getPriorityName(detailDialog.notification.priority) }}
+            </a-tag>
           </a-descriptions-item>
-          <a-descriptions-item label="已发送次数">{{ detailDialog.notification.sentCount || 0 }}</a-descriptions-item>
-          <a-descriptions-item label="最后发送时间">
-            {{ detailDialog.notification.lastSent ? formatFullDateTime(detailDialog.notification.lastSent) : '未发送' }}
+          <a-descriptions-item label="最大重试次数">{{ detailDialog.notification.max_retries }}</a-descriptions-item>
+          <a-descriptions-item label="重试间隔">{{ detailDialog.notification.retry_interval }}分钟</a-descriptions-item>
+          <a-descriptions-item label="是否默认配置">
+            {{ detailDialog.notification.is_default === IsDefault.Yes ? '是' : '否' }}
           </a-descriptions-item>
-          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.notification.createdAt) }}</a-descriptions-item>
+          <a-descriptions-item label="创建时间">{{ formatFullDateTime(detailDialog.notification.created_at) }}</a-descriptions-item>
+          <a-descriptions-item label="更新时间">{{ formatFullDateTime(detailDialog.notification.updated_at) }}</a-descriptions-item>
         </a-descriptions>
 
         <div class="message-template-preview">
@@ -498,7 +708,7 @@
             <template v-if="column.key === 'channel'">
               <a-tag :color="getChannelColor(record.channel)">
                 <component :is="getChannelIcon(record.channel)" style="margin-right: 4px;" />
-                {{ getChannelName(record.channel) }}
+                {{ getNotificationChannelName(record.channel) }}
               </a-tag>
             </template>
             <template v-if="column.key === 'status'">
@@ -513,11 +723,73 @@
         </a-table>
       </div>
     </a-modal>
+
+    <!-- 手动发送对话框 -->
+    <a-modal 
+      :open="manualSendDialogVisible" 
+      title="手动发送通知" 
+      :width="600"
+      @ok="saveManualSend" 
+      @cancel="closeManualSendDialog"
+      :destroy-on-close="true"
+      :confirm-loading="manualSendDialog.saving"
+      class="responsive-modal manual-send-modal"
+    >
+      <a-form :model="manualSendDialog.form" :rules="manualSendRules" layout="vertical">
+        <a-form-item label="通知渠道" name="channels">
+          <a-checkbox-group v-model:value="manualSendDialog.form.channels" style="width: 100%;">
+            <a-row :gutter="[16, 16]">
+              <a-col 
+                :span="12" 
+                v-for="channel in getAllNotificationChannels()" 
+                :key="channel"
+              >
+                <a-checkbox :value="channel">
+                  <span class="channel-option">
+                    <component :is="getChannelIcon(channel)" :style="{ color: getChannelIconColor(channel) }" />
+                    {{ getNotificationChannelName(channel) }}
+                  </span>
+                </a-checkbox>
+              </a-col>
+            </a-row>
+          </a-checkbox-group>
+        </a-form-item>
+
+        <a-form-item label="接收人" name="recipient">
+          <a-input
+            v-model:value="manualSendDialog.form.recipient"
+            placeholder="请输入接收人地址（邮箱、手机号、用户ID等）"
+          />
+          <div class="form-help" style="margin-top: 4px;">
+            <small class="text-gray">
+              支持邮箱、手机号、飞书用户ID、钉钉用户ID等格式
+            </small>
+          </div>
+        </a-form-item>
+
+        <a-form-item label="通知主题" name="subject">
+          <a-input
+            v-model:value="manualSendDialog.form.subject"
+            placeholder="请输入通知主题"
+          />
+        </a-form-item>
+
+        <a-form-item label="通知内容" name="content">
+          <a-textarea
+            v-model:value="manualSendDialog.form.content"
+            :rows="6"
+            placeholder="请输入通知内容"
+            show-count
+            :maxlength="1000"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, nextTick } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
 import dayjs from 'dayjs';
@@ -528,40 +800,47 @@ import {
   CheckCircleOutlined,
   StopOutlined,
   SendOutlined,
-  FormOutlined,
   DownOutlined,
   CopyOutlined,
   FileTextOutlined,
   MessageOutlined,
   MailOutlined,
-  PhoneOutlined,
-  WechatOutlined
+  PhoneOutlined
 } from '@ant-design/icons-vue';
 import {
   NotificationStatus,
   NotificationChannel,
-  type NotificationChannelType,
   NotificationTrigger,
-  type NotificationTriggerType,
+  NotificationPriority,
+  IsDefault,
   type Notification,
   type NotificationLog,
   type CreateNotificationReq,
   type UpdateNotificationReq,
   type ListNotificationReq,
   type ListSendLogReq,
+  type ManualSendNotificationReq,
   getNotificationList,
   getNotificationDetail,
   createNotification,
   updateNotification,
   deleteNotification,
   updateNotificationStatus,
-  getNotificationStats as fetchNotificationStats,
   getSendLogs,
   testSendNotification,
-  duplicateNotification
+  duplicateNotification,
+  sendNotificationManually,
+  getEventTypeName,
+  getNotificationChannelName,
+  getRecipientTypeName,
+  getAllEventTypes,
+  getAllNotificationChannels,
+  getAllRecipientTypes
 } from '#/api/core/workorder_notification';
-import { listFormDesign } from '#/api/core/workorder_form_design';
-import { getUserList } from '#/api/core/user';
+import { listWorkorderProcess, type WorkorderProcessItem } from '#/api/core/workorder_process';
+import { listWorkorderTemplate, type WorkorderTemplateItem } from '#/api/core/workorder_template';
+import { listWorkorderCategory, type WorkorderCategoryItem } from '#/api/core/workorder_category';
+import { getUserList, type User } from '#/api/core/user';
 
 // 表单ref
 const formRef = ref<FormInstance>();
@@ -599,15 +878,15 @@ const logsDialogWidth = computed(() => {
 
 // 列定义
 const columns = [
-  { title: '表单名称', dataIndex: 'formName', key: 'formName', width: 180, fixed: 'left' },
+  { title: '配置名称', dataIndex: 'name', key: 'name', width: 200, fixed: 'left' },
+  { title: '触发事件', dataIndex: 'event_types', key: 'eventTypes', width: 150 },
+  { title: '接收人类型', dataIndex: 'recipient_types', key: 'recipientTypes', width: 150 },
   { title: '通知渠道', dataIndex: 'channels', key: 'channels', width: 180 },
-  { title: '通知对象', dataIndex: 'recipients', key: 'recipients', width: 160 },
-  { title: '表单链接', dataIndex: 'formUrl', key: 'formUrl', width: 250 },
+  { title: '触发类型', dataIndex: 'trigger_type', key: 'triggerType', width: 120 },
+  { title: '优先级', dataIndex: 'priority', key: 'priority', width: 80, align: 'center' as const },
   { title: '状态', dataIndex: 'status', key: 'status', width: 80, align: 'center' as const },
-  { title: '发送次数', dataIndex: 'sentCount', key: 'sentCount', width: 100, align: 'center' as const },
-  { title: '最后发送', dataIndex: 'lastSent', key: 'lastSent', width: 140 },
-  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 140 },
-  { title: '操作', key: 'action', width: 180, align: 'center' as const, fixed: 'right' }
+  { title: '创建时间', dataIndex: 'created_at', key: 'createdAt', width: 140 },
+  { title: '操作', key: 'action', width: 200, align: 'center' as const, fixed: 'right' }
 ];
 
 const logsColumns = [
@@ -621,15 +900,60 @@ const logsColumns = [
 // 状态数据
 const loading = ref(false);
 const logsLoading = ref(false);
-const formsLoading = ref(false);
-const usersLoading = ref(false);
 const searchQuery = ref('');
-const channelFilter = ref<NotificationChannelType | undefined>(undefined);
-const statusFilter = ref<NotificationStatus | undefined>(undefined);
+const channelFilter = ref<string | undefined>(undefined);
+const statusFilter = ref<number | undefined>(undefined);
 const notifications = ref<(Notification & { statusLoading?: boolean })[]>([]);
-const publishedForms = ref<any[]>([]);
-const suggestedUsers = ref<{label: string, value: any}[]>([]);
 const sendLogs = ref<NotificationLog[]>([]);
+
+// 联动数据
+const processes = ref<WorkorderProcessItem[]>([]);
+const templates = ref<WorkorderTemplateItem[]>([]);
+const categories = ref<WorkorderCategoryItem[]>([]);
+const users = ref<User[]>([]);
+
+// 分页加载状态
+const processLoading = ref(false);
+const templateLoading = ref(false);
+const categoryLoading = ref(false);
+const userLoading = ref(false);
+
+// 分页参数
+const processPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: true
+});
+
+const templatePagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: true
+});
+
+const categoryPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: true
+});
+
+const userPagination = reactive({
+  current: 1,
+  pageSize: 20,
+  total: 0,
+  hasMore: true
+});
+
+// 统计数据
+const stats = reactive({
+  total: 0,
+  enabled: 0,
+  disabled: 0,
+  todaySent: 0
+});
 
 // 分页配置
 const paginationConfig = reactive({
@@ -649,18 +973,13 @@ const logsPagination = reactive({
   size: 'small' as const
 });
 
-// 统计数据
-const stats = reactive({
-  total: 0,
-  enabled: 0,
-  disabled: 0,
-  todaySent: 0
-});
+
 
 // 对话框状态
 const notificationDialogVisible = ref(false);
 const detailDialogVisible = ref(false);
 const logsDialogVisible = ref(false);
+const manualSendDialogVisible = ref(false);
 
 // 通知配置对话框数据
 const notificationDialog = reactive({
@@ -668,13 +987,28 @@ const notificationDialog = reactive({
   saving: false,
   form: {
     id: undefined as number | undefined,
-    formId: undefined as number | undefined,
-    channels: [] as NotificationChannelType[],
-    recipients: [] as string[],
-    messageTemplate: '您好！\n\n表单"{formName}"已发布，请点击以下链接填写：\n{formUrl}\n\n发送人：{senderName}\n发送时间：{currentTime}',
-    triggerType: NotificationTrigger.MANUAL as NotificationTriggerType,
+    name: '',
+    description: '',
+    processId: undefined as number | undefined,
+    templateId: undefined as number | undefined,
+    categoryId: undefined as number | undefined,
+    eventTypes: [] as string[],
+    triggerType: NotificationTrigger.IMMEDIATE as string,
+    triggerCondition: '',
+    channels: [] as string[],
+    recipientTypes: [] as string[],
+    recipientUsers: [] as string[],
+    recipientRoles: [] as string[],
+    recipientDepts: [] as string[],
+    messageTemplate: '您好！\n\n工单通知：{instanceTitle}\n\n详情请查看系统。\n\n时间：{currentTime}',
+    subjectTemplate: '',
     scheduledTime: undefined as any,
-    status: NotificationStatus.ENABLED
+    repeatInterval: undefined as number | undefined,
+    maxRetries: 3,
+    retryInterval: 5,
+    status: NotificationStatus.Enabled as number,
+    priority: NotificationPriority.Medium as number,
+    isDefault: IsDefault.No as number
   }
 });
 
@@ -683,19 +1017,123 @@ const detailDialog = reactive({
   notification: null as Notification | null
 });
 
+// 手动发送对话框数据
+const manualSendDialog = reactive({
+  saving: false,
+  form: {
+    channels: [] as string[],
+    recipient: '',
+    subject: '',
+    content: ''
+  }
+});
+
 // 表单验证规则
 const notificationRules = {
-  formId: [
-    { required: true, message: '请选择关联表单', trigger: 'change' }
+  name: [
+    { required: true, message: '请输入配置名称', trigger: 'blur' }
+  ],
+  eventTypes: [
+    { required: true, type: 'array', min: 1, message: '请选择至少一个触发事件', trigger: 'change' }
+  ],
+  triggerType: [
+    { required: true, message: '请选择触发类型', trigger: 'change' }
   ],
   channels: [
     { required: true, type: 'array', min: 1, message: '请选择至少一个通知渠道', trigger: 'change' }
   ],
-  recipients: [
-    { required: true, type: 'array', min: 1, message: '请添加至少一个通知对象', trigger: 'change' }
+  recipientTypes: [
+    { required: true, type: 'array', min: 1, message: '请选择至少一种接收人类型', trigger: 'change' }
+  ],
+  recipientUsers: [
+    {
+      validator: (_rule: any, value: string[], callback: Function) => {
+        if (notificationDialog.form.recipientTypes.includes('user') && (!value || value.length === 0 || value.some(v => !v || !v.trim()))) {
+          callback(new Error('选择了用户类型接收人时，请至少输入一个有效的用户ID'));
+        }
+        callback();
+      },
+      trigger: 'change'
+    }
+  ],
+  recipientRoles: [
+    {
+      validator: (_rule: any, value: string[], callback: Function) => {
+        if (notificationDialog.form.recipientTypes.includes('role') && (!value || value.length === 0 || value.some(v => !v || !v.trim()))) {
+          callback(new Error('选择了角色类型接收人时，请至少输入一个有效的角色ID'));
+        }
+        callback();
+      },
+      trigger: 'change'
+    }
+  ],
+  recipientDepts: [
+    {
+      validator: (_rule: any, value: string[], callback: Function) => {
+        if (notificationDialog.form.recipientTypes.includes('dept') && (!value || value.length === 0 || value.some(v => !v || !v.trim()))) {
+          callback(new Error('选择了部门类型接收人时，请至少输入一个有效的部门ID'));
+        }
+        callback();
+      },
+      trigger: 'change'
+    }
   ],
   messageTemplate: [
     { required: true, message: '请输入消息模板', trigger: 'blur' }
+  ],
+  maxRetries: [
+    { required: true, type: 'number', min: 0, max: 10, message: '最大重试次数必须在0-10之间', trigger: 'blur' }
+  ],
+  retryInterval: [
+    { required: true, type: 'number', min: 1, message: '重试间隔必须大于0', trigger: 'blur' }
+  ],
+  priority: [
+    { required: true, message: '请选择优先级', trigger: 'change' }
+  ]
+};
+
+// 手动发送验证规则
+const manualSendRules = {
+  channels: [
+    { required: true, type: 'array', min: 1, message: '请选择至少一个通知渠道', trigger: 'change' }
+  ],
+  recipient: [
+    { required: true, message: '请输入接收人地址', trigger: 'blur' },
+    {
+      validator: (_rule: any, value: string, callback: Function) => {
+        if (!value || !value.trim()) {
+          callback(new Error('接收人地址不能为空'));
+          return;
+        }
+        
+        // 检查是否包含邮件渠道，如果有则验证邮箱格式
+        if (manualSendDialog.form.channels.includes('email')) {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(value.trim())) {
+            callback(new Error('选择了邮件渠道时，请输入有效的邮箱地址'));
+            return;
+          }
+        }
+        
+        // 检查是否包含短信渠道，如果有则验证手机号格式
+        if (manualSendDialog.form.channels.includes('sms')) {
+          const phoneRegex = /^1[3-9]\d{9}$/;
+          if (!phoneRegex.test(value.trim())) {
+            callback(new Error('选择了短信渠道时，请输入有效的手机号码'));
+            return;
+          }
+        }
+        
+        callback();
+      },
+      trigger: 'blur'
+    }
+  ],
+  subject: [
+    { required: true, message: '请输入通知主题', trigger: 'blur' }
+  ],
+  content: [
+    { required: true, message: '请输入通知内容', trigger: 'blur' }
   ]
 };
 
@@ -710,127 +1148,47 @@ const disabledDate = (current: any) => {
   return current && current < dayjs().startOf('day');
 };
 
-// 获取表单名称
-const getFormName = (formId?: number): string => {
-  if (!formId) return '未知表单';
-  const form = publishedForms.value.find(f => f.id === formId);
-  return form?.name || '未知表单';
-};
-
-// 生成表单URL
-const generateFormUrl = (formId?: number): string => {
-  if (!formId) return '';
-  return `${window.location.origin}/workorder/form/fill/${formId}`;
-};
-
-// 表单分页数据
-const formsPagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0
-});
-
-// 用户分页数据
-const usersPagination = reactive({
-  current: 1,
-  pageSize: 10,
-  total: 0
-});
-
-const userSearchQuery = ref('');
-
-// 加载已发布表单数据
-const loadPublishedForms = async (page = 1) => {
-  formsLoading.value = true;
-  try {
-    const response = await listFormDesign({
-      page: page,
-      size: formsPagination.pageSize,
-      status: 2
-    });
-    if (response) {
-      publishedForms.value = response.items || [];
-      formsPagination.total = response.total || 0;
-      formsPagination.current = page;
-    }
-  } catch (error) {
-    message.error('加载表单数据失败');
-    console.error('Failed to load forms:', error);
-  } finally {
-    formsLoading.value = false;
+// 工具函数
+const getEventTypesDisplay = (eventTypes: string[]): string => {
+  if (eventTypes.length <= 2) {
+    return eventTypes.map(type => getEventTypeName(type)).join(', ');
   }
+  return `${eventTypes.slice(0, 2).map(type => getEventTypeName(type)).join(', ')} 等${eventTypes.length}个`;
 };
 
-// 加载用户数据
-const loadSuggestedUsers = async (page = 1, search = '') => {
-  usersLoading.value = true;
-  try {
-    const response = await getUserList({
-      page: page,
-      size: usersPagination.pageSize,
-      search: search,
-      enable: 1
-    });
-    
-    if (response && Array.isArray(response.items)) {
-      suggestedUsers.value = response.items.map((user: any) => ({
-        label: user.username || '未命名用户',
-        value: user.id || ''
-      })).filter((item: any) => item.value);
-      usersPagination.total = response.total || 0;
-      usersPagination.current = page;
-    } else {
-      suggestedUsers.value = [];
-      usersPagination.total = 0;
-    }
-  } catch (error) {
-    suggestedUsers.value = [];
-    usersPagination.total = 0;
-    console.error('Failed to load users:', error);
-  } finally {
-    usersLoading.value = false;
+const getRecipientTypesDisplay = (recipientTypes: string[]): string => {
+  if (recipientTypes.length <= 2) {
+    return recipientTypes.map(type => getRecipientTypeName(type)).join(', ');
   }
+  return `${recipientTypes.slice(0, 2).map(type => getRecipientTypeName(type)).join(', ')} 等${recipientTypes.length}个`;
 };
 
-// 表单分页处理函数
-const onFormsPageChange = async (page: number, pageSize?: number) => {
-  await nextTick();
-  if (pageSize && pageSize !== formsPagination.pageSize) {
-    formsPagination.pageSize = pageSize;
-  }
-  await loadPublishedForms(page);
+const getPriorityName = (priority: number): string => {
+  const priorityMap: Record<number, string> = {
+    [NotificationPriority.High]: '高',
+    [NotificationPriority.Medium]: '中',
+    [NotificationPriority.Low]: '低'
+  };
+  return priorityMap[priority] || '未知';
 };
 
-// 用户分页处理函数  
-const onUsersPageChange = async (page: number, pageSize?: number) => {
-  await nextTick();
-  if (pageSize && pageSize !== usersPagination.pageSize) {
-    usersPagination.pageSize = pageSize;
-  }
-  await loadSuggestedUsers(page, userSearchQuery.value);
+const getPriorityColor = (priority: number): string => {
+  const colorMap: Record<number, string> = {
+    [NotificationPriority.High]: 'red',
+    [NotificationPriority.Medium]: 'orange',
+    [NotificationPriority.Low]: 'green'
+  };
+  return colorMap[priority] || 'default';
 };
 
-// 用户搜索处理函数
-const onUserSearch = async (value: string) => {
-  await nextTick();
-  userSearchQuery.value = value || '';
-  usersPagination.current = 1;
-  await loadSuggestedUsers(1, userSearchQuery.value);
-};
-
-// 加载统计数据
-const loadStats = async () => {
-  try {
-    const response = await fetchNotificationStats();
-    if (response) {
-      stats.enabled = response.enabled || 0;
-      stats.disabled = response.disabled || 0;
-      stats.todaySent = response.todaySent || 0;
-      stats.total = stats.enabled + stats.disabled;
-    }
-  } catch (error) {
-    console.error('Failed to load stats:', error);
-  }
+const getTriggerTypeName = (type: string): string => {
+  const typeMap: Record<string, string> = {
+    [NotificationTrigger.IMMEDIATE]: '立即触发',
+    [NotificationTrigger.DELAYED]: '延迟触发',
+    [NotificationTrigger.SCHEDULED]: '定时触发',
+    [NotificationTrigger.CONDITIONAL]: '条件触发'
+  };
+  return typeMap[type] || type;
 };
 
 
@@ -838,46 +1196,30 @@ const getChannelColor = (channel: string): string => {
   const colorMap: Record<string, string> = {
     [NotificationChannel.FEISHU]: 'green',
     [NotificationChannel.EMAIL]: 'blue',
-    [NotificationChannel.DINGTALK]: 'cyan',
-    [NotificationChannel.WECHAT]: 'orange'
+    [NotificationChannel.SMS]: 'orange',
+    [NotificationChannel.WEBHOOK]: 'purple'
   };
   return colorMap[channel] || 'default';
-};
-
-const getChannelName = (channel: string): string => {
-  const nameMap: Record<string, string> = {
-    [NotificationChannel.FEISHU]: '飞书',
-    [NotificationChannel.EMAIL]: '邮箱',
-    [NotificationChannel.DINGTALK]: '钉钉',
-    [NotificationChannel.WECHAT]: '企业微信'
-  };
-  return nameMap[channel] || channel;
 };
 
 const getChannelIcon = (channel: string) => {
   const iconMap: Record<string, any> = {
     [NotificationChannel.FEISHU]: MessageOutlined,
     [NotificationChannel.EMAIL]: MailOutlined,
-    [NotificationChannel.DINGTALK]: PhoneOutlined,
-    [NotificationChannel.WECHAT]: WechatOutlined
+    [NotificationChannel.SMS]: PhoneOutlined,
+    [NotificationChannel.WEBHOOK]: SendOutlined
   };
   return iconMap[channel] || MessageOutlined;
 };
 
-const getTriggerTypeName = (type: string): string => {
-  const typeMap: Record<string, string> = {
-    [NotificationTrigger.MANUAL]: '手动发送',
-    [NotificationTrigger.IMMEDIATE]: '表单发布后立即发送',
-    [NotificationTrigger.SCHEDULED]: '定时发送'
+const getChannelIconColor = (channel: string): string => {
+  const colorMap: Record<string, string> = {
+    [NotificationChannel.FEISHU]: '#00b96b',
+    [NotificationChannel.EMAIL]: '#1890ff',
+    [NotificationChannel.SMS]: '#fa8c16',
+    [NotificationChannel.WEBHOOK]: '#722ed1'
   };
-  return typeMap[type] || type;
-};
-
-const getRecipientsDisplay = (recipients: string[]): string => {
-  if (recipients.length <= 2) {
-    return recipients.join(', ');
-  }
-  return `${recipients.slice(0, 2).join(', ')} 等${recipients.length}人`;
+  return colorMap[channel] || '#666';
 };
 
 const formatDate = (dateStr?: string): string => {
@@ -895,36 +1237,217 @@ const formatFullDateTime = (dateStr?: string): string => {
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm:ss');
 };
 
-const getInitials = (name: string): string => {
-  if (!name) return '';
-  return name.slice(0, 2).toUpperCase();
-};
-
-const getAvatarColor = (name: string): string => {
-  const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length]!;
-};
-
 const getPreviewMessage = (notification: Notification): string => {
-  return notification.messageTemplate
-    .replace('{formName}', getFormName(notification.formId))
-    .replace('{formUrl}', notification.formUrl || generateFormUrl(notification.formId))
-    .replace('{senderName}', '系统管理员')
+  return (notification.message_template || '')
+    .replace('{instanceTitle}', '示例工单标题')
+    .replace('{operatorName}', '系统管理员')
     .replace('{currentTime}', dayjs().format('YYYY-MM-DD HH:mm:ss'));
 };
 
-const copyFormUrl = async (url: string) => {
+// 添加缺失的函数
+const getFormName = (templateId?: number): string => {
+  if (!templateId) return '未知模板';
+  const template = templates.value.find(t => t.id === templateId);
+  return template ? template.name : `模板 ${templateId}`;
+};
+
+
+
+// 实现 getAvailableChannels 函数
+const getAvailableChannels = (): string[] => {
+  return getAllNotificationChannels();
+};
+
+// 联动数据加载函数
+const loadProcesses = async (reset = false): Promise<void> => {
+  if (processLoading.value || (!processPagination.hasMore && !reset)) return;
+  
+  if (reset) {
+    processPagination.current = 1;
+    processPagination.hasMore = true;
+    processes.value = [];
+  }
+  
+  processLoading.value = true;
+  
   try {
-    await navigator.clipboard.writeText(url);
-    message.success('表单链接已复制到剪贴板');
+    const res = await listWorkorderProcess({
+      page: processPagination.current,
+      size: processPagination.pageSize,
+      search: '',
+      status: 2 // 只加载已发布的流程
+    });
+    
+    if (res) {
+      const newItems = res.items || [];
+      if (reset) {
+        processes.value = newItems;
+      } else {
+        processes.value.push(...newItems);
+      }
+      
+      processPagination.total = res.total || 0;
+      processPagination.current++;
+      processPagination.hasMore = newItems.length >= processPagination.pageSize;
+    }
   } catch (error) {
-    message.error('复制失败，请手动复制');
+    console.error('Failed to load processes:', error);
+  } finally {
+    processLoading.value = false;
   }
 };
+
+const loadTemplates = async (reset = false): Promise<void> => {
+  if (templateLoading.value || (!templatePagination.hasMore && !reset)) return;
+  
+  if (reset) {
+    templatePagination.current = 1;
+    templatePagination.hasMore = true;
+    templates.value = [];
+  }
+  
+  templateLoading.value = true;
+  
+  try {
+    const res = await listWorkorderTemplate({
+      page: templatePagination.current,
+      size: templatePagination.pageSize,
+      search: '',
+      status: 1 // 只加载启用的模板
+    });
+    
+    if (res) {
+      const newItems = res.items || [];
+      if (reset) {
+        templates.value = newItems;
+      } else {
+        templates.value.push(...newItems);
+      }
+      
+      templatePagination.total = res.total || 0;
+      templatePagination.current++;
+      templatePagination.hasMore = newItems.length >= templatePagination.pageSize;
+    }
+  } catch (error) {
+    console.error('Failed to load templates:', error);
+  } finally {
+    templateLoading.value = false;
+  }
+};
+
+const loadCategories = async (reset = false): Promise<void> => {
+  if (categoryLoading.value || (!categoryPagination.hasMore && !reset)) return;
+  
+  if (reset) {
+    categoryPagination.current = 1;
+    categoryPagination.hasMore = true;
+    categories.value = [];
+  }
+  
+  categoryLoading.value = true;
+  
+  try {
+    const res = await listWorkorderCategory({
+      page: categoryPagination.current,
+      size: categoryPagination.pageSize,
+      search: '',
+      status: 1 // 只加载启用的分类
+    });
+    
+    if (res) {
+      const newItems = res.items || [];
+      if (reset) {
+        categories.value = newItems;
+      } else {
+        categories.value.push(...newItems);
+      }
+      
+      categoryPagination.total = res.total || 0;
+      categoryPagination.current++;
+      categoryPagination.hasMore = newItems.length >= categoryPagination.pageSize;
+    }
+  } catch (error) {
+    console.error('Failed to load categories:', error);
+  } finally {
+    categoryLoading.value = false;
+  }
+};
+
+const loadUsers = async (reset = false): Promise<void> => {
+  if (userLoading.value || (!userPagination.hasMore && !reset)) return;
+  
+  if (reset) {
+    userPagination.current = 1;
+    userPagination.hasMore = true;
+    users.value = [];
+  }
+  
+  userLoading.value = true;
+  
+  try {
+    const res = await getUserList({
+      page: userPagination.current,
+      size: userPagination.pageSize,
+      search: '',
+      enable: 1 // 只加载启用的用户
+    });
+    
+    if (res) {
+      const newItems = res.items || [];
+      if (reset) {
+        users.value = newItems;
+      } else {
+        users.value.push(...newItems);
+      }
+      
+      userPagination.total = res.total || 0;
+      userPagination.current++;
+      userPagination.hasMore = newItems.length >= userPagination.pageSize;
+    }
+  } catch (error) {
+    console.error('Failed to load users:', error);
+  } finally {
+    userLoading.value = false;
+  }
+};
+
+// 滚动分页处理函数
+const handleProcessScroll = (e: Event): void => {
+  const { target } = e;
+  if (target) {
+    const element = target as HTMLElement;
+    const { scrollTop, scrollHeight, clientHeight } = element;
+    if (scrollTop + clientHeight >= scrollHeight - 5) {
+      loadProcesses();
+    }
+  }
+};
+
+const handleTemplateScroll = (e: Event): void => {
+  const { target } = e;
+  if (target) {
+    const element = target as HTMLElement;
+    const { scrollTop, scrollHeight, clientHeight } = element;
+    if (scrollTop + clientHeight >= scrollHeight - 5) {
+      loadTemplates();
+    }
+  }
+};
+
+const handleCategoryScroll = (e: Event): void => {
+  const { target } = e;
+  if (target) {
+    const element = target as HTMLElement;
+    const { scrollTop, scrollHeight, clientHeight } = element;
+    if (scrollTop + clientHeight >= scrollHeight - 5) {
+      loadCategories();
+    }
+  }
+};
+
+
+
+
 
 // 搜索和过滤
 const handleSearch = (): void => {
@@ -955,16 +1478,22 @@ const handleResetFilters = (): void => {
   message.success('过滤条件已重置');
 };
 
-const handleTableChange = (pagination: any, filters: any, sorter: any): void => {
+const handleTableChange = (pagination: any, _filters: any, _sorter: any): void => {
   paginationConfig.current = pagination.current;
-  paginationConfig.pageSize = pagination.pageSize;
+  if (pagination.pageSize !== paginationConfig.pageSize) {
+    paginationConfig.pageSize = pagination.pageSize;
+    paginationConfig.current = 1; // 当改变页面大小时重置到第一页
+  }
   loadNotifications();
 };
 
-// 表单过滤
-const filterFormOption = (input: string, option: any) => {
-  const formName = option.children?.props?.children?.[0]?.children || '';
-  return formName.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+// 计算统计数据
+const calculateStats = (): void => {
+  stats.total = paginationConfig.total;
+  stats.enabled = notifications.value.filter(item => item.status === NotificationStatus.Enabled).length;
+  stats.disabled = notifications.value.filter(item => item.status === NotificationStatus.Disabled).length;
+  // 由于没有API接口，今日发送数据设为静态值
+  stats.todaySent = 0;
 };
 
 // 数据加载
@@ -975,18 +1504,21 @@ const loadNotifications = async (): Promise<void> => {
     const params: ListNotificationReq = {
       page: paginationConfig.current,
       size: paginationConfig.pageSize,
-      search: searchQuery.value,
+      name: searchQuery.value,
       channel: channelFilter.value,
       status: statusFilter.value
     };
     
-    const response = await getNotificationList(params);
-    if (response) {
-      notifications.value = (response.items || []).map((item: any) => ({
+    const res = await getNotificationList(params);
+    if (res) {
+      notifications.value = (res.items || []).map((item: any) => ({
         ...item,
         statusLoading: false
       }));
-      paginationConfig.total = response.total || 0;
+      paginationConfig.total = res.total || 0;
+      
+      // 计算统计数据
+      calculateStats();
     }
   } catch (error) {
     message.error('加载通知配置失败');
@@ -999,7 +1531,10 @@ const loadNotifications = async (): Promise<void> => {
 // 处理发送记录表格分页变化
 const handleLogsTableChange = (pagination: any): void => {
   logsPagination.current = pagination.current;
-  logsPagination.pageSize = pagination.pageSize;
+  if (pagination.pageSize !== logsPagination.pageSize) {
+    logsPagination.pageSize = pagination.pageSize;
+    logsPagination.current = 1; // 当改变页面大小时重置到第一页
+  }
   if (detailDialog.notification?.id) {
     loadSendLogs(detailDialog.notification.id);
   }
@@ -1013,13 +1548,12 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
     const params: ListSendLogReq = {
       page: logsPagination.current,
       size: logsPagination.pageSize,
-      search: '',
       notificationId: notificationId
     };
-    const response = await getSendLogs(params);
-    if (response) {
-      sendLogs.value = response.items || [];
-      logsPagination.total = response.total || 0;
+    const res = await getSendLogs(params);
+    if (res) {
+      sendLogs.value = res.items || [];
+      logsPagination.total = res.total || 0;
     }
   } catch (error) {
     message.error('加载发送记录失败');
@@ -1030,73 +1564,78 @@ const loadSendLogs = async (notificationId: number): Promise<void> => {
 };
 
 // 事件处理
-const handleCreateNotification = async (): Promise<void> => {
+const handleCreateNotification = (): void => {
   notificationDialog.isEdit = false;
   notificationDialog.saving = false;
   notificationDialog.form = {
     id: undefined,
-    formId: undefined,
+    name: '',
+    description: '',
+    processId: undefined,
+    templateId: undefined,
+    categoryId: undefined,
+    eventTypes: ['instance_created', 'instance_submitted'],
+    triggerType: NotificationTrigger.IMMEDIATE as string,
+    triggerCondition: '',
     channels: [],
-    recipients: [],
-    messageTemplate: '您好！\n\n表单"{formName}"已发布，请点击以下链接填写：\n{formUrl}\n\n发送人：{senderName}\n发送时间：{currentTime}',
-    triggerType: NotificationTrigger.MANUAL,
+    recipientTypes: ['creator'],
+    recipientUsers: [],
+    recipientRoles: [],
+    recipientDepts: [],
+    messageTemplate: '您好！\n\n工单通知：{instanceTitle}\n\n详情请查看系统。\n\n时间：{currentTime}',
+    subjectTemplate: '',
     scheduledTime: undefined,
-    status: NotificationStatus.ENABLED
+    repeatInterval: undefined,
+    maxRetries: 3,
+    retryInterval: 5,
+    status: NotificationStatus.Enabled,
+    priority: NotificationPriority.Medium,
+    isDefault: IsDefault.No
   };
   
-  // 重置分页并加载数据
-  formsPagination.current = 1;
-  usersPagination.current = 1;
-  userSearchQuery.value = '';
-  
-  // 显示对话框
   notificationDialogVisible.value = true;
-  
-  // 在对话框显示后加载数据
-  await nextTick();
-  await Promise.all([
-    loadPublishedForms(1),
-    loadSuggestedUsers(1, '')
-  ]);
 };
 
-const handleEditNotification = async (record: Notification): Promise<void> => {
+const handleEditNotification = (record: Notification): void => {
   notificationDialog.isEdit = true;
   notificationDialog.saving = false;
   notificationDialog.form = { 
     id: record.id,
-    formId: record.formId,
-    channels: record.channels,
-    recipients: record.recipients,
-    messageTemplate: record.messageTemplate,
-    triggerType: record.triggerType,
-    scheduledTime: record.scheduledTime ? dayjs(record.scheduledTime) : undefined,
-    status: record.status
-  } as typeof notificationDialog.form;
-  
-  // 重置分页并加载数据
-  formsPagination.current = 1;
-  usersPagination.current = 1;
-  userSearchQuery.value = '';
+    name: record.name,
+    description: record.description || '',
+    processId: record.process_id,
+    templateId: record.template_id,
+    categoryId: record.category_id,
+    eventTypes: record.event_types || [],
+    triggerType: record.trigger_type,
+    triggerCondition: record.trigger_condition ? JSON.stringify(record.trigger_condition) : '',
+    channels: record.channels || [],
+    recipientTypes: record.recipient_types || [],
+    recipientUsers: record.recipient_users || [],
+    recipientRoles: record.recipient_roles || [],
+    recipientDepts: record.recipient_depts || [],
+    messageTemplate: record.message_template,
+    subjectTemplate: record.subject_template || '',
+    scheduledTime: record.scheduled_time ? dayjs(record.scheduled_time) : undefined,
+    repeatInterval: record.repeat_interval,
+    maxRetries: record.max_retries,
+    retryInterval: record.retry_interval,
+    status: record.status as number,
+    priority: record.priority as number,
+    isDefault: record.is_default as number
+  };
   
   // 关闭详情对话框并显示编辑对话框
   detailDialogVisible.value = false;
   notificationDialogVisible.value = true;
-  
-  // 在对话框显示后加载数据
-  await nextTick();
-  await Promise.all([
-    loadPublishedForms(1),
-    loadSuggestedUsers(1, '')
-  ]);
 };
 
 const handleViewNotification = async (record: Notification): Promise<void> => {
   try {
     if (record.id) {
-      const response = await getNotificationDetail(record.id);
-      if (response) {
-        detailDialog.notification = response;
+      const res = await getNotificationDetail(record.id);
+      if (res) {
+        detailDialog.notification = res;
         detailDialogVisible.value = true;
       }
     }
@@ -1113,14 +1652,13 @@ const handleStatusToggle = async (record: Notification & { statusLoading?: boole
   }
 
   record.statusLoading = true;
-  const newStatus = checked ? NotificationStatus.ENABLED : NotificationStatus.DISABLED;
+  const newStatus = checked ? NotificationStatus.Enabled : NotificationStatus.Disabled;
   
   try {
     await updateNotificationStatus(record.id, newStatus);
     record.status = newStatus;
-    const statusText = newStatus === NotificationStatus.ENABLED ? '启用' : '禁用';
+    const statusText = newStatus === NotificationStatus.Enabled ? '启用' : '禁用';
     message.success(`通知配置已${statusText}`);
-    loadStats(); // 更新统计数据
   } catch (error) {
     message.error('更新状态失败');
     console.error('Failed to update status:', error);
@@ -1133,6 +1671,9 @@ const handleMenuClick = (command: string, record: Notification): void => {
   switch (command) {
     case 'test':
       handleTestSend(record);
+      break;
+    case 'manual':
+      handleManualSend(record);
       break;
     case 'logs':
       handleViewLogs(record);
@@ -1160,7 +1701,7 @@ const handleTestSend = (record: Notification): void => {
     onOk: async () => {
       try {
         const loadingMessage = message.loading('正在发送测试通知...', 0);
-        await testSendNotification({ notificationId: record.id! });
+        await testSendNotification({ notification_id: record.id! });
         loadingMessage();
         message.success('测试通知发送成功');
       } catch (error) {
@@ -1169,6 +1710,20 @@ const handleTestSend = (record: Notification): void => {
       }
     }
   });
+};
+
+const handleManualSend = (record: Notification): void => {
+  // 重置表单数据
+  manualSendDialog.saving = false;
+  manualSendDialog.form = {
+    channels: record.channels || [],
+    recipient: '',
+    subject: `表单通知 - ${getFormName(record.template_id)}`,
+    content: getPreviewMessage(record)
+  };
+  
+  // 显示对话框
+  manualSendDialogVisible.value = true;
 };
 
 const handleViewLogs = (record: Notification): void => {
@@ -1190,11 +1745,10 @@ const handleDuplicateNotification = async (record: Notification): Promise<void> 
   }
   
   try {
-    const response = await duplicateNotification({ sourceId: record.id });
-    if (response && response.id) {
+    const res = await duplicateNotification(record.id!);
+    if (res && res.id) {
       message.success('复制通知配置成功');
       loadNotifications();
-      loadStats();
     }
   } catch (error) {
     message.error('复制配置失败');
@@ -1210,7 +1764,7 @@ const handleDeleteNotification = (record: Notification): void => {
   
   Modal.confirm({
     title: '删除确认',
-    content: `确定要删除表单"${getFormName(record.formId)}"的通知配置吗？`,
+    content: `确定要删除表单"${getFormName(record.template_id)}"的通知配置吗？`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
@@ -1219,7 +1773,6 @@ const handleDeleteNotification = (record: Notification): void => {
         await deleteNotification(record.id!);
         message.success('通知配置已删除');
         loadNotifications();
-        loadStats(); // 更新统计数据
       } catch (error) {
         message.error('删除失败');
         console.error('Failed to delete notification:', error);
@@ -1235,31 +1788,55 @@ const saveNotification = async (): Promise<void> => {
     return;
   }
 
-  if (!notificationDialog.form.formId) {
-    message.error('请选择关联表单');
+  // 增加额外的业务逻辑验证
+  const formData = notificationDialog.form;
+  
+  // 验证接收人配置完整性
+  if (formData.recipientTypes.includes('user') && (!formData.recipientUsers || formData.recipientUsers.length === 0 || formData.recipientUsers.some(u => !u || !u.trim()))) {
+    message.error('选择了用户类型接收人时，必须配置有效的用户ID');
     return;
   }
   
-  if (notificationDialog.form.channels.length === 0) {
-    message.error('请选择至少一个通知渠道');
+  if (formData.recipientTypes.includes('role') && (!formData.recipientRoles || formData.recipientRoles.length === 0 || formData.recipientRoles.some(r => !r || !r.trim()))) {
+    message.error('选择了角色类型接收人时，必须配置有效的角色ID');
     return;
   }
   
-  if (notificationDialog.form.recipients.length === 0) {
-    message.error('请添加至少一个通知对象');
+  if (formData.recipientTypes.includes('dept') && (!formData.recipientDepts || formData.recipientDepts.length === 0 || formData.recipientDepts.some(d => !d || !d.trim()))) {
+    message.error('选择了部门类型接收人时，必须配置有效的部门ID');
     return;
+  }
+  
+  // 验证渠道与接收人类型的兼容性
+  const hasFeishuChannel = formData.channels.includes('feishu');
+  const hasUserRecipient = formData.recipientTypes.includes('user');
+  
+  if (hasFeishuChannel && !hasUserRecipient && formData.recipientTypes.length === 1 && formData.recipientTypes.includes('creator')) {
+    message.warning('使用飞书通知时，建议同时配置用户ID接收人，以确保通知能正常发送');
   }
 
   notificationDialog.saving = true;
   
   try {
-    const formData = {
-      ...notificationDialog.form,
-      scheduledTime: notificationDialog.form.scheduledTime ? 
-        dayjs(notificationDialog.form.scheduledTime).format('YYYY-MM-DD HH:mm:ss') : 
-        undefined,
-      formUrl: generateFormUrl(notificationDialog.form.formId)
-    };
+    const scheduledTime = formData.scheduledTime ? 
+      dayjs(formData.scheduledTime).format('YYYY-MM-DD HH:mm:ss') : 
+      undefined;
+
+    // 处理触发条件
+    let triggerCondition: Record<string, any> | undefined;
+    if (formData.triggerCondition) {
+      try {
+        triggerCondition = JSON.parse(formData.triggerCondition);
+      } catch {
+        message.error('触发条件格式不正确，请输入有效的JSON');
+        return;
+      }
+    }
+    
+    // 清理空的接收人数据
+    const cleanRecipientUsers = formData.recipientUsers?.filter(u => u && u.trim()) || [];
+    const cleanRecipientRoles = formData.recipientRoles?.filter(r => r && r.trim()) || [];
+    const cleanRecipientDepts = formData.recipientDepts?.filter(d => d && d.trim()) || [];
 
     if (notificationDialog.isEdit) {
       // 更新通知配置
@@ -1270,14 +1847,28 @@ const saveNotification = async (): Promise<void> => {
       
       const updateReq: UpdateNotificationReq = {
         id: formData.id,
-        formId: formData.formId!,
+        name: formData.name,
+        description: formData.description,
+        process_id: formData.processId,
+        template_id: formData.templateId,
+        category_id: formData.categoryId,
+        event_types: formData.eventTypes,
+        trigger_type: formData.triggerType,
+        trigger_condition: triggerCondition,
         channels: formData.channels,
-        recipients: formData.recipients,
-        messageTemplate: formData.messageTemplate,
-        triggerType: formData.triggerType,
-        scheduledTime: formData.scheduledTime,
+        recipient_types: formData.recipientTypes,
+        recipient_users: cleanRecipientUsers,
+        recipient_roles: cleanRecipientRoles,
+        recipient_depts: cleanRecipientDepts,
+        message_template: formData.messageTemplate,
+        subject_template: formData.subjectTemplate,
+        scheduled_time: scheduledTime,
+        repeat_interval: formData.repeatInterval,
+        max_retries: formData.maxRetries,
+        retry_interval: formData.retryInterval,
         status: formData.status,
-        formUrl: formData.formUrl
+        priority: formData.priority,
+        is_default: formData.isDefault
       };
       
       await updateNotification(updateReq);
@@ -1285,13 +1876,27 @@ const saveNotification = async (): Promise<void> => {
     } else {
       // 创建通知配置
       const createReq: CreateNotificationReq = {
-        formId: formData.formId!,
+        name: formData.name,
+        description: formData.description,
+        process_id: formData.processId,
+        template_id: formData.templateId,
+        category_id: formData.categoryId,
+        event_types: formData.eventTypes,
+        trigger_type: formData.triggerType,
+        trigger_condition: triggerCondition,
         channels: formData.channels,
-        recipients: formData.recipients,
-        messageTemplate: formData.messageTemplate,
-        triggerType: formData.triggerType,
-        scheduledTime: formData.scheduledTime,
-        formUrl: formData.formUrl
+        recipient_types: formData.recipientTypes,
+        recipient_users: cleanRecipientUsers,
+        recipient_roles: cleanRecipientRoles,
+        recipient_depts: cleanRecipientDepts,
+        message_template: formData.messageTemplate,
+        subject_template: formData.subjectTemplate,
+        scheduled_time: scheduledTime,
+        repeat_interval: formData.repeatInterval,
+        max_retries: formData.maxRetries,
+        retry_interval: formData.retryInterval,
+        priority: formData.priority,
+        is_default: formData.isDefault
       };
       
       await createNotification(createReq);
@@ -1300,24 +1905,34 @@ const saveNotification = async (): Promise<void> => {
     
     notificationDialogVisible.value = false;
     loadNotifications();
-    loadStats(); // 更新统计数据
-  } catch (error) {
-    message.error(notificationDialog.isEdit ? '更新失败' : '创建失败');
+  } catch (error: any) {
+    // 根据错误类型提供更具体的错误信息
+    let errorMessage = notificationDialog.isEdit ? '更新失败' : '创建失败';
+    
+    if (error.message) {
+      if (error.message.includes('datetime') || error.message.includes('NOW()')) {
+        errorMessage += ': 服务器时间格式错误，请联系管理员';
+      } else if (error.message.includes('duplicate') || error.message.includes('重复')) {
+        errorMessage += ': 配置名称已存在，请使用其他名称';
+      } else if (error.message.includes('validation') || error.message.includes('验证')) {
+        errorMessage += ': 数据验证失败，请检查输入内容';
+      } else if (error.message.includes('timeout') || error.message.includes('超时')) {
+        errorMessage += ': 请求超时，请稍后重试';
+      } else if (error.message.includes('network') || error.message.includes('网络')) {
+        errorMessage += ': 网络连接异常，请检查网络';
+      } else {
+        errorMessage += `: ${error.message}`;
+      }
+    }
+    
+    message.error(errorMessage);
     console.error('Failed to save notification:', error);
   } finally {
     notificationDialog.saving = false;
   }
 };
 
-const viewForm = (formId?: number): void => {
-  if (!formId) {
-    message.error('表单ID不存在');
-    return;
-  }
-  message.info(`跳转到表单详情页面 (ID: ${formId})`);
-  // 这里应该跳转到表单详情页面
-  // window.location.href = `/workorder/form/view/${formId}`;
-};
+
 
 // 对话框关闭
 const closeNotificationDialog = (): void => {
@@ -1337,14 +1952,66 @@ const closeLogsDialog = (): void => {
   sendLogs.value = [];
 };
 
+const closeManualSendDialog = (): void => {
+  manualSendDialogVisible.value = false;
+  manualSendDialog.form = {
+    channels: [],
+    recipient: '',
+    subject: '',
+    content: ''
+  };
+};
+
+const saveManualSend = async (): Promise<void> => {
+  if (manualSendDialog.form.channels.length === 0) {
+    message.error('请选择至少一个通知渠道');
+    return;
+  }
+  
+  if (!manualSendDialog.form.recipient.trim()) {
+    message.error('请输入接收人地址');
+    return;
+  }
+  
+  if (!manualSendDialog.form.subject.trim()) {
+    message.error('请输入通知主题');
+    return;
+  }
+  
+  if (!manualSendDialog.form.content.trim()) {
+    message.error('请输入通知内容');
+    return;
+  }
+
+  manualSendDialog.saving = true;
+  
+  try {
+    const sendData: ManualSendNotificationReq = {
+      channels: manualSendDialog.form.channels,
+      recipient: manualSendDialog.form.recipient.trim(),
+      subject: manualSendDialog.form.subject.trim(),
+      content: manualSendDialog.form.content.trim()
+    };
+    
+    await sendNotificationManually(sendData);
+    message.success('通知发送成功');
+    manualSendDialogVisible.value = false;
+
+  } catch (error) {
+    message.error('发送失败');
+    console.error('Failed to send manual notification:', error);
+  } finally {
+    manualSendDialog.saving = false;
+  }
+};
+
 // 生命周期
-onMounted(async () => {
-  await Promise.all([
-    loadPublishedForms(1),
-    loadSuggestedUsers(1, ''),
-    loadNotifications(),
-    loadStats()
-  ]);
+onMounted(() => {
+  loadNotifications();
+  loadProcesses(true);
+  loadTemplates(true);
+  loadCategories(true);
+  loadUsers(true);
 });
 </script>
 
@@ -1357,6 +2024,19 @@ onMounted(async () => {
 
 .page-header {
   margin-bottom: 20px;
+}
+
+.stats-grid {
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.stats-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  height: 100%;
 }
 
 .header-actions {
@@ -1401,21 +2081,7 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.stats-row {
-  margin-bottom: 20px;
-}
 
-.stats-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  height: 100%;
-  transition: all 0.3s ease;
-}
-
-.stats-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
 
 .table-container {
   margin-bottom: 24px;
@@ -1658,6 +2324,11 @@ onMounted(async () => {
     justify-content: center;
   }
   
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
   .stats-card :deep(.ant-statistic-title) {
     font-size: 12px;
   }
@@ -1709,7 +2380,33 @@ onMounted(async () => {
   }
 }
 
+/* 平板端适配 */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .notification-management-container {
+    padding: 16px;
+  }
+  
+  .search-input {
+    width: 200px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 大屏幕优化 */
+@media (min-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 @media (max-width: 480px) {
+  .stats-card {
+    text-align: center;
+  }
+  
   .channels-display,
   .recipients-display {
     flex-direction: column;
@@ -1799,9 +2496,7 @@ onMounted(async () => {
   }
 }
 
-.stats-card {
-  animation: fadeInUp 0.5s ease-out;
-}
+
 
 /* 表格加载优化 */
 .table-container :deep(.ant-table-placeholder) {

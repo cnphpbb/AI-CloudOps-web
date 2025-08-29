@@ -1,18 +1,25 @@
 <template>
   <div class="info-container">
-    <div class="info-header">
+    <!-- 页面头部 -->
+    <div class="page-header">
       <div class="header-content">
-        <h1 class="page-title">
-          <CheckCircleOutlined class="title-icon" />
-          服务信息
-        </h1>
-        <p class="page-description">查看智能助手服务的详细信息和配置参数</p>
-      </div>
-      <div class="header-actions">
-        <a-button type="primary" @click="refreshInfo" :loading="loading">
-          <template #icon><ReloadOutlined /></template>
-          刷新信息
-        </a-button>
+        <div class="header-left">
+          <div class="header-icon">
+            <CheckCircleOutlined />
+          </div>
+          <div class="header-text">
+            <h1 class="page-title">服务信息</h1>
+            <p class="page-subtitle">查看智能助手服务的详细信息和配置</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a-button type="primary" @click="refreshInfo" :loading="loading">
+            <template #icon>
+              <ReloadOutlined />
+            </template>
+            刷新信息
+          </a-button>
+        </div>
       </div>
     </div>
 
@@ -80,7 +87,9 @@
             <div class="endpoint-header">
               <a-tag color="purple">{{ name }}</a-tag>
               <a-button type="link" size="small" @click="copyToClipboard(url)">
-                <template #icon><CopyOutlined /></template>
+                <template #icon>
+                  <CopyOutlined />
+                </template>
                 复制
               </a-button>
             </div>
@@ -106,7 +115,7 @@
         <div v-else class="empty-config">
           <a-empty description="暂无配置信息" />
         </div>
-        
+
         <div v-if="configInfo.version || configInfo.timestamp" class="config-meta">
           <a-divider />
           <div class="meta-info">
@@ -137,8 +146,8 @@ import {
   CalendarOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons-vue';
-import { 
-  getAssistantInfo, 
+import {
+  getAssistantInfo,
   getAssistantConfig,
   type ServiceInfoResponse,
   type ServiceConfigResponse
@@ -208,10 +217,10 @@ const fetchServiceInfo = async () => {
     loading.value = true;
     const response = await getAssistantInfo();
     const data = response as ServiceInfoResponse;
-    
+
     // 更新服务信息
     Object.assign(serviceInfo, data);
-    
+
     message.success('服务信息获取成功');
   } catch (error: any) {
     message.error(`获取服务信息失败: ${error.message}`);
@@ -227,10 +236,10 @@ const fetchConfigInfo = async () => {
     configLoading.value = true;
     const response = await getAssistantConfig();
     const data = response as ServiceConfigResponse;
-    
+
     // 更新配置信息
     Object.assign(configInfo, data);
-    
+
     message.success('配置信息获取成功');
   } catch (error: any) {
     message.error(`获取配置信息失败: ${error.message}`);
@@ -261,46 +270,58 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-.info-header {
+/* 页面头部 */
+.info-container .page-header {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.info-container .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--ant-border-color, #d9d9d9);
-
-  .header-content {
-    .page-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 24px;
-      font-weight: bold;
-      margin: 0;
-      background: linear-gradient(90deg, #1890ff, #52c41a);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .page-description {
-      margin: 0;
-      color: var(--ant-text-color-secondary);
-      font-size: 16px;
-      line-height: 1.5;
-    }
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
+  width: 100%;
 }
 
-.title-icon {
-  font-size: 28px;
+.info-container .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.info-container .header-icon {
+  font-size: 32px;
   color: #1890ff;
+}
+
+.info-container .header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-container .page-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #262626;
+  line-height: 1.2;
+}
+
+.info-container .page-subtitle {
+  color: #8c8c8c;
+  margin: 0;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.info-container .header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .info-content {
@@ -331,7 +352,7 @@ onMounted(() => {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 24px;
+          font-size: 18px;
           color: #fff;
 
           &.online {
@@ -357,11 +378,11 @@ onMounted(() => {
             font-size: 20px;
             font-weight: 600;
             line-height: 1.2;
-            
+
             &.online {
               color: #52c41a;
             }
-            
+
             &.offline {
               color: #ff4d4f;
             }
@@ -420,7 +441,7 @@ onMounted(() => {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 18px;
       }
 
       .capability-text {
@@ -516,15 +537,33 @@ onMounted(() => {
   .info-container {
     padding: 16px;
   }
-  
-  .info-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
+
+  .info-container .page-header {
+    padding: 20px;
+    margin-bottom: 16px;
   }
-  
-  .header-actions {
-    justify-content: center;
+
+  .info-container .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .info-container .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .info-container .page-title {
+    font-size: 20px;
+  }
+
+  .info-container .page-subtitle {
+    font-size: 13px;
+  }
+
+  .info-container .header-icon {
+    font-size: 36px;
   }
 
   .status-card {
