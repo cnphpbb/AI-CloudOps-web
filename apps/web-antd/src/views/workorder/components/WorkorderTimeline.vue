@@ -277,7 +277,7 @@ import {
   type ListWorkorderInstanceTimelineReq,
   TimelineAction,
   listWorkorderInstanceTimeline
-} from '#/api/core/workorder_instance_time_line'
+} from '#/api/core/workorder/workorder_instance_time_line'
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
@@ -616,14 +616,12 @@ const loadTimeline = async (instanceId: number) => {
     });
   } catch (error: any) {
     message.error('加载时间线失败');
-    console.error('Failed to load timeline:', error);
+
     timelineList.value = [];
   } finally {
     loading.value = false;
   }
 }
-
-
 
 // 主要方法
 const showTimeline = async (instanceId: number) => {

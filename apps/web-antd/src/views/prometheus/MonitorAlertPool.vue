@@ -448,9 +448,9 @@ import {
   type GetAlertManagerPoolListParams,
   type CreateMonitorAlertManagerPoolReq,
   type UpdateMonitorAlertManagerPoolReq,
-} from '#/api/core/prometheus_alert_pool';
+} from '#/api/core/prometheus/prometheus_alert_pool';
 
-import { getUserList, type GetUserListReq } from '#/api/core/user';
+import { getUserList, type GetUserListReq } from '#/api/core/system/user';
 
 // 动态表单项接口
 interface DynamicItem {
@@ -586,7 +586,6 @@ const formRules = {
   ]
 };
 
-
 const getAvatarColor = (name: string): string => {
   const colors = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'];
   let hash = 0;
@@ -645,7 +644,7 @@ const fetchAlertManagerPools = async (): Promise<void> => {
       updateStats();
     }
   } catch (error: any) {
-    console.error('加载实例池列表失败:', error);
+
     message.error(error.message || '加载实例池列表失败');
   } finally {
     loading.value = false;
@@ -695,7 +694,7 @@ const handleViewPool = async (record: MonitorAlertManagerPool): Promise<void> =>
     detailDialog.form = response;
     detailDialogVisible.value = true;
   } catch (error: any) {
-    console.error('获取实例池详情失败:', error);
+
     message.error(error.message || '获取实例池详情失败');
   }
 };
@@ -725,7 +724,7 @@ const confirmDelete = (record: MonitorAlertManagerPool): void => {
         message.success(`实例池 "${record.name}" 已删除`);
         fetchAlertManagerPools();
       } catch (error: any) {
-        console.error('删除实例池失败:', error);
+
         message.error(error.message || '删除实例池失败');
       }
     }

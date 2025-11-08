@@ -273,8 +273,8 @@ import {
   type GetInstanceCommentsTreeReq,
   createWorkorderInstanceComment,
   getInstanceCommentsTree
-} from '#/api/core/workorder_instance_comment'
-import type { WorkorderInstanceItem } from '#/api/core/workorder_instance'
+} from '#/api/core/workorder/workorder_instance_comment'
+import type { WorkorderInstanceItem } from '#/api/core/workorder/workorder_instance'
 
 // 图标组件
 const IconComponent = ({ icon }: { icon: string }) => {
@@ -722,7 +722,7 @@ const loadComments = async (instanceId: number) => {
       commentsList.value = []
     }
   } catch (error: any) {
-    console.error('Failed to load comments:', error)
+
     message.error(`加载评论失败: ${error.message || '未知错误'}`)
     commentsList.value = []
   } finally {
@@ -745,7 +745,7 @@ const saveComment = async () => {
     emit('commentAdded')
   } catch (error: any) {
     message.error(`添加评论失败: ${error.message || '未知错误'}`)
-    console.error('Failed to create comment:', error)
+
   } finally {
     loading.value = false
   }

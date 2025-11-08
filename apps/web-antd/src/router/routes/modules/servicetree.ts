@@ -33,6 +33,24 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: '云账户管理',
+        path: '/cloud_account_management',
+        component: () => import('#/views/servicetree/CloudAccountManagement.vue'),
+        meta: {
+          title: '云账户管理',
+          icon: 'mdi:cloud-outline',
+        },
+      },
+      {
+        name: '云资源管理',
+        path: '/cloud_resource_management',
+        component: () => import('#/views/servicetree/CloudResourceManager.vue'),
+        meta: {
+          title: '云资源管理',
+          icon: 'mdi:cloud',
+        },
+      },
+      {
         name: 'TerminalConnect',
         path: '/terminal_connect',
         component: () => import('#/views/servicetree/TerminalConnect.vue'),

@@ -107,9 +107,9 @@ import { InfoCircleOutlined } from '@ant-design/icons-vue';
 import { 
   ProcessStatus,
   type CreateWorkorderProcessReq 
-} from '#/api/core/workorder_process';
-import { type WorkorderCategoryItem, listWorkorderCategory } from '#/api/core/workorder_category';
-import { type WorkorderFormDesignItem, listWorkorderFormDesign, FormDesignStatus } from '#/api/core/workorder_form_design';
+} from '#/api/core/workorder/workorder_process';
+import { type WorkorderCategoryItem, listWorkorderCategory } from '#/api/core/workorder/workorder_category';
+import { type WorkorderFormDesignItem, listWorkorderFormDesign, FormDesignStatus } from '#/api/core/workorder/workorder_form_design';
 
 // Props
 interface Props {
@@ -232,7 +232,7 @@ const loadForms = async (search?: string): Promise<void> => {
       forms.value = res.items || [];
     }
   } catch (error: any) {
-    console.error('Failed to load forms:', error);
+
     forms.value = [];
   } finally {
     formSelectorLoading.value = false;
@@ -256,7 +256,7 @@ const loadCategories = async (search?: string): Promise<void> => {
       categories.value = res.items || [];
     }
   } catch (error: any) {
-    console.error('Failed to load categories:', error);
+
     categories.value = [];
   } finally {
     categorySelectorLoading.value = false;

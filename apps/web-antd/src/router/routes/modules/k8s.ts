@@ -16,127 +16,185 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'K8sCluster',
         path: '/k8s_cluster',
-        component: () => import('#/views/k8s/K8sCluster.vue'),
+        component: () => import('#/views/k8s/cluster/Cluster.vue'),
         meta: {
+          order: 1,
           icon: 'lucide:database',
-          title: '集群管理',
+          title: 'cluster管理',
+        },
+      },
+      {
+        name: 'K8sNamespace',
+        path: '/k8s_namespace',
+        component: () => import('#/views/k8s/namespace/Namespace.vue'),
+        meta: {
+          order: 2,
+          icon: 'lucide:folder',
+          title: 'namespace管理',
         },
       },
       {
         name: 'K8sNode',
         path: '/k8s_node',
-        component: () => import('#/views/k8s/K8sNode.vue'),
+        component: () => import('#/views/k8s/node/Node.vue'),
         meta: {
-          hideInMenu: true,
-          icon: 'lucide:list-check',
-          title: '节点管理',
-        },
-      },
-      {
-        name: 'K8sPod',
-        path: '/k8s_pod',
-        component: () => import('#/views/k8s/K8sPod.vue'),
-        meta: {
-          icon: 'lucide:bell-ring',
-          title: 'Pod管理',
-        },
-      },
-      {
-        name: 'K8sService',
-        path: '/k8s_service',
-        component: () => import('#/views/k8s/K8sService.vue'),
-        meta: {
-          icon: 'lucide:box',
-          title: 'Service管理',
+          order: 3,
+          icon: 'lucide:server',
+          title: 'node管理',
         },
       },
       {
         name: 'K8sDeployment',
         path: '/k8s_deployment',
-        component: () => import('#/views/k8s/K8sDeployment.vue'),
+        component: () => import('#/views/k8s/deployment/Deployment.vue'),
         meta: {
-          icon: 'lucide:file-text',
-          title: 'Deployment管理',
+          order: 6,
+          icon: 'lucide:rocket',
+          title: 'deployment管理',
+        },
+      },
+      {
+        name: 'K8sStatefulSet',
+        path: '/k8s_statefulset',
+        component: () => import('#/views/k8s/statefulset/StatefulSet.vue'),
+        meta: {
+          order: 7,
+          icon: 'lucide:layers',
+          title: 'statefulset管理',
+        },
+      },
+      {
+        name: 'K8sDaemonSet',
+        path: '/k8s_daemonset',
+        component: () => import('#/views/k8s/daemonset/DaemonSet.vue'),
+        meta: {
+          order: 8,
+          icon: 'lucide:shield',
+          title: 'DaemonSet管理',
+        },
+      },
+      {
+        name: 'K8sService',
+        path: '/k8s_service',
+        component: () => import('#/views/k8s/service/Service.vue'),
+        meta: {
+          order: 9,
+          icon: 'lucide:network',
+          title: 'service管理',
+        },
+      },
+      {
+        name: 'K8sIngress',
+        path: '/k8s_ingress',
+        component: () => import('#/views/k8s/ingress/Ingress.vue'),
+        meta: {
+          order: 10,
+          icon: 'lucide:shield-check',
+          title: 'Ingress管理',
+        },
+      },
+      {
+        name: 'K8sPod',
+        path: '/k8s_pod',
+        component: () => import('#/views/k8s/pod/Pod.vue'),
+        meta: {
+          order: 11,
+          icon: 'lucide:separator-vertical',
+          title: 'pod管理',
         },
       },
       {
         name: 'K8sConfigMap',
         path: '/k8s_configmap',
-        component: () => import('#/views/k8s/K8sConfigmap.vue'),
+        component: () => import('#/views/k8s/configmap/ConfigMap.vue'),
         meta: {
-          hideInMenu: true,
-          icon: 'lucide:user-round-minus',
+          order: 12,
+          icon: 'lucide:settings',
           title: 'ConfigMap管理',
+        },
+      },
+      {
+        name: 'K8sSecret',
+        path: '/k8s_secret',
+        component: () => import('#/views/k8s/secret/Secret.vue'),
+        meta: {
+          order: 13,
+          icon: 'lucide:key',
+          title: 'Secret管理',
+        },
+      },
+      {
+        name: 'K8sPV',
+        path: '/k8s_pv',
+        component: () => import('#/views/k8s/pv/PV.vue'),
+        meta: {
+          order: 14,
+          icon: 'lucide:hard-drive',
+          title: 'PV管理',
+        },
+      },
+      {
+        name: 'K8sPVC',
+        path: '/k8s_pvc',
+        component: () => import('#/views/k8s/pvc/PVC.vue'),
+        meta: {
+          order: 15,
+          icon: 'lucide:database',
+          title: 'PVC管理',
+        },
+      },
+      {
+        name: 'K8sRole',
+        path: '/k8s_role',
+        component: () => import('#/views/k8s/role/Role.vue'),
+        meta: {
+          order: 16,
+          icon: 'lucide:shield',
+          title: 'Role管理',
+        },
+      },
+      {
+        name: 'K8sRoleBinding',
+        path: '/k8s_rolebinding',
+        component: () => import('#/views/k8s/rolebinding/RoleBinding.vue'),
+        meta: {
+          order: 17,
+          icon: 'lucide:key',
+          title: 'RoleBinding管理',
+        },
+      },
+      {
+        name: 'K8sClusterRoleBinding',
+        path: '/k8s_clusterrolebinding',
+        component: () => import('#/views/k8s/clusterrolebinding/ClusterRoleBinding.vue'),
+        meta: {
+          order: 19,
+          icon: 'lucide:settings',
+          title: 'ClusterRoleBinding管理',
         },
       },
       {
         name: 'K8sYamlTemplate',
         path: '/k8s_yaml_template',
-        component: () => import('#/views/k8s/K8sYamlTemplate.vue'),
+        component: () => import('#/views/k8s/template/Template.vue'),
         meta: {
-          icon: 'material-symbols:table-outline',
-          title: 'Yaml模板',
+          order: 20,
+          icon: 'lucide:file-text',
+          title: 'YAML模板管理',
         },
       },
       {
         name: 'K8sYamlTask',
         path: '/k8s_yaml_task',
-        component: () => import('#/views/k8s/K8sYamlTask.vue'),
+        component: () => import('#/views/k8s/task/Task.vue'),
         meta: {
-          icon: 'lucide:send-horizontal',
-          title: 'Yaml任务',
+          order: 21,
+          icon: 'lucide:file',
+          title: 'YAML任务管理',
         },
       },
     ],
   },
-  // {
-  //   component: BasicLayout,
-  //   meta: {
-  //     order: 4,
-  //     title: 'k8s应用管理',
-  //   },
-  //   name: 'K8sApp',
-  //   path: '/k8s_app',
-  //   children: [
-  //     {
-  //       name: 'K8sInstance',
-  //       path: '/k8s_instance',
-  //       component: () => import('#/views/k8s/K8sInstance.vue'),
-  //       meta: {
-  //         icon: 'lucide:database',
-  //         title: '实例管理',
-  //       },
-  //     },
-  //     {
-  //       name: 'K8sApps',
-  //       path: '/k8s_apps',
-  //       component: () => import('#/views/k8s/K8sApps.vue'),
-  //       meta: {
-  //         hideInMenu: true,
-  //         icon: 'lucide:list-check',
-  //         title: '应用管理',
-  //       },
-  //     },
-  //     {
-  //       name: 'K8sProject',
-  //       path: '/k8s_project',
-  //       component: () => import('#/views/k8s/K8sProject.vue'),
-  //       meta: {
-  //         icon: 'lucide:bell-ring',
-  //         title: '项目管理',
-  //       },
-  //     },
-  //     {
-  //       name: 'CronJob',
-  //       path: '/k8s_cronjob',
-  //       component: () => import('#/views/k8s/K8sCronJob.vue'),
-  //       meta: {
-  //         icon: 'lucide:box',
-  //         title: 'CronJob管理',
-  //       },
-  //     },
-  //   ],
-  // },
 ];
 
 export default routes;

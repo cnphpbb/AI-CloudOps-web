@@ -471,9 +471,9 @@ import {
   getRoleApisApi,
   type Role,
   type ListRolesReq,
-} from '#/api/core/system';
+} from '#/api/core/system/system';
 
-import { listApisApi } from '#/api/core/api';
+import { listApisApi } from '#/api/core/system/api';
 
 // 表单引用
 const formRef = ref<FormInstance>();
@@ -753,7 +753,7 @@ const fetchApiList = async () => {
       }
     }
     
-    const safeApiList = (response.items || []).map((api: any) => ({
+    const safeApiList = allApis.map((api: any) => ({
       ...api,
       method: formatMethod(api.method),
       name: api.name || '未命名API',
@@ -828,7 +828,7 @@ const handleApiPageChange = (page: number, size: number) => {
   fetchModalApiList();
 };
 
-const handleApiPageSizeChange = (current: number, size: number) => {
+const handleApiPageSizeChange = (_: number, size: number) => {
   apiPagination.current = 1;
   apiPagination.pageSize = size;
   fetchModalApiList();

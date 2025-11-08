@@ -221,8 +221,8 @@ import { message } from 'ant-design-vue';
 import { Icon } from '@iconify/vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { assistantQuery } from '#/api/core/assistant';
-import type { AssistantRequest, AssistantResponse } from '#/api/core/assistant';
+import { assistantQuery } from '#/api/core/aiops/assistant';
+import type { AssistantRequest, AssistantResponse } from '#/api/core/aiops/assistant';
 
 // 路由
 const router = useRouter();
@@ -304,7 +304,6 @@ const sendMessage = async () => {
       currentSessionId.value = data.session_id;
     }
 
-
     const assistantMessage: ChatMessage = {
       role: 'assistant',
       content: data.answer,
@@ -321,7 +320,7 @@ const sendMessage = async () => {
 
   } catch (error: any) {
     message.error(`发送失败: ${error.message}`);
-    console.error('发送消息失败:', error);
+
   } finally {
     isLoading.value = false;
   }
